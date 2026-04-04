@@ -14,6 +14,7 @@ const GroupDataSchema = z.object({
 	name: z.string(),
 	lightnessMax: z.number(),
 	lightnessMin: z.number(),
+	reversed: z.boolean().default(false),
 	colors: z.array(ColorDataSchema)
 });
 
@@ -23,7 +24,7 @@ export type ColorData = z.infer<typeof ColorDataSchema>;
 export type GroupData = z.infer<typeof GroupDataSchema>;
 
 const DEFAULT_GROUPS: GroupData[] = [
-	{ id: 1, name: 'palette', lightnessMax: 0.95, lightnessMin: 0.16, colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
+	{ id: 1, name: 'palette', lightnessMax: 0.95, lightnessMin: 0.16, reversed: false, colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
 ];
 
 export function loadGroups(): GroupData[] {

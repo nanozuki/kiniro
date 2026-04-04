@@ -30,6 +30,7 @@
               nodejs
               pnpm
               svelte-language-server
+              typos
             ];
             shellHook = ''
               export ESLINT_USE_FLAT_CONFIG="true"

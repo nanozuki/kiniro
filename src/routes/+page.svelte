@@ -15,6 +15,7 @@
 			name: 'palette',
 			lightnessMax: 0.95,
 			lightnessMin: 0.16,
+			reversed: false,
 			colors: [{ id: 1, name: 'color', hex: '#907aa9' }]
 		});
 	}
@@ -33,6 +34,7 @@
 				bind:colors={group.colors}
 				bind:lightnessMax={group.lightnessMax}
 				bind:lightnessMin={group.lightnessMin}
+				bind:reversed={group.reversed}
 			/>
 			<button class="delete-btn" onclick={() => deleteGroup(group.id)}>✕</button>
 		</div>

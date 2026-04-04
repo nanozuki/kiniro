@@ -31,15 +31,17 @@
 		name = $bindable('palette'),
 		colors = $bindable<ColorData[]>([{ id: 1, name: 'primary', hex: '#907aa9' }]),
 		lightnessMax = $bindable(0.95),
-		lightnessMin = $bindable(0.16)
+		lightnessMin = $bindable(0.16),
+		reversed = $bindable(false)
 	} = $props();
 
-	const lightness = $derived(
-		Array.from(
+	const lightness = $derived.by(() => {
+		const arr = Array.from(
 			{ length: STEPS_COUNT },
 			(_, i) => lightnessMax - (lightnessMax - lightnessMin) * (i / (STEPS_COUNT - 1))
-		)
-	);
+		);
+		return reversed ? arr.reverse() : arr;
+	});
 
 	const nextId = $derived(colors.reduce((max, c) => Math.max(max, c.id), 0));
 
@@ -64,6 +66,9 @@
 			Lightness min
 			<input type="number" bind:value={lightnessMin} min="0" max="1" step="0.01" />
 		</label>
+		<button class="reverse-btn" class:active={reversed} onclick={() => (reversed = !reversed)} title="Reverse lightness direction (for dark mode)">
+			reverse
+		</button>
 	</div>
 	{#each colors as color (color.id)}
 		<div class="row-wrapper">
@@ -124,6 +129,23 @@
 		border-radius: 4px;
 		font-size: 0.875rem;
 		font-family: monospace;
+	}
+
+	.reverse-btn {
+		margin-left: auto;
+		padding: 0.2rem 0.6rem;
+		font-size: 0.8rem;
+		background: none;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		cursor: pointer;
+		color: #888;
+	}
+
+	.reverse-btn.active {
+		background: #f3f0f7;
+		border-color: #907aa9;
+		color: #907aa9;
 	}
 
 	.arrow {
