@@ -41,5 +41,8 @@
 		"vitest": "^4.1.0",
 		"vitest-browser-svelte": "^2.0.2",
 		"wrangler": "^4.63.0"
+	},
+	"dependencies": {
+		"colorjs.io": "^0.6.1"
 	}
 }
