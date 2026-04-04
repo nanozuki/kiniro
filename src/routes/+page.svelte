@@ -1,45 +1,43 @@
 <script lang="ts">
-	import { browser } from '$app/environment';
-	import ColorRow from './ColorRow.svelte';
+	import ColorGroup from './ColorGroup.svelte';
+	import { type GroupData, loadGroups, saveGroups } from '$lib/storage';
 
-	const STORAGE_KEY = 'kiniro-palettes';
-
-	type RowData = { id: number; name: string; hex: string };
-
-	function loadRows(): RowData[] {
-		if (!browser) return [];
-		try {
-			const saved = localStorage.getItem(STORAGE_KEY);
-			if (saved) return JSON.parse(saved);
-		} catch {}
-		return [{ id: 1, name: 'primary', hex: '#3b82f6' }];
-	}
-
-	let rows = $state<RowData[]>(loadRows());
-	let nextId = $derived(rows.reduce((max, r) => Math.max(max, r.id), 0));
+	let groups = $state<GroupData[]>(loadGroups());
+	let nextId = $derived(groups.reduce((max, g) => Math.max(max, g.id), 0));
 
 	$effect(() => {
-		localStorage.setItem(STORAGE_KEY, JSON.stringify($state.snapshot(rows)));
+		saveGroups($state.snapshot(groups));
 	});
 
-	function addRow() {
-		rows.push({ id: nextId + 1, name: 'color', hex: '#6366f1' });
+	function addGroup() {
+		groups.push({
+			id: nextId + 1,
+			name: 'palette',
+			lightnessMax: 0.95,
+			lightnessMin: 0.16,
+			colors: [{ id: 1, name: 'color', hex: '#907aa9' }]
+		});
 	}
 
-	function deleteRow(id: number) {
-		rows = rows.filter((r) => r.id !== id);
+	function deleteGroup(id: number) {
+		groups = groups.filter((g) => g.id !== id);
 	}
 </script>
 
 <main>
 	<h1>OKLCH Color Palette Maker</h1>
-	{#each rows as row (row.id)}
-		<div class="row-wrapper">
-			<ColorRow bind:name={row.name} bind:hex={row.hex} />
-			<button class="delete-btn" onclick={() => deleteRow(row.id)}>✕</button>
+	{#each groups as group (group.id)}
+		<div class="group-wrapper">
+			<ColorGroup
+				bind:name={group.name}
+				bind:colors={group.colors}
+				bind:lightnessMax={group.lightnessMax}
+				bind:lightnessMin={group.lightnessMin}
+			/>
+			<button class="delete-btn" onclick={() => deleteGroup(group.id)}>✕</button>
 		</div>
 	{/each}
-	<button class="add-btn" onclick={addRow}>+ Add color</button>
+	<button class="add-btn" onclick={addGroup}>+ Add group</button>
 </main>
 
 <style>
@@ -48,15 +46,15 @@
 		font-family: sans-serif;
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		gap: 1rem;
 	}
 
 	h1 {
 		font-size: 1.5rem;
-		margin-bottom: 1rem;
+		margin-bottom: 0.5rem;
 	}
 
-	.row-wrapper {
+	.group-wrapper {
 		display: flex;
 		align-items: flex-start;
 		gap: 0.5rem;

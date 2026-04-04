@@ -8,27 +8,34 @@
 
   Design:
     The user picks a name and a seed hex color. We extract Chroma (C) and Hue (H)
-    from the seed, then produce 9 swatches by sweeping Lightness across preset
-    values (100 = lightest, 900 = darkest). C and H are held constant; each swatch
-    is gamut-mapped back to sRGB so all output colors are displayable.
+    from the seed, then produce 9 swatches by sweeping Lightness across values
+    supplied by the parent (100 = lightest, 900 = darkest). C and H are held
+    constant; each swatch is gamut-mapped back to sRGB so all output colors are
+    displayable.
 
     C and H are the same for every swatch in a row, so they are shown only once
     (on swatch 100) to avoid redundancy.
 
   Usage:
-    <ColorRow bind:name bind:hex />
-    Both props are bindable so the parent can own and persist the state.
+    <ColorRow bind:name bind:hex {lightness} />
+    name and hex are bindable so the parent can own and persist the state.
+    lightness is a plain prop (9-element array, max → min); defaults to the
+    standard 0.95 → 0.16 scale when used outside a ColorGroup.
 -->
 <script lang="ts">
 	import Color from 'colorjs.io';
 
 	const STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-	const LIGHTNESS = [0.95, 0.87, 0.78, 0.68, 0.57, 0.46, 0.36, 0.26, 0.16];
+	const LIGHTNESS_DEFAULT = [0.95, 0.87, 0.78, 0.68, 0.57, 0.46, 0.36, 0.26, 0.16];
 
-	let { name = $bindable('primary'), hex = $bindable('#3b82f6') } = $props();
+	let {
+		name = $bindable('primary'),
+		hex = $bindable('#907aa9'),
+		lightness = LIGHTNESS_DEFAULT
+	} = $props();
 
 	type Swatch = { step: number; hex: string; lightness: number };
-	type BaseOklch = { c: number; h: number };
+	type BaseOklch = { l: number; c: number; h: number };
 
 	function toHex(color: Color): string {
 		const srgb = color.to('srgb').toGamut();
@@ -39,10 +46,11 @@
 	function parseBase(hex: string): BaseOklch | null {
 		try {
 			const oklch = new Color(hex).to('oklch');
-			const [, chroma, hue] = oklch.coords;
+			const [lightness, chroma, hue] = oklch.coords;
+			const l = lightness == null || isNaN(lightness) ? 0 : lightness;
 			const c = chroma == null || isNaN(chroma) ? 0 : chroma;
 			const h = hue == null || isNaN(hue) ? 0 : hue;
-			return { c, h };
+			return { l, c, h };
 		} catch {
 			return null;
 		}
@@ -53,7 +61,7 @@
 	const palette = $derived.by((): Swatch[] => {
 		if (!base) return [];
 		return STEPS.map((step, i) => {
-			const l = LIGHTNESS[i];
+			const l = lightness[i];
 			return { step, hex: toHex(new Color('oklch', [l, base.c, base.h])), lightness: l };
 		});
 	});
@@ -64,6 +72,9 @@
 		<input type="text" bind:value={name} placeholder="color name" />
 		<input type="color" bind:value={hex} />
 		<input type="text" bind:value={hex} placeholder="#rrggbb" />
+		{#if base}
+			<span class="oklch-label">oklch({base.l.toFixed(2)} {base.c.toFixed(3)} {base.h.toFixed(1)}°)</span>
+		{/if}
 	</div>
 	<div class="swatches">
 		{#each palette as swatch, i (swatch.step)}
@@ -104,6 +115,12 @@
 		border: 1px solid #ccc;
 		border-radius: 4px;
 		font-size: 0.875rem;
+	}
+
+	.oklch-label {
+		font-family: monospace;
+		font-size: 0.875rem;
+		color: #555;
 	}
 
 	.inputs input[type='color'] {
