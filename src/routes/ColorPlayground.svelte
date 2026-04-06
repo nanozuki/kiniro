@@ -4,25 +4,44 @@
 
 	let { groups, prefix }: { groups: GroupData[]; prefix: string } = $props();
 
-	type Slot = 'bg' | 'text' | 'btn-bg' | 'btn-border' | 'btn-text';
+	type ColorRole = 'foreground' | 'background';
+	type ColorChoice = { hex: string; varName?: string };
+	type Rating = {
+		label: string;
+		description: string;
+		aa: number;
+		aaa: number | null;
+	};
+	type SwatchRow = { name: string; swatches: { hex: string; label: string; varName: string }[] };
 
-	const SLOTS: { id: Slot; label: string }[] = [
-		{ id: 'bg', label: 'Background' },
-		{ id: 'text', label: 'Text' },
-		{ id: 'btn-bg', label: 'Button BG' },
-		{ id: 'btn-border', label: 'Button Border' },
-		{ id: 'btn-text', label: 'Button Text' }
+	const RATINGS: Rating[] = [
+		{
+			label: 'Body text',
+			description: 'Normal-size text',
+			aa: 4.5,
+			aaa: 7
+		},
+		{
+			label: 'Large-scale text',
+			description: 'At least 18pt, or 14pt bold',
+			aa: 3,
+			aaa: 4.5
+		},
+		{
+			label: 'UI and graphics',
+			description: 'Active controls, icons, graphs',
+			aa: 3,
+			aaa: null
+		}
 	];
 
-	type SlotValue = { hex: string; varName?: string };
+	const MDN_CONTRAST =
+		'https://developer.mozilla.org/en-US/docs/Web/Accessibility/Guides/Understanding_WCAG/Perceivable/Color_contrast';
 
-	let active = $state<Slot>('bg');
-	let chosen = $state<Record<Slot, SlotValue>>({
-		bg: { hex: '#f5f5f5' },
-		text: { hex: '#1a1a1a' },
-		'btn-bg': { hex: '#5a52d5' },
-		'btn-border': { hex: '#4a42c5' },
-		'btn-text': { hex: '#ffffff' }
+	let active = $state<ColorRole>('foreground');
+	let colors = $state<Record<ColorRole, ColorChoice>>({
+		foreground: { hex: '#1a1a1a' },
+		background: { hex: '#f5f5f5' }
 	});
 
 	function toHex(color: Color): string {
@@ -31,7 +50,6 @@
 		return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
 	}
 
-	// WCAG 2.1 contrast ratio
 	function relativeLuminance(hex: string): number {
 		try {
 			const color = new Color(hex).to('srgb');
@@ -53,69 +71,14 @@
 		return (lighter + 0.05) / (darker + 0.05);
 	}
 
-	type ContrastCheck = {
-		label: string;
-		fg: string;
-		bg: string;
-		ratio: number;
-		kind: 'text' | 'ui';
-		large: boolean;
-		link: string;
-	};
+	function colorLabel(choice: ColorChoice): string {
+		return choice.varName ? `var(--${prefix}${choice.varName})` : choice.hex;
+	}
 
-	const WCAG_CONTRAST = 'https://www.w3.org/WAI/WCAG21/Understanding/contrast-minimum.html';
-	const WCAG_NON_TEXT = 'https://www.w3.org/WAI/WCAG21/Understanding/non-text-contrast.html';
-
-	let textLarge = $state(false);
-
-	const contrasts = $derived<ContrastCheck[]>([
-		{
-			label: 'Text on Background',
-			fg: chosen.text.hex,
-			bg: chosen.bg.hex,
-			ratio: contrastRatio(chosen.text.hex, chosen.bg.hex),
-			kind: 'text',
-			large: textLarge,
-			link: WCAG_CONTRAST
-		},
-		{
-			label: 'Button text on Button BG',
-			fg: chosen['btn-text'].hex,
-			bg: chosen['btn-bg'].hex,
-			ratio: contrastRatio(chosen['btn-text'].hex, chosen['btn-bg'].hex),
-			kind: 'text',
-			large: false,
-			link: WCAG_CONTRAST
-		},
-		{
-			label: 'Button border on Background',
-			fg: chosen['btn-border'].hex,
-			bg: chosen.bg.hex,
-			ratio: contrastRatio(chosen['btn-border'].hex, chosen.bg.hex),
-			kind: 'ui',
-			large: false,
-			link: WCAG_NON_TEXT
-		}
-	]);
-
-	const cssOutput = $derived.by(() => {
-		function val(slot: Slot): string {
-			const v = chosen[slot];
-			return v.varName ? `oklch(var(--${prefix}${v.varName}))` : v.hex;
-		}
-		return [
-			'/* Container */',
-			`background-color: ${val('bg')};`,
-			`color: ${val('text')};`,
-			'',
-			'/* Button */',
-			`background-color: ${val('btn-bg')};`,
-			`border-color: ${val('btn-border')};`,
-			`color: ${val('btn-text')};`
-		].join('\n');
-	});
-
-	type SwatchRow = { name: string; swatches: { hex: string; label: string; varName: string }[] };
+	const ratio = $derived(contrastRatio(colors.foreground.hex, colors.background.hex));
+	const colorPair = $derived(
+		`${colorLabel(colors.foreground)} on ${colorLabel(colors.background)}`
+	);
 
 	const palette = $derived.by((): SwatchRow[] => {
 		const rows: SwatchRow[] = [];
@@ -165,115 +128,121 @@
 		return rows;
 	});
 
+	function chooseRole(role: ColorRole) {
+		active = role;
+	}
+
+	function updateHex(role: ColorRole, hex: string) {
+		colors[role] = { hex };
+	}
+
 	function pick(hex: string, varName: string) {
-		chosen[active] = { hex, varName };
+		colors[active] = { hex, varName };
 	}
 </script>
 
 <div class="playground">
-	<div class="slots">
-		{#each SLOTS as slot (slot.id)}
-			<button
-				class="slot-btn"
-				class:active={active === slot.id}
-				onclick={() => (active = slot.id)}
-			>
-				<span class="dot" style:background-color={chosen[slot.id].hex}></span>
-				{slot.label}
-			</button>
-		{/each}
-		<label class="large-label">
-			<input type="checkbox" bind:checked={textLarge} />
-			Large text
+	<div class="controls">
+		<button
+			class="role-btn"
+			class:active={active === 'background'}
+			onclick={() => chooseRole('background')}
+		>
+			<span class="dot" style:background-color={colors.background.hex}></span>
+			Background
+		</button>
+		<button
+			class="role-btn"
+			class:active={active === 'foreground'}
+			onclick={() => chooseRole('foreground')}
+		>
+			<span class="dot" style:background-color={colors.foreground.hex}></span>
+			Foreground
+		</button>
+	</div>
+
+	<div class="inputs">
+		<label>
+			Background
+			<input
+				type="color"
+				value={colors.background.hex}
+				oninput={(e) => updateHex('background', e.currentTarget.value)}
+			/>
+			<input
+				type="text"
+				value={colorLabel(colors.background)}
+				readonly
+				onfocus={() => chooseRole('background')}
+			/>
+		</label>
+		<label>
+			Foreground
+			<input
+				type="color"
+				value={colors.foreground.hex}
+				oninput={(e) => updateHex('foreground', e.currentTarget.value)}
+			/>
+			<input
+				type="text"
+				value={colorLabel(colors.foreground)}
+				readonly
+				onfocus={() => chooseRole('foreground')}
+			/>
 		</label>
 	</div>
 
 	<div
 		class="preview"
-		style:background-color={chosen.bg.hex}
-		style:color={chosen.text.hex}
-		onclick={() => (active = 'bg')}
-		onkeydown={(e) => e.key === 'Enter' && (active = 'bg')}
-		role="button"
-		tabindex="0"
-		aria-label="Select background color"
+		style:background-color={colors.background.hex}
+		style:color={colors.foreground.hex}
 	>
-		<div
-			class="preview-text"
-			style:font-size={textLarge ? '1.5rem' : '1rem'}
-			onclick={(e) => {
-				e.stopPropagation();
-				active = 'text';
-			}}
-			onkeydown={(e) => {
-				if (e.key === 'Enter') {
-					e.stopPropagation();
-					active = 'text';
-				}
-			}}
-			role="button"
-			tabindex="0"
-			aria-label="Select text color"
-		>
-			The quick brown fox jumps over the lazy dog.
-		</div>
-		<button
-			class="preview-btn"
-			style:background-color={chosen['btn-bg'].hex}
-			style:border-color={chosen['btn-border'].hex}
-			style:color={chosen['btn-text'].hex}
-			onclick={(e) => {
-				e.stopPropagation();
-				active = 'btn-bg';
-			}}
-			aria-label="Select button color"
-		>
-			<span
-				onclick={(e) => {
-					e.stopPropagation();
-					active = 'btn-text';
-				}}
-				onkeydown={(e) => {
-					if (e.key === 'Enter') {
-						e.stopPropagation();
-						active = 'btn-text';
-					}
-				}}
-				role="button"
-				tabindex="0"
-				aria-label="Select button text color"
-			>
-				Click me
-			</span>
-		</button>
+		<span class="preview-text">Sample text</span>
+		<div class="preview-bar" style:background-color={colors.foreground.hex}></div>
+		<div class="preview-block" style:background-color={colors.foreground.hex}></div>
 	</div>
 
-	<div class="info-row">
-		<pre class="css-output">{cssOutput}</pre>
+	<div class="result">
+		<div>
+			<span class="result-label">Contrast</span>
+			<strong>{ratio.toFixed(2)}:1</strong>
+		</div>
+		<span class="pair-label">{colorPair}</span>
+	</div>
 
-		<div class="contrast-checks">
-			{#each contrasts as c (c.label)}
-				{@const aaThreshold = c.kind === 'ui' ? 3 : c.large ? 3 : 4.5}
-				{@const aaaThreshold = c.large ? 4.5 : 7}
-				{@const passAA = c.ratio >= aaThreshold}
-				{@const passAAA = c.ratio >= aaaThreshold}
-				<div class="contrast-row">
-					<span class="contrast-swatches">
-						<span class="cswatch" style:background-color={c.fg}></span>
-						<span class="cswatch" style:background-color={c.bg}></span>
-					</span>
-					<span class="contrast-label">
-						{c.label}<a class="std-link" href={c.link} target="_blank" rel="noopener noreferrer">↗</a>
-					</span>
-						<span class="contrast-ratio">{c.ratio.toFixed(2)}:1</span>
-					<span class="badge" class:pass={passAA} class:fail={!passAA}>AA</span>
-					{#if c.kind === 'text'}
-						<span class="badge" class:pass={passAAA} class:fail={!passAAA}>AAA</span>
-					{/if}
+	<div class="ratings" aria-label="Color contrast ratings">
+		<div class="rating-header">
+			<span>Content type</span>
+			<span>Minimum AA</span>
+			<span>Enhanced AAA</span>
+		</div>
+		{#each RATINGS as rating (rating.label)}
+			{@const passAA = ratio >= rating.aa}
+			{@const passAAA = rating.aaa == null ? null : ratio >= rating.aaa}
+			<div class="rating-row">
+				<div>
+					<strong>{rating.label}</strong>
+					<span>{rating.description}</span>
 				</div>
-			{/each}
-		</div>
+				<span class="badge" class:pass={passAA} class:fail={!passAA}>
+					{passAA ? 'Pass' : 'Fail'}
+					{rating.aa}:1
+				</span>
+				{#if passAAA === null}
+					<span class="badge muted">Not defined</span>
+				{:else}
+					<span class="badge" class:pass={passAAA} class:fail={!passAAA}>
+						{passAAA ? 'Pass' : 'Fail'}
+						{rating.aaa}:1
+					</span>
+				{/if}
+			</div>
+		{/each}
 	</div>
+
+	<a class="source-link" href={MDN_CONTRAST} target="_blank" rel="noopener noreferrer">
+		Contrast thresholds from MDN color contrast guidance
+	</a>
 
 	{#if palette.length > 0}
 		<div class="palette">
@@ -282,15 +251,13 @@
 					<span class="row-name">{row.name}</span>
 					<div class="swatches">
 						{#each row.swatches as s (s.label)}
-							<div
+							<button
 								class="swatch"
 								style:background-color={s.hex}
-								title={s.label}
+								title={`Set ${active} to ${s.label}`}
+								aria-label={`Set ${active} to ${s.label}`}
 								onclick={() => pick(s.hex, s.varName)}
-								onkeydown={(e) => e.key === 'Enter' && pick(s.hex, s.varName)}
-								role="button"
-								tabindex="0"
-							></div>
+							></button>
 						{/each}
 					</div>
 				</div>
@@ -311,13 +278,14 @@
 		border-radius: 8px;
 	}
 
-	.slots {
+	.controls,
+	.inputs {
 		display: flex;
 		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
 
-	.slot-btn {
+	.role-btn {
 		display: flex;
 		align-items: center;
 		gap: 0.4rem;
@@ -330,7 +298,7 @@
 		color: #555;
 	}
 
-	.slot-btn.active {
+	.role-btn.active {
 		border-color: #907aa9;
 		color: #907aa9;
 		background: #f3f0f7;
@@ -344,130 +312,132 @@
 		flex-shrink: 0;
 	}
 
+	.inputs label {
+		display: flex;
+		align-items: center;
+		gap: 0.5rem;
+		font-size: 0.875rem;
+		color: #555;
+	}
+
+	.inputs input[type='color'] {
+		width: 2.5rem;
+		height: 2rem;
+		padding: 0;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		cursor: pointer;
+	}
+
+	.inputs input[type='text'] {
+		width: 13rem;
+		padding: 0.25rem 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-family: monospace;
+		font-size: 0.8rem;
+		color: #333;
+		background: #f9fafb;
+	}
+
 	.preview {
-		padding: 1.5rem;
+		width: min(18rem, 100%);
+		min-height: 8rem;
 		border-radius: 8px;
+		border: 1px solid rgba(0, 0, 0, 0.12);
 		display: flex;
 		flex-direction: column;
+		align-items: flex-start;
 		gap: 1rem;
-		cursor: pointer;
-		outline: none;
+		padding: 0.75rem;
 	}
 
 	.preview-text {
-		margin: 0;
 		font-size: 1rem;
 		line-height: 1.5;
+	}
+
+	.preview-bar {
+		width: 100%;
+		height: 2px;
+	}
+
+	.preview-block {
+		width: 100%;
+		height: 4rem;
 		border-radius: 4px;
-		padding: 0.25rem;
-		cursor: pointer;
-		outline: none;
 	}
 
-	.preview-btn {
-		align-self: flex-start;
-		padding: 0.5rem 1.25rem;
-		border: 2px solid;
-		border-radius: 6px;
-		cursor: pointer;
-		font-size: 0.9rem;
-		font-weight: 500;
-	}
-
-	.info-row {
+	.result {
 		display: flex;
+		align-items: baseline;
 		gap: 1rem;
 		flex-wrap: wrap;
-		align-items: flex-start;
 	}
 
-	.css-output {
-		flex: 1;
-		min-width: 16rem;
-		margin: 0;
-		padding: 0.75rem 1rem;
-		background: #f8f9fa;
-		border: 1px solid #e5e7eb;
-		border-radius: 6px;
+	.result-label {
+		margin-right: 0.5rem;
+		font-size: 0.8rem;
+		color: #666;
+	}
+
+	.result strong {
+		font-family: monospace;
+		font-size: 1.25rem;
+	}
+
+	.pair-label {
 		font-family: monospace;
 		font-size: 0.8rem;
-		line-height: 1.6;
-		color: #333;
-		white-space: pre;
+		color: #666;
 	}
 
-	.contrast-checks {
-		flex: 1;
-		min-width: 20rem;
+	.ratings {
 		display: flex;
 		flex-direction: column;
-		gap: 0.5rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 6px;
+		overflow: hidden;
 	}
 
-	.contrast-row {
-		display: flex;
+	.rating-header,
+	.rating-row {
+		display: grid;
+		grid-template-columns: minmax(12rem, 1fr) minmax(8rem, auto) minmax(8rem, auto);
+		gap: 0.75rem;
 		align-items: center;
-		gap: 0.6rem;
-		font-size: 0.8rem;
+		padding: 0.65rem 0.75rem;
 	}
 
-	.contrast-swatches {
-		display: flex;
-		gap: 2px;
-		flex-shrink: 0;
-	}
-
-	.cswatch {
-		width: 1rem;
-		height: 1rem;
-		border-radius: 3px;
-		border: 1px solid rgba(0, 0, 0, 0.12);
-		display: inline-block;
-	}
-
-	.contrast-label {
-		flex: 1;
-		color: #555;
-	}
-
-	.std-link {
-		margin-left: 0.25rem;
-		font-size: 0.65rem;
-		color: #aaa;
-		text-decoration: none;
-		vertical-align: super;
-	}
-
-	.std-link:hover {
-		color: #907aa9;
-	}
-
-	.large-label {
-		display: flex;
-		align-items: center;
-		gap: 0.25rem;
+	.rating-header {
+		background: #f8f9fa;
+		color: #666;
 		font-size: 0.75rem;
-		color: #555;
-		cursor: pointer;
-		flex-shrink: 0;
-		white-space: nowrap;
+		font-weight: 700;
 	}
 
-	.contrast-ratio {
-		font-family: monospace;
+	.rating-row {
+		border-top: 1px solid #e5e7eb;
 		font-size: 0.8rem;
-		color: #333;
-		min-width: 4rem;
-		text-align: right;
+	}
+
+	.rating-row div {
+		display: flex;
+		flex-direction: column;
+		gap: 0.2rem;
+	}
+
+	.rating-row span {
+		color: #666;
 	}
 
 	.badge {
-		font-size: 0.7rem;
+		font-size: 0.75rem;
 		font-weight: 700;
-		padding: 0.1rem 0.4rem;
+		padding: 0.2rem 0.45rem;
 		border-radius: 3px;
-		min-width: 2.5rem;
 		text-align: center;
+		white-space: nowrap;
 	}
 
 	.badge.pass {
@@ -478,6 +448,21 @@
 	.badge.fail {
 		background: #fee2e2;
 		color: #991b1b;
+	}
+
+	.badge.muted {
+		background: #f3f4f6;
+		color: #6b7280;
+	}
+
+	.source-link {
+		align-self: flex-start;
+		font-size: 0.8rem;
+		color: #666;
+	}
+
+	.source-link:hover {
+		color: #111;
 	}
 
 	.palette {
@@ -509,6 +494,7 @@
 	.swatch {
 		width: 1.75rem;
 		height: 1.75rem;
+		padding: 0;
 		border-radius: 4px;
 		border: 1px solid rgba(0, 0, 0, 0.1);
 		cursor: pointer;
@@ -520,10 +506,24 @@
 	}
 
 	.empty-msg {
-		font-size: 0.875rem;
-		color: #888;
-		text-align: center;
-		padding: 1rem;
 		margin: 0;
+		color: #888;
+		font-size: 0.875rem;
+	}
+
+	@media (max-width: 720px) {
+		.rating-header,
+		.rating-row {
+			grid-template-columns: 1fr;
+		}
+
+		.inputs label {
+			width: 100%;
+		}
+
+		.inputs input[type='text'] {
+			flex: 1;
+			min-width: 0;
+		}
 	}
 </style>
