@@ -2,9 +2,11 @@
 	import { generateCssVariables } from '$lib/cssVariables';
 	import type { GroupData } from '$lib/storage';
 
-	let { groups, open = $bindable(false) }: { groups: GroupData[]; open: boolean } = $props();
-
-	let prefix = $state('color-');
+	let {
+		groups,
+		open = $bindable(false),
+		prefix = $bindable('color-')
+	}: { groups: GroupData[]; open: boolean; prefix: string } = $props();
 	let dialog: HTMLDialogElement;
 	let copied = $state(false);
 

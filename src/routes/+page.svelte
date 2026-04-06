@@ -1,9 +1,11 @@
 <script lang="ts">
 	import ColorGroup from './ColorGroup.svelte';
+	import ColorPlayground from './ColorPlayground.svelte';
 	import CssVariablesDialog from './CssVariablesDialog.svelte';
 	import { type GroupData, loadGroups, saveGroups, parseGroupsJson } from '$lib/storage';
 
 	let cssDialogOpen = $state(false);
+	let cssVarPrefix = $state('color-');
 
 	let groups = $state<GroupData[]>(loadGroups());
 	let nextId = $derived(groups.reduce((max, g) => Math.max(max, g.id), 0));
@@ -88,9 +90,10 @@
 		</div>
 	{/each}
 	<button class="add-btn" onclick={addGroup}>+ Add group</button>
+	<ColorPlayground {groups} prefix={cssVarPrefix} />
 </main>
 
-<CssVariablesDialog {groups} bind:open={cssDialogOpen} />
+<CssVariablesDialog {groups} bind:open={cssDialogOpen} bind:prefix={cssVarPrefix} />
 
 <style>
 	main {
