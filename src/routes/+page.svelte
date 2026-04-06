@@ -1,6 +1,9 @@
 <script lang="ts">
 	import ColorGroup from './ColorGroup.svelte';
-	import { type GroupData, loadGroups, saveGroups } from '$lib/storage';
+	import CssVariablesDialog from './CssVariablesDialog.svelte';
+	import { type GroupData, loadGroups, saveGroups, parseGroupsJson } from '$lib/storage';
+
+	let cssDialogOpen = $state(false);
 
 	let groups = $state<GroupData[]>(loadGroups());
 	let nextId = $derived(groups.reduce((max, g) => Math.max(max, g.id), 0));
@@ -23,10 +26,49 @@
 	function deleteGroup(id: number) {
 		groups = groups.filter((g) => g.id !== id);
 	}
+
+	function exportJson() {
+		const json = JSON.stringify($state.snapshot(groups), null, 2);
+		const blob = new Blob([json], { type: 'application/json' });
+		const url = URL.createObjectURL(blob);
+		const a = document.createElement('a');
+		a.href = url;
+		a.download = 'kiniro-palettes.json';
+		a.click();
+		URL.revokeObjectURL(url);
+	}
+
+	function importJson() {
+		const input = document.createElement('input');
+		input.type = 'file';
+		input.accept = 'application/json,.json';
+		input.onchange = () => {
+			const file = input.files?.[0];
+			if (!file) return;
+			const reader = new FileReader();
+			reader.onload = () => {
+				const parsed = parseGroupsJson(reader.result as string);
+				if (parsed) {
+					groups = parsed;
+				} else {
+					alert('Invalid palette file.');
+				}
+			};
+			reader.readAsText(file);
+		};
+		input.click();
+	}
 </script>
 
 <main>
-	<h1>OKLCH Color Palette Maker</h1>
+	<div class="header">
+		<h1>OKLCH Color Palette Maker</h1>
+		<div class="header-actions">
+			<button class="tool-btn" onclick={() => (cssDialogOpen = true)}>CSS Variables</button>
+			<button class="tool-btn" onclick={exportJson}>Export JSON</button>
+			<button class="tool-btn" onclick={importJson}>Import JSON</button>
+		</div>
+	</div>
 	{#each groups as group (group.id)}
 		<div class="group-wrapper">
 			<ColorGroup
@@ -42,6 +84,8 @@
 	<button class="add-btn" onclick={addGroup}>+ Add group</button>
 </main>
 
+<CssVariablesDialog {groups} bind:open={cssDialogOpen} />
+
 <style>
 	main {
 		padding: 2rem;
@@ -51,9 +95,20 @@
 		gap: 1rem;
 	}
 
+	.header {
+		display: flex;
+		align-items: center;
+		gap: 1rem;
+	}
+
 	h1 {
 		font-size: 1.5rem;
-		margin-bottom: 0.5rem;
+		flex: 1;
+	}
+
+	.header-actions {
+		display: flex;
+		gap: 0.5rem;
 	}
 
 	.group-wrapper {
@@ -91,6 +146,21 @@
 	}
 
 	.add-btn:hover {
+		border-color: #555;
+		color: #111;
+	}
+
+	.tool-btn {
+		padding: 0.4rem 0.8rem;
+		background: none;
+		border: 1px solid #aaa;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.875rem;
+		color: #555;
+	}
+
+	.tool-btn:hover {
 		border-color: #555;
 		color: #111;
 	}

@@ -42,3 +42,12 @@ export function loadGroups(): GroupData[] {
 export function saveGroups(groups: GroupData[]): void {
 	localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
+
+export function parseGroupsJson(json: string): GroupData[] | null {
+	try {
+		const result = StorageSchema.safeParse(JSON.parse(json));
+		return result.success ? result.data : null;
+	} catch {
+		return null;
+	}
+}
