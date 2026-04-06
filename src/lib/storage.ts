@@ -15,6 +15,9 @@ const GroupDataSchema = z.object({
 	lightnessMax: z.number(),
 	lightnessMin: z.number(),
 	reversed: z.boolean().default(false),
+	stepsCount: z.number().min(3).max(9).default(9),
+	halfStepBefore: z.boolean().default(false),
+	halfStepAfter: z.boolean().default(false),
 	colors: z.array(ColorDataSchema)
 });
 
@@ -24,7 +27,7 @@ export type ColorData = z.infer<typeof ColorDataSchema>;
 export type GroupData = z.infer<typeof GroupDataSchema>;
 
 const DEFAULT_GROUPS: GroupData[] = [
-	{ id: 1, name: 'palette', lightnessMax: 0.95, lightnessMin: 0.16, reversed: false, colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
+	{ id: 1, name: 'palette', lightnessMax: 0.95, lightnessMin: 0.16, reversed: false, stepsCount: 9, halfStepBefore: false, halfStepAfter: false, colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
 ];
 
 export function loadGroups(): GroupData[] {

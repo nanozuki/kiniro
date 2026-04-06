@@ -25,13 +25,14 @@
 <script lang="ts">
 	import Color from 'colorjs.io';
 
-	const STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+	const STEPS_DEFAULT = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 	const LIGHTNESS_DEFAULT = [0.95, 0.87, 0.78, 0.68, 0.57, 0.46, 0.36, 0.26, 0.16];
 
 	let {
 		name = $bindable('primary'),
 		hex = $bindable('#907aa9'),
-		lightness = LIGHTNESS_DEFAULT
+		lightness = LIGHTNESS_DEFAULT,
+		steps = STEPS_DEFAULT
 	} = $props();
 
 	type Swatch = { step: number; hex: string; lightness: number };
@@ -60,7 +61,7 @@
 
 	const palette = $derived.by((): Swatch[] => {
 		if (!base) return [];
-		return STEPS.map((step, i) => {
+		return steps.map((step, i) => {
 			const l = lightness[i];
 			return { step, hex: toHex(new Color('oklch', [l, base.c, base.h])), lightness: l };
 		});

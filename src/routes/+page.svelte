@@ -19,6 +19,9 @@
 			lightnessMax: 0.95,
 			lightnessMin: 0.16,
 			reversed: false,
+			stepsCount: 9,
+			halfStepBefore: false,
+			halfStepAfter: false,
 			colors: [{ id: 1, name: 'color', hex: '#907aa9' }]
 		});
 	}
@@ -77,6 +80,9 @@
 				bind:lightnessMax={group.lightnessMax}
 				bind:lightnessMin={group.lightnessMin}
 				bind:reversed={group.reversed}
+				bind:stepsCount={group.stepsCount}
+				bind:halfStepBefore={group.halfStepBefore}
+				bind:halfStepAfter={group.halfStepAfter}
 			/>
 			<button class="delete-btn" onclick={() => deleteGroup(group.id)}>✕</button>
 		</div>

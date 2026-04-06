@@ -1,8 +1,33 @@
 import Color from 'colorjs.io';
 import type { GroupData } from './storage';
 
-const STEPS = [100, 200, 300, 400, 500, 600, 700, 800, 900];
-const STEPS_COUNT = 9;
+function computeSteps(group: GroupData): number[] {
+	const { stepsCount = 9, halfStepBefore = false, halfStepAfter = false } = group;
+	const arr: number[] = [];
+	if (halfStepBefore) arr.push(50);
+	for (let k = 1; k <= stepsCount; k++) arr.push(k * 100);
+	if (halfStepAfter) arr.push(stepsCount * 100 + 50);
+	return arr;
+}
+
+function computeLightness(group: GroupData, steps: number[]): number[] {
+	const { lightnessMax, lightnessMin, reversed = false, stepsCount = 9, halfStepBefore = false, halfStepAfter = false } = group;
+	const totalSteps = stepsCount - 1 + 0.5 * (halfStepBefore ? 1 : 0) + 0.5 * (halfStepAfter ? 1 : 0);
+	const stepSize = (lightnessMax - lightnessMin) / totalSteps;
+	const arr = steps.map((step) => {
+		let pos: number;
+		if (step === 50) {
+			pos = 0;
+		} else if (step === stepsCount * 100 + 50) {
+			pos = totalSteps;
+		} else {
+			const k = step / 100;
+			pos = halfStepBefore ? k - 0.5 : k - 1;
+		}
+		return lightnessMax - pos * stepSize;
+	});
+	return reversed ? [...arr].reverse() : arr;
+}
 
 export function generateCssVariables(groups: GroupData[], prefix: string): string {
 	const lines: string[] = [
@@ -13,12 +38,8 @@ export function generateCssVariables(groups: GroupData[], prefix: string): strin
 	for (const group of groups) {
 		lines.push(`  /* ${group.name} */`);
 
-		const lightness = Array.from(
-			{ length: STEPS_COUNT },
-			(_, i) =>
-				group.lightnessMax - (group.lightnessMax - group.lightnessMin) * (i / (STEPS_COUNT - 1))
-		);
-		if (group.reversed) lightness.reverse();
+		const steps = computeSteps(group);
+		const lightness = computeLightness(group, steps);
 
 		for (const color of group.colors) {
 			try {
@@ -27,10 +48,10 @@ export function generateCssVariables(groups: GroupData[], prefix: string): strin
 				const C = c == null || isNaN(c) ? 0 : c;
 				const H = h == null || isNaN(h) ? 0 : h;
 
-				for (let i = 0; i < STEPS.length; i++) {
+				for (let i = 0; i < steps.length; i++) {
 					const L = lightness[i];
 					lines.push(
-						`  --${prefix}${color.name}-${STEPS[i]}: ${L.toFixed(3)} ${C.toFixed(3)} ${H.toFixed(1)};`
+						`  --${prefix}${color.name}-${steps[i]}: ${L.toFixed(3)} ${C.toFixed(3)} ${H.toFixed(1)};`
 					);
 				}
 			} catch {
