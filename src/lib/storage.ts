@@ -14,6 +14,7 @@ const GroupDataSchema = z.object({
 	name: z.string(),
 	lightnessMax: z.number(),
 	lightnessMin: z.number(),
+	controlledLightness: z.record(z.coerce.number(), z.number()).default({}),
 	reversed: z.boolean().default(false),
 	stepsCount: z.number().min(3).max(9).default(9),
 	halfStepBefore: z.boolean().default(false),
@@ -27,7 +28,18 @@ export type ColorData = z.infer<typeof ColorDataSchema>;
 export type GroupData = z.infer<typeof GroupDataSchema>;
 
 const DEFAULT_GROUPS: GroupData[] = [
-	{ id: 1, name: 'palette', lightnessMax: 0.95, lightnessMin: 0.16, reversed: false, stepsCount: 9, halfStepBefore: false, halfStepAfter: false, colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
+	{
+		id: 1,
+		name: 'palette',
+		lightnessMax: 0.95,
+		lightnessMin: 0.16,
+		controlledLightness: {},
+		reversed: false,
+		stepsCount: 9,
+		halfStepBefore: false,
+		halfStepAfter: false,
+		colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
+	}
 ];
 
 export function loadGroups(): GroupData[] {
@@ -38,7 +50,9 @@ export function loadGroups(): GroupData[] {
 			const result = StorageSchema.safeParse(JSON.parse(saved));
 			if (result.success) return result.data;
 		}
-	} catch {}
+	} catch {
+		// Fall back to defaults when saved JSON is unavailable or invalid.
+	}
 	return DEFAULT_GROUPS;
 }
 

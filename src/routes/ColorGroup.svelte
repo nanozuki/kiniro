@@ -24,46 +24,55 @@
 <script lang="ts">
 	import ColorRow from './ColorRow.svelte';
 	import { type ColorData } from '$lib/storage';
+	import { cleanControlledLightness, computeLightness, computeSteps } from '$lib/lightness';
 
 	let {
 		name = $bindable('palette'),
 		colors = $bindable<ColorData[]>([{ id: 1, name: 'primary', hex: '#907aa9' }]),
 		lightnessMax = $bindable(0.95),
 		lightnessMin = $bindable(0.16),
+		controlledLightness = $bindable<Record<number, number>>({}),
 		reversed = $bindable(false),
 		stepsCount = $bindable(9),
 		halfStepBefore = $bindable(false),
 		halfStepAfter = $bindable(false)
 	} = $props();
 
-	const steps = $derived.by((): number[] => {
-		const arr: number[] = [];
-		if (halfStepBefore) arr.push(50);
-		for (let k = 1; k <= stepsCount; k++) arr.push(k * 100);
-		if (halfStepAfter) arr.push(stepsCount * 100 + 50);
-		return arr;
+	const lightnessSettings = $derived({
+		lightnessMax,
+		lightnessMin,
+		controlledLightness,
+		reversed,
+		stepsCount,
+		halfStepBefore,
+		halfStepAfter
 	});
 
-	const lightness = $derived.by((): number[] => {
-		const totalSteps =
-			stepsCount - 1 + 0.5 * (halfStepBefore ? 1 : 0) + 0.5 * (halfStepAfter ? 1 : 0);
-		const stepSize = (lightnessMax - lightnessMin) / totalSteps;
-		const arr = steps.map((step) => {
-			let pos: number;
-			if (step === 50) {
-				pos = 0;
-			} else if (step === stepsCount * 100 + 50) {
-				pos = totalSteps;
-			} else {
-				const k = step / 100;
-				pos = halfStepBefore ? k - 0.5 : k - 1;
-			}
-			return lightnessMax - pos * stepSize;
-		});
-		return reversed ? [...arr].reverse() : arr;
+	const steps = $derived(computeSteps(lightnessSettings));
+	const normalLightness = $derived(
+		computeLightness({ ...lightnessSettings, reversed: false }, steps)
+	);
+	const lightness = $derived(computeLightness(lightnessSettings, steps));
+
+	$effect(() => {
+		const cleaned = cleanControlledLightness(controlledLightness, steps);
+		if (JSON.stringify(cleaned) !== JSON.stringify(controlledLightness)) {
+			controlledLightness = cleaned;
+		}
 	});
 
 	const nextId = $derived(colors.reduce((max, c) => Math.max(max, c.id), 0));
+
+	function updateControlledLightness(step: number, value: number) {
+		if (!Number.isFinite(value)) return;
+		controlledLightness = { ...controlledLightness, [step]: value };
+	}
+
+	function resetControlledLightness(step: number) {
+		const rest = { ...controlledLightness };
+		delete rest[step];
+		controlledLightness = rest;
+	}
 
 	function addColor() {
 		colors.push({ id: nextId + 1, name: 'color', hex: '#907aa9' });
@@ -102,9 +111,45 @@
 			<input type="checkbox" bind:checked={halfStepAfter} />
 			Add <code>{stepsCount * 100 + 50}</code> step
 		</label>
-		<button class="reverse-btn" class:active={reversed} onclick={() => (reversed = !reversed)} title="Reverse lightness direction (for dark mode)">
+		<button
+			class="reverse-btn"
+			class:active={reversed}
+			onclick={() => (reversed = !reversed)}
+			title="Reverse lightness direction (for dark mode)"
+		>
 			reverse
 		</button>
+	</div>
+	<div class="lightness-controls" aria-label="Lightness steps">
+		{#each steps as step, i (step)}
+			{@const editable = i > 0 && i < steps.length - 1}
+			{@const controlled = controlledLightness[step] != null}
+			<label class:controlled class:fixed={!editable}>
+				<span class="step-name">{step}</span>
+				<input
+					type="number"
+					value={normalLightness[i]?.toFixed(3)}
+					min="0"
+					max="1"
+					step="0.01"
+					disabled={!editable}
+					oninput={(e) => updateControlledLightness(step, e.currentTarget.valueAsNumber)}
+				/>
+				{#if controlled}
+					<button
+						type="button"
+						class="reset-step-btn"
+						onclick={() => resetControlledLightness(step)}
+					>
+						reset
+					</button>
+				{:else if editable}
+					<span class="auto-label">auto</span>
+				{:else}
+					<span class="auto-label">fixed</span>
+				{/if}
+			</label>
+		{/each}
 	</div>
 	{#each colors as color (color.id)}
 		<div class="row-wrapper">
@@ -210,6 +255,75 @@
 	.arrow {
 		color: #aaa;
 		font-size: 0.875rem;
+	}
+
+	.lightness-controls {
+		display: flex;
+		flex-wrap: wrap;
+		gap: 0.4rem;
+		padding-bottom: 0.5rem;
+		border-bottom: 1px solid #e5e7eb;
+		margin-bottom: 0.25rem;
+	}
+
+	.lightness-controls label {
+		display: flex;
+		align-items: center;
+		gap: 0.3rem;
+		padding: 0.25rem 0.35rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 4px;
+		font-size: 0.75rem;
+		color: #555;
+	}
+
+	.lightness-controls label.controlled {
+		border-color: #907aa9;
+		background: #f3f0f7;
+		color: #4f3d61;
+	}
+
+	.lightness-controls label.fixed {
+		background: #f9fafb;
+	}
+
+	.step-name {
+		font-family: monospace;
+		font-weight: 700;
+		min-width: 2rem;
+	}
+
+	.lightness-controls input {
+		width: 4.5rem;
+		padding: 0.2rem 0.35rem;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-family: monospace;
+		font-size: 0.75rem;
+	}
+
+	.lightness-controls input:disabled {
+		color: #888;
+		background: #f3f4f6;
+	}
+
+	.auto-label {
+		min-width: 2rem;
+		color: #888;
+	}
+
+	.reset-step-btn {
+		padding: 0.15rem 0.35rem;
+		background: none;
+		border: 1px solid #907aa9;
+		border-radius: 4px;
+		color: #907aa9;
+		cursor: pointer;
+		font-size: 0.7rem;
+	}
+
+	.reset-step-btn:hover {
+		background: #fff;
 	}
 
 	.row-wrapper {

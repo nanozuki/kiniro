@@ -20,6 +20,7 @@
 			name: 'palette',
 			lightnessMax: 0.95,
 			lightnessMin: 0.16,
+			controlledLightness: {},
 			reversed: false,
 			stepsCount: 9,
 			halfStepBefore: false,
@@ -81,6 +82,7 @@
 				bind:colors={group.colors}
 				bind:lightnessMax={group.lightnessMax}
 				bind:lightnessMin={group.lightnessMin}
+				bind:controlledLightness={group.controlledLightness}
 				bind:reversed={group.reversed}
 				bind:stepsCount={group.stepsCount}
 				bind:halfStepBefore={group.halfStepBefore}

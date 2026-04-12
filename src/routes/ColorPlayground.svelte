@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Color from 'colorjs.io';
+	import { computeLightness, computeSteps } from '$lib/lightness';
 	import type { GroupData } from '$lib/storage';
 
 	let { groups, prefix }: { groups: GroupData[]; prefix: string } = $props();
@@ -83,28 +84,8 @@
 	const palette = $derived.by((): SwatchRow[] => {
 		const rows: SwatchRow[] = [];
 		for (const group of groups) {
-			const steps: number[] = [];
-			if (group.halfStepBefore) steps.push(50);
-			for (let k = 1; k <= group.stepsCount; k++) steps.push(k * 100);
-			if (group.halfStepAfter) steps.push(group.stepsCount * 100 + 50);
-
-			const totalSteps =
-				group.stepsCount -
-				1 +
-				0.5 * (group.halfStepBefore ? 1 : 0) +
-				0.5 * (group.halfStepAfter ? 1 : 0);
-			const stepSize = (group.lightnessMax - group.lightnessMin) / totalSteps;
-			const lArr = steps.map((step) => {
-				let pos: number;
-				if (step === 50) pos = 0;
-				else if (step === group.stepsCount * 100 + 50) pos = totalSteps;
-				else {
-					const k = step / 100;
-					pos = group.halfStepBefore ? k - 0.5 : k - 1;
-				}
-				return group.lightnessMax - pos * stepSize;
-			});
-			if (group.reversed) lArr.reverse();
+			const steps = computeSteps(group);
+			const lArr = computeLightness(group, steps);
 
 			for (const color of group.colors) {
 				try {
