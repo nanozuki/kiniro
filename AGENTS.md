@@ -8,11 +8,12 @@ lightness generates the visible scale steps.
 
 Prefer implementations that keep this model easy to reason about:
 
-- Treat lightness step generation as shared domain logic, not as view-only state.
-- Reuse helpers from `src/lib` when exporting CSS variables, rendering palettes,
-  or testing generated values.
-- Keep UI controls aligned with OKLCH concepts: lightness, chroma, hue, step
-  count, half steps, and reversed scales.
+- Treat lightness step generation as shared domain logic, not as view-only
+  state.
+  - Reuse helpers from `src/lib` when exporting CSS variables, rendering
+    palettes, or testing generated values.
+  - Keep UI controls aligned with OKLCH concepts: lightness, chroma, hue, step
+    count, half steps, and reversed scales.
 
 ## SvelteKit Conventions
 
@@ -20,21 +21,25 @@ Prefer implementations that keep this model easy to reason about:
 - Put route-level UI in `src/routes` and reusable logic in `src/lib`.
 - Keep browser persistence and schema handling in `src/lib/storage.ts`.
 - Keep CSS variable export behavior in `src/lib/cssVariables.ts`.
-- Avoid duplicating palette math inside file-level components when a shared helper
-  can express the same behavior.
-
-## Components
-
-For every component change:
-
-- Add or update Vitest coverage through the Vite/Vitest setup when behavior can be
-  tested meaningfully.
-- Prefer valuable tests that check user-visible behavior, domain rules, and edge
-  cases over tests that only mirror implementation details.
-- Write comments only when they record motivation, usage, or non-obvious
-  constraints. Do not repeat what the code already says.
+- Avoid duplicating palette math inside file-level components when a shared
+  helper can express the same behavior.
 - Keep component state minimal and derive values from explicit inputs where
   practical.
+
+## Comments
+
+Add comment for each exported function, and Svelte component. Keep comments
+brief, descriptive, and natural. Focus on motivation, usage, and non-obvious
+constraints. Avoid unnecessary styles and labels and do not include obvious
+information or repeat code step-by-step.
+
+Using line comments rather than block comments.
+
+## Testing
+
+Add valuable tests for each exported function and Svelte component (except
+`+page.svelte`), focusing on user-visible behavior, domain rules, and edge
+cases. Don't add meaningless tests that only mirror implementation details.
 
 ## OKLCH Lightness Rules
 
@@ -42,16 +47,13 @@ For every component change:
 - Step generation should remain deterministic for exports, previews, and tests.
 - Intermediate lightness controls should be documented and tested when their
   behavior affects generated colors.
-- Reversed palettes should preserve the documented model in `PLAN.md`: compute the
-  normal lightness scale first, then reverse the final values.
+- Reversed palettes should preserve the documented model in `PLAN.md`: compute
+  the normal lightness scale first, then reverse the final values.
 
 ## Verification
 
 After each file change, run:
 
-```sh
-pnpm run check
-pnpm run test
-```
+`pnpm run check` and `pnpm run test`
 
-If either command cannot run, document the blocker and what remains unverified.
+And fix all issues.
