@@ -4,6 +4,7 @@
 	import CssVariablesDialog from './CssVariablesDialog.svelte';
 	import { type GroupData, loadGroups, saveGroups, parseGroupsJson } from '$lib/storage';
 
+	// The page owns persisted palette groups and passes the shared OKLCH model to editing tools.
 	let cssDialogOpen = $state(false);
 	let cssVarPrefix = $state('color-');
 

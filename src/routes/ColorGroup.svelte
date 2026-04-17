@@ -1,13 +1,9 @@
-<!--
-  A group applies one OKLCH lightness scale to multiple seed colors. Endpoints are
-  fixed, optional intermediate anchors tune local steps, and reversal happens
-  after normal interpolation so persisted anchors stay tied to step labels.
--->
 <script lang="ts">
 	import ColorRow from './ColorRow.svelte';
 	import { type ColorData } from '$lib/storage';
 	import { cleanControlledLightness, computeLightness, computeSteps } from '$lib/lightness';
 
+	// ColorGroup applies one shared OKLCH lightness scale to multiple seed colors.
 	let {
 		name = $bindable('palette'),
 		colors = $bindable<ColorData[]>([{ id: 1, name: 'primary', hex: '#907aa9' }]),

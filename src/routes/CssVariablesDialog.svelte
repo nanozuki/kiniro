@@ -2,6 +2,7 @@
 	import { generateCssVariables } from '$lib/cssVariables';
 	import type { GroupData } from '$lib/storage';
 
+	// CssVariablesDialog previews and copies the same CSS variable export users see on screen.
 	let {
 		groups,
 		open = $bindable(false),

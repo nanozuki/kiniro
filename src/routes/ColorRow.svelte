@@ -1,12 +1,8 @@
-<!--
-  A row keeps the seed color's OKLCH chroma and hue, then sweeps parent-provided
-  lightness values across the step labels. Display colors are gamut-mapped back to
-  sRGB.
--->
 <script lang="ts">
 	import Color from 'colorjs.io';
 	import { parseBaseOklch, toDisplayHex } from '$lib/color';
 
+	// ColorRow preserves a seed color's OKLCH chroma and hue across parent-provided lightness steps.
 	const STEPS_DEFAULT = [100, 200, 300, 400, 500, 600, 700, 800, 900];
 	const LIGHTNESS_DEFAULT = [0.95, 0.87, 0.78, 0.68, 0.57, 0.46, 0.36, 0.26, 0.16];
 

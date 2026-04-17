@@ -42,6 +42,7 @@ const DEFAULT_GROUPS: GroupData[] = [
 	}
 ];
 
+// Loads saved palette groups in the browser and falls back to the default palette.
 export function loadGroups(): GroupData[] {
 	if (!browser) return [];
 	try {
@@ -56,10 +57,12 @@ export function loadGroups(): GroupData[] {
 	return DEFAULT_GROUPS;
 }
 
+// Persists palette groups as JSON without storing derived color steps.
 export function saveGroups(groups: GroupData[]): void {
 	localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
 }
 
+// Validates imported palette JSON before it replaces current app state.
 export function parseGroupsJson(json: string): GroupData[] | null {
 	try {
 		const result = StorageSchema.safeParse(JSON.parse(json));

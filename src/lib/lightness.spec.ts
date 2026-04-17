@@ -1,6 +1,18 @@
 import { describe, expect, it } from 'vitest';
 import { cleanControlledLightness, computeLightness, computeSteps } from './lightness';
 
+describe('computeSteps', () => {
+	it('builds default hundred steps for the standard palette scale', () => {
+		expect(computeSteps({})).toEqual([100, 200, 300, 400, 500, 600, 700, 800, 900]);
+	});
+
+	it('adds half steps around the configured scale', () => {
+		expect(computeSteps({ stepsCount: 4, halfStepBefore: true, halfStepAfter: true })).toEqual([
+			50, 100, 200, 300, 400, 450
+		]);
+	});
+});
+
 describe('computeLightness', () => {
 	it('interpolates piecewise between controlled lightness anchors', () => {
 		const steps = [100, 200, 300, 400, 500];

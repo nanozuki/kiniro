@@ -14,6 +14,7 @@ type StepAnchor = {
 	value: number;
 };
 
+// Builds the visible step labels for a lightness scale, including optional half steps.
 export function computeSteps(
 	group: Pick<LightnessGroup, 'stepsCount' | 'halfStepBefore' | 'halfStepAfter'>
 ): number[] {
@@ -39,6 +40,7 @@ function stepPosition(
 	return halfStepBefore ? k - 0.5 : k - 1;
 }
 
+// Removes persisted anchors that no longer belong to editable intermediate steps.
 export function cleanControlledLightness(
 	controlledLightness: Record<number, number> | undefined,
 	steps: number[]
@@ -58,6 +60,7 @@ export function cleanControlledLightness(
 	return cleaned;
 }
 
+// Interpolates OKLCH lightness between endpoints and optional intermediate anchors.
 export function computeLightness(group: LightnessGroup, steps = computeSteps(group)): number[] {
 	const { lightnessMax, lightnessMin, reversed = false } = group;
 	const controlledLightness = cleanControlledLightness(group.controlledLightness, steps);

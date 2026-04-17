@@ -33,7 +33,8 @@ brief, descriptive, and natural. Focus on motivation, usage, and non-obvious
 constraints. Avoid unnecessary styles and labels and do not include obvious
 information or repeat code step-by-step.
 
-Using line comments rather than block comments.
+Place comments immediately before the code they describe. Use line comments
+rather than block comments.
 
 ## Testing
 

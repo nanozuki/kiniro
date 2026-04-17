@@ -2,6 +2,7 @@ import Color from 'colorjs.io';
 import type { GroupData } from './storage';
 import { computeLightness, computeSteps } from './lightness';
 
+// Exports palette groups as OKLCH CSS custom properties using shared lightness logic.
 export function generateCssVariables(groups: GroupData[], prefix: string): string {
 	const lines: string[] = ['/* Usage: color: oklch(var(--your-var) / 0.5); */', ':root {'];
 

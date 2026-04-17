@@ -4,6 +4,7 @@
 	import { computeLightness, computeSteps } from '$lib/lightness';
 	import type { GroupData } from '$lib/storage';
 
+	// ColorPlayground checks foreground and background combinations from generated palette colors.
 	let { groups, prefix }: { groups: GroupData[]; prefix: string } = $props();
 
 	type ColorRole = 'foreground' | 'background';
