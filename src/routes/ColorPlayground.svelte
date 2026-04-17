@@ -1,5 +1,6 @@
 <script lang="ts">
 	import Color from 'colorjs.io';
+	import { toDisplayHex } from '$lib/color';
 	import { computeLightness, computeSteps } from '$lib/lightness';
 	import type { GroupData } from '$lib/storage';
 
@@ -44,12 +45,6 @@
 		foreground: { hex: '#1a1a1a' },
 		background: { hex: '#f5f5f5' }
 	});
-
-	function toHex(color: Color): string {
-		const srgb = color.to('srgb').toGamut();
-		const [r, g, b] = srgb.coords.map((v) => Math.round(Math.min(1, Math.max(0, v ?? 0)) * 255));
-		return `#${r.toString(16).padStart(2, '0')}${g.toString(16).padStart(2, '0')}${b.toString(16).padStart(2, '0')}`;
-	}
 
 	function relativeLuminance(hex: string): number {
 		try {
@@ -96,13 +91,13 @@
 					rows.push({
 						name: `${group.name} / ${color.name}`,
 						swatches: steps.map((step, i) => ({
-							hex: toHex(new Color('oklch', [lArr[i], C, H])),
+							hex: toDisplayHex(new Color('oklch', [lArr[i], C, H])),
 							label: `${color.name}-${step}`,
 							varName: `${color.name}-${step}`
 						}))
 					});
 				} catch {
-					// skip invalid colors
+					// Invalid imported seed colors should not prevent testing valid palette rows.
 				}
 			}
 		}

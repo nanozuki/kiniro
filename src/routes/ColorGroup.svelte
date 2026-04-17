@@ -1,25 +1,7 @@
 <!--
-  ColorGroup — a named collection of ColorRows sharing the same lightness range.
-
-  Motivation:
-    Different design contexts call for different lightness ranges. A group lets the
-    user define one lightness scale (max → min) and apply it uniformly to every
-    color in the collection, so all colors feel visually consistent with each other
-    while remaining independent of other groups.
-
-  Design:
-    The user sets lightnessMax (lightest swatch, step 100) and lightnessMin
-    (darkest swatch, step 900). The 9 intermediate values are computed by linear
-    interpolation, which looks perceptually even in OKLCH because its L axis is
-    designed to be perceptually uniform.
-
-    Each ColorRow only receives the computed lightness array; C and H come from
-    the row's own seed color, so hue and chroma stay per-color while lightness
-    steps stay per-group.
-
-  Usage:
-    <ColorGroup bind:name bind:colors bind:lightnessMax bind:lightnessMin />
-    All props are bindable so the parent can own and persist the state.
+  A group applies one OKLCH lightness scale to multiple seed colors. Endpoints are
+  fixed, optional intermediate anchors tune local steps, and reversal happens
+  after normal interpolation so persisted anchors stay tied to step labels.
 -->
 <script lang="ts">
 	import ColorRow from './ColorRow.svelte';
@@ -55,6 +37,7 @@
 	const lightness = $derived(computeLightness(lightnessSettings, steps));
 
 	$effect(() => {
+		// Prune anchors for step labels that disappear after step-setting changes.
 		const cleaned = cleanControlledLightness(controlledLightness, steps);
 		if (JSON.stringify(cleaned) !== JSON.stringify(controlledLightness)) {
 			controlledLightness = cleaned;
@@ -128,6 +111,7 @@
 				<span class="step-name">{step}</span>
 				<input
 					type="number"
+					aria-label={`Lightness ${step}`}
 					value={normalLightness[i]?.toFixed(3)}
 					min="0"
 					max="1"
@@ -139,6 +123,7 @@
 					<button
 						type="button"
 						class="reset-step-btn"
+						aria-label={`Reset lightness ${step}`}
 						onclick={() => resetControlledLightness(step)}
 					>
 						reset

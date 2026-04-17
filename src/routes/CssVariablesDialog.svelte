@@ -10,6 +10,8 @@
 	let dialog: HTMLDialogElement;
 	let copied = $state(false);
 
+	// The dialog previews the exact generated export so prefix edits and copy output
+	// cannot drift apart.
 	const css = $derived(generateCssVariables(groups, prefix));
 
 	$effect(() => {

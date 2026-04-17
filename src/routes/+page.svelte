@@ -11,6 +11,8 @@
 	let nextId = $derived(groups.reduce((max, g) => Math.max(max, g.id), 0));
 
 	$effect(() => {
+		// Persist the palette model, not generated swatches, so OKLCH rules can evolve
+		// without locking old files to derived display colors.
 		saveGroups($state.snapshot(groups));
 	});
 
