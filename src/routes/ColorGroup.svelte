@@ -1,29 +1,33 @@
 <script lang="ts">
 	import ColorRow from './ColorRow.svelte';
-	import { type ColorData } from '$lib/storage';
 	import { cleanControlledLightness, computeLightness, computeSteps } from '$lib/lightness';
+	import type { ColorData, GroupData, GroupLightnessSettings, PaletteGroupData } from '$lib/storage';
 
-	// ColorGroup applies one shared OKLCH lightness scale to multiple seed colors.
+	// ColorGroup applies one variant lightness scale to a shared palette group and its seed colors.
 	let {
-		name = $bindable('palette'),
-		colors = $bindable<ColorData[]>([{ id: 1, name: 'primary', hex: '#907aa9' }]),
-		lightnessMax = $bindable(0.95),
-		lightnessMin = $bindable(0.16),
-		controlledLightness = $bindable<Record<number, number>>({}),
-		reversed = $bindable(false),
-		stepsCount = $bindable(9),
-		halfStepBefore = $bindable(false),
-		halfStepAfter = $bindable(false)
+		group,
+		onGroupChange = () => {},
+		onLightnessChange = () => {},
+		onColorChange = () => {},
+		onAddColor = () => {},
+		onDeleteColor = () => {}
+	}: {
+		group: GroupData;
+		onGroupChange?: (patch: Partial<Pick<PaletteGroupData, 'name'>>) => void;
+		onLightnessChange?: (patch: Partial<GroupLightnessSettings>) => void;
+		onColorChange?: (colorId: number, patch: Partial<Pick<ColorData, 'name' | 'hex'>>) => void;
+		onAddColor?: () => void;
+		onDeleteColor?: (colorId: number) => void;
 	} = $props();
 
 	const lightnessSettings = $derived({
-		lightnessMax,
-		lightnessMin,
-		controlledLightness,
-		reversed,
-		stepsCount,
-		halfStepBefore,
-		halfStepAfter
+		lightnessMax: group.lightnessMax,
+		lightnessMin: group.lightnessMin,
+		controlledLightness: group.controlledLightness,
+		reversed: group.reversed,
+		stepsCount: group.stepsCount,
+		halfStepBefore: group.halfStepBefore,
+		halfStepAfter: group.halfStepAfter
 	});
 
 	const steps = $derived(computeSteps(lightnessSettings));
@@ -34,66 +38,87 @@
 
 	$effect(() => {
 		// Prune anchors for step labels that disappear after step-setting changes.
-		const cleaned = cleanControlledLightness(controlledLightness, steps);
-		if (JSON.stringify(cleaned) !== JSON.stringify(controlledLightness)) {
-			controlledLightness = cleaned;
+		const cleaned = cleanControlledLightness(group.controlledLightness, steps);
+		if (JSON.stringify(cleaned) !== JSON.stringify(group.controlledLightness)) {
+			onLightnessChange({ controlledLightness: cleaned });
 		}
 	});
 
-	const nextId = $derived(colors.reduce((max, c) => Math.max(max, c.id), 0));
-
 	function updateControlledLightness(step: number, value: number) {
 		if (!Number.isFinite(value)) return;
-		controlledLightness = { ...controlledLightness, [step]: value };
+		onLightnessChange({ controlledLightness: { ...group.controlledLightness, [step]: value } });
 	}
 
 	function resetControlledLightness(step: number) {
-		const rest = { ...controlledLightness };
+		const rest = { ...group.controlledLightness };
 		delete rest[step];
-		controlledLightness = rest;
-	}
-
-	function addColor() {
-		colors.push({ id: nextId + 1, name: 'color', hex: '#907aa9' });
-	}
-
-	function deleteColor(id: number) {
-		colors = colors.filter((c) => c.id !== id);
+		onLightnessChange({ controlledLightness: rest });
 	}
 </script>
 
 <div class="color-group">
-	<input class="group-title" type="text" bind:value={name} placeholder="group name" />
+	<input
+		class="group-title"
+		type="text"
+		value={group.name}
+		placeholder="group name"
+		oninput={(e) => onGroupChange({ name: e.currentTarget.value })}
+	/>
 	<div class="group-settings">
 		<label>
 			Lightness max
-			<input type="number" bind:value={lightnessMax} min="0" max="1" step="0.01" />
+			<input
+				type="number"
+				value={group.lightnessMax}
+				min="0"
+				max="1"
+				step="0.01"
+				oninput={(e) => onLightnessChange({ lightnessMax: e.currentTarget.valueAsNumber })}
+			/>
 		</label>
 		<span class="arrow">→</span>
 		<label>
 			Lightness min
-			<input type="number" bind:value={lightnessMin} min="0" max="1" step="0.01" />
+			<input
+				type="number"
+				value={group.lightnessMin}
+				min="0"
+				max="1"
+				step="0.01"
+				oninput={(e) => onLightnessChange({ lightnessMin: e.currentTarget.valueAsNumber })}
+			/>
 		</label>
 		<label>
 			Steps
-			<select bind:value={stepsCount}>
+			<select
+				value={group.stepsCount}
+				onchange={(e) => onLightnessChange({ stepsCount: Number(e.currentTarget.value) })}
+			>
 				{#each [3, 4, 5, 6, 7, 8, 9] as n (n)}
 					<option value={n}>{n}</option>
 				{/each}
 			</select>
 		</label>
 		<label class="checkbox-label">
-			<input type="checkbox" bind:checked={halfStepBefore} />
+			<input
+				type="checkbox"
+				checked={group.halfStepBefore}
+				onchange={(e) => onLightnessChange({ halfStepBefore: e.currentTarget.checked })}
+			/>
 			Add <code>50</code> step
 		</label>
 		<label class="checkbox-label">
-			<input type="checkbox" bind:checked={halfStepAfter} />
-			Add <code>{stepsCount * 100 + 50}</code> step
+			<input
+				type="checkbox"
+				checked={group.halfStepAfter}
+				onchange={(e) => onLightnessChange({ halfStepAfter: e.currentTarget.checked })}
+			/>
+			Add <code>{group.stepsCount * 100 + 50}</code> step
 		</label>
 		<button
 			class="reverse-btn"
-			class:active={reversed}
-			onclick={() => (reversed = !reversed)}
+			class:active={group.reversed}
+			onclick={() => onLightnessChange({ reversed: !group.reversed })}
 			title="Reverse lightness direction (for dark mode)"
 		>
 			reverse
@@ -102,7 +127,7 @@
 	<div class="lightness-controls" aria-label="Lightness steps">
 		{#each steps as step, i (step)}
 			{@const editable = i > 0 && i < steps.length - 1}
-			{@const controlled = controlledLightness[step] != null}
+			{@const controlled = group.controlledLightness[step] != null}
 			<label class:controlled class:fixed={!editable}>
 				<span class="step-name">{step}</span>
 				<input
@@ -132,13 +157,20 @@
 			</label>
 		{/each}
 	</div>
-	{#each colors as color (color.id)}
+	{#each group.colors as color (color.id)}
 		<div class="row-wrapper">
-			<ColorRow bind:name={color.name} bind:hex={color.hex} {lightness} {steps} />
-			<button class="delete-btn" onclick={() => deleteColor(color.id)}>✕</button>
+			<ColorRow
+				name={color.name}
+				hex={color.hex}
+				{lightness}
+				{steps}
+				onNameChange={(name) => onColorChange(color.id, { name })}
+				onHexChange={(hex) => onColorChange(color.id, { hex })}
+			/>
+			<button class="delete-btn" onclick={() => onDeleteColor(color.id)}>✕</button>
 		</div>
 	{/each}
-	<button class="add-btn" onclick={addColor}>+ Add color</button>
+	<button class="add-btn" onclick={onAddColor}>+ Add color</button>
 </div>
 
 <style>

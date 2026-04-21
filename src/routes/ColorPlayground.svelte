@@ -1,11 +1,16 @@
 <script lang="ts">
 	import Color from 'colorjs.io';
 	import { toDisplayHex } from '$lib/color';
+	import { slugifyCssIdent } from '$lib/cssVariables';
 	import { computeLightness, computeSteps } from '$lib/lightness';
 	import type { GroupData } from '$lib/storage';
 
 	// ColorPlayground checks foreground and background combinations from generated palette colors.
-	let { groups, prefix }: { groups: GroupData[]; prefix: string } = $props();
+	let {
+		groups,
+		prefix,
+		variableNamespace = ''
+	}: { groups: GroupData[]; prefix: string; variableNamespace?: string } = $props();
 
 	type ColorRole = 'foreground' | 'background';
 	type ColorChoice = { hex: string; varName?: string };
@@ -94,7 +99,7 @@
 						swatches: steps.map((step, i) => ({
 							hex: toDisplayHex(new Color('oklch', [lArr[i], C, H])),
 							label: `${color.name}-${step}`,
-							varName: `${color.name}-${step}`
+							varName: `${variableNamespace}${slugifyCssIdent(group.name)}-${slugifyCssIdent(color.name)}-${step}`
 						}))
 					});
 				} catch {

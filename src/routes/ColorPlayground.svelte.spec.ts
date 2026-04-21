@@ -21,17 +21,21 @@ const groups: GroupData[] = [
 
 describe('ColorPlayground.svelte', () => {
 	it('uses generated palette swatches as named foreground and background choices', async () => {
-		render(ColorPlayground, { groups, prefix: 'tone-' });
+		render(ColorPlayground, { groups, prefix: 'tone-', variableNamespace: 'brand-light-' });
 
 		await page.getByRole('button', { name: 'Set foreground to primary-100' }).click();
 		await expect
-			.element(page.getByText('var(--tone-primary-100) on #f5f5f5'))
+			.element(page.getByText('var(--tone-brand-light-brand-primary-100) on #f5f5f5'))
 			.toBeInTheDocument();
 
 		await page.getByRole('button', { name: 'Background' }).click();
 		await page.getByRole('button', { name: 'Set background to primary-300' }).click();
 		await expect
-			.element(page.getByText('var(--tone-primary-100) on var(--tone-primary-300)'))
+			.element(
+				page.getByText(
+					'var(--tone-brand-light-brand-primary-100) on var(--tone-brand-light-brand-primary-300)'
+				)
+			)
 			.toBeInTheDocument();
 	});
 

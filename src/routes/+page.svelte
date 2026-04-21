@@ -1,43 +1,44 @@
 <script lang="ts">
+	import { Tabs } from 'melt/builders';
+	import { Kiniro } from '$lib/kiniro.svelte';
+	import { slugifyCssIdent } from '$lib/cssVariables';
+	import { loadPalettes, parsePalettesJson, savePalettes } from '$lib/storage';
 	import ColorGroup from './ColorGroup.svelte';
 	import ColorPlayground from './ColorPlayground.svelte';
 	import CssVariablesDialog from './CssVariablesDialog.svelte';
-	import { type GroupData, loadGroups, saveGroups, parseGroupsJson } from '$lib/storage';
 
-	// The page owns persisted palette groups and passes the shared OKLCH model to editing tools.
+	// The page coordinates the reactive Kiniro model with route-level import, export, and editing UI.
 	let cssDialogOpen = $state(false);
 	let cssVarPrefix = $state('color-');
+	let kiniro = new Kiniro(loadPalettes());
+	const paletteTabs = new Tabs<string>({
+		value: () => String(kiniro.activePaletteId ?? ''),
+		onValueChange: (value) => {
+			kiniro.activePaletteId = Number(value);
+			kiniro.activeVariantId = kiniro.activePalette?.variants[0]?.id ?? null;
+		}
+	});
+	const variantTabs = new Tabs<string>({
+		value: () => String(kiniro.activeVariantId ?? ''),
+		onValueChange: (value) => (kiniro.activeVariantId = Number(value))
+	});
 
-	let groups = $state<GroupData[]>(loadGroups());
-	let nextId = $derived(groups.reduce((max, g) => Math.max(max, g.id), 0));
+	const activeVariableNamespace = $derived.by(() => {
+		const palette = kiniro.activePalette;
+		const variant = kiniro.activeVariant;
+		return palette && variant
+			? `${slugifyCssIdent(palette.name)}-${slugifyCssIdent(variant.name)}-`
+			: '';
+	});
 
 	$effect(() => {
 		// Persist the palette model, not generated swatches, so OKLCH rules can evolve
 		// without locking old files to derived display colors.
-		saveGroups($state.snapshot(groups));
+		savePalettes(kiniro.snapshot());
 	});
 
-	function addGroup() {
-		groups.push({
-			id: nextId + 1,
-			name: 'palette',
-			lightnessMax: 0.95,
-			lightnessMin: 0.16,
-			controlledLightness: {},
-			reversed: false,
-			stepsCount: 9,
-			halfStepBefore: false,
-			halfStepAfter: false,
-			colors: [{ id: 1, name: 'color', hex: '#907aa9' }]
-		});
-	}
-
-	function deleteGroup(id: number) {
-		groups = groups.filter((g) => g.id !== id);
-	}
-
 	function exportJson() {
-		const json = JSON.stringify($state.snapshot(groups), null, 2);
+		const json = JSON.stringify(kiniro.snapshot(), null, 2);
 		const blob = new Blob([json], { type: 'application/json' });
 		const url = URL.createObjectURL(blob);
 		const a = document.createElement('a');
@@ -56,9 +57,9 @@
 			if (!file) return;
 			const reader = new FileReader();
 			reader.onload = () => {
-				const parsed = parseGroupsJson(reader.result as string);
+				const parsed = parsePalettesJson(reader.result as string);
 				if (parsed) {
-					groups = parsed;
+					kiniro.replaceAll(parsed);
 				} else {
 					alert('Invalid palette file.');
 				}
@@ -78,27 +79,101 @@
 			<button class="tool-btn" onclick={importJson}>Import JSON</button>
 		</div>
 	</div>
-	{#each groups as group (group.id)}
-		<div class="group-wrapper">
-			<ColorGroup
-				bind:name={group.name}
-				bind:colors={group.colors}
-				bind:lightnessMax={group.lightnessMax}
-				bind:lightnessMin={group.lightnessMin}
-				bind:controlledLightness={group.controlledLightness}
-				bind:reversed={group.reversed}
-				bind:stepsCount={group.stepsCount}
-				bind:halfStepBefore={group.halfStepBefore}
-				bind:halfStepAfter={group.halfStepAfter}
-			/>
-			<button class="delete-btn" onclick={() => deleteGroup(group.id)}>✕</button>
-		</div>
-	{/each}
-	<button class="add-btn" onclick={addGroup}>+ Add group</button>
-	<ColorPlayground {groups} prefix={cssVarPrefix} />
+
+	{#if kiniro.activePalette && kiniro.activeVariant}
+		<section class="model-controls" aria-label="Palette and variant controls">
+			<div class="tab-section">
+				<span class="tab-label">Palette</span>
+				<div class="tabs" {...paletteTabs.triggerList}>
+					{#each kiniro.palettes as palette (palette.id)}
+						<button type="button" class="tab-trigger" {...paletteTabs.getTrigger(String(palette.id))}>
+							{palette.name}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			{#each kiniro.palettes as palette (palette.id)}
+				<div class="control-block" {...paletteTabs.getContent(String(palette.id))}>
+					{#if palette.id === kiniro.activePaletteId}
+						<input
+							type="text"
+							value={kiniro.activePalette.name}
+							aria-label="Palette name"
+							oninput={(e) =>
+								kiniro.activePaletteId &&
+								kiniro.updatePalette(kiniro.activePaletteId, { name: e.currentTarget.value })}
+						/>
+						<button class="tool-btn" onclick={() => kiniro.addPalette()}>+ Add palette</button>
+						<button
+							class="tool-btn danger"
+							disabled={kiniro.palettes.length <= 1}
+							onclick={() => kiniro.activePaletteId && kiniro.deletePalette(kiniro.activePaletteId)}
+						>
+							Delete palette
+						</button>
+					{/if}
+				</div>
+			{/each}
+
+			<div class="tab-section">
+				<span class="tab-label">Variant</span>
+				<div class="tabs" {...variantTabs.triggerList}>
+					{#each kiniro.activePalette.variants as variant (variant.id)}
+						<button type="button" class="tab-trigger" {...variantTabs.getTrigger(String(variant.id))}>
+							{variant.name}
+						</button>
+					{/each}
+				</div>
+			</div>
+
+			{#each kiniro.activePalette.variants as variant (variant.id)}
+				<div class="control-block" {...variantTabs.getContent(String(variant.id))}>
+					{#if variant.id === kiniro.activeVariantId}
+						<input
+							type="text"
+							value={kiniro.activeVariant.name}
+							aria-label="Variant name"
+							oninput={(e) =>
+								kiniro.activeVariantId &&
+								kiniro.updateVariant(kiniro.activeVariantId, { name: e.currentTarget.value })}
+						/>
+						<button class="tool-btn" onclick={() => kiniro.addVariant()}>+ Add variant</button>
+						<button
+							class="tool-btn danger"
+							disabled={kiniro.activePalette.variants.length <= 1}
+							onclick={() => kiniro.activeVariantId && kiniro.deleteVariant(kiniro.activeVariantId)}
+						>
+							Delete variant
+						</button>
+					{/if}
+				</div>
+			{/each}
+		</section>
+
+		{#each kiniro.activeGroups as group (group.id)}
+			<div class="group-wrapper">
+				<ColorGroup
+					{group}
+					onGroupChange={(patch) => kiniro.updateGroup(group.id, patch)}
+					onLightnessChange={(patch) => kiniro.updateGroupLightness(group.id, patch)}
+					onColorChange={(colorId, patch) => kiniro.updateColor(group.id, colorId, patch)}
+					onAddColor={() => kiniro.addColor(group.id)}
+					onDeleteColor={(colorId) => kiniro.deleteColor(group.id, colorId)}
+				/>
+				<button class="delete-btn" onclick={() => kiniro.deleteGroup(group.id)}>✕</button>
+			</div>
+		{/each}
+		<button class="add-btn" onclick={() => kiniro.addGroup()}>+ Add group</button>
+		<ColorPlayground
+			groups={kiniro.activeGroups}
+			prefix={cssVarPrefix}
+			variableNamespace={activeVariableNamespace}
+		/>
+	{/if}
 </main>
 
-<CssVariablesDialog {groups} bind:open={cssDialogOpen} bind:prefix={cssVarPrefix} />
+<CssVariablesDialog palettes={kiniro.palettes} bind:open={cssDialogOpen} bind:prefix={cssVarPrefix} />
 
 <style>
 	main {
@@ -120,9 +195,71 @@
 		flex: 1;
 	}
 
-	.header-actions {
+	.header-actions,
+	.control-block,
+	.tabs {
 		display: flex;
 		gap: 0.5rem;
+		flex-wrap: wrap;
+	}
+
+	.model-controls {
+		display: flex;
+		flex-direction: column;
+		gap: 0.75rem;
+		padding: 1rem;
+		border: 1px solid #e5e7eb;
+		border-radius: 8px;
+	}
+
+	.control-block {
+		align-items: center;
+	}
+
+	.control-block input {
+		padding: 0.25rem 0.5rem;
+		border: 1px solid #ccc;
+		border-radius: 4px;
+		font-size: 0.875rem;
+	}
+
+	.tab-section {
+		display: flex;
+		align-items: center;
+		gap: 0.75rem;
+		flex-wrap: wrap;
+	}
+
+	.tab-label {
+		width: 4rem;
+		font-size: 0.875rem;
+		font-weight: 600;
+		color: #555;
+	}
+
+	.tabs {
+		align-items: center;
+	}
+
+	.tab-trigger {
+		padding: 0.35rem 0.7rem;
+		background: #fff;
+		border: 1px solid #d1d5db;
+		border-radius: 4px;
+		cursor: pointer;
+		font-size: 0.875rem;
+		color: #555;
+	}
+
+	.tab-trigger:hover {
+		border-color: #907aa9;
+		color: #4f3d61;
+	}
+
+	.tab-trigger[data-active] {
+		background: #f3f0f7;
+		border-color: #907aa9;
+		color: #4f3d61;
 	}
 
 	.group-wrapper {
@@ -174,8 +311,18 @@
 		color: #555;
 	}
 
-	.tool-btn:hover {
+	.tool-btn:hover:not(:disabled) {
 		border-color: #555;
 		color: #111;
+	}
+
+	.tool-btn:disabled {
+		cursor: not-allowed;
+		opacity: 0.45;
+	}
+
+	.tool-btn.danger:hover:not(:disabled) {
+		border-color: #e55;
+		color: #e55;
 	}
 </style>
