@@ -81,7 +81,8 @@ function parseStorageValue(value: unknown): PaletteData[] | null {
 	return null;
 }
 
-// Loads saved palettes in the browser and falls back to the default palette.
+// Loads saved palettes in the browser, falls back to the default palette there,
+// and returns an empty array during SSR.
 export function loadPalettes(): PaletteData[] {
 	if (!browser) return [];
 	try {
