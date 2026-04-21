@@ -49,6 +49,14 @@
 		onLightnessChange({ controlledLightness: { ...group.controlledLightness, [step]: value } });
 	}
 
+	function updateLightnessBoundary(
+		key: 'lightnessMax' | 'lightnessMin',
+		value: number
+	) {
+		if (!Number.isFinite(value)) return;
+		onLightnessChange({ [key]: Math.min(1, Math.max(0, value)) });
+	}
+
 	function resetControlledLightness(step: number) {
 		const rest = { ...group.controlledLightness };
 		delete rest[step];
@@ -73,7 +81,7 @@
 				min="0"
 				max="1"
 				step="0.01"
-				oninput={(e) => onLightnessChange({ lightnessMax: e.currentTarget.valueAsNumber })}
+				oninput={(e) => updateLightnessBoundary('lightnessMax', e.currentTarget.valueAsNumber)}
 			/>
 		</label>
 		<span class="arrow">→</span>
@@ -85,7 +93,7 @@
 				min="0"
 				max="1"
 				step="0.01"
-				oninput={(e) => onLightnessChange({ lightnessMin: e.currentTarget.valueAsNumber })}
+				oninput={(e) => updateLightnessBoundary('lightnessMin', e.currentTarget.valueAsNumber)}
 			/>
 		</label>
 		<label>

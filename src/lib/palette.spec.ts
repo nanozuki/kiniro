@@ -119,6 +119,22 @@ describe('syncVariantGroups', () => {
 		});
 		expect(synced.variants[0].groups[99]).toBeUndefined();
 	});
+
+	it('creates a default variant when imported palette data has none', () => {
+		const synced = syncVariantGroups({
+			id: 1,
+			name: 'Brand',
+			groups: [{ id: 2, name: 'brand', colors: [] }],
+			variants: []
+		});
+
+		expect(synced.variants).toHaveLength(1);
+		expect(synced.variants[0]).toMatchObject({ id: 1, name: 'Default' });
+		expect(synced.variants[0].groups[2]).toMatchObject({
+			lightnessMax: 0.95,
+			lightnessMin: 0.16
+		});
+	});
 });
 
 describe('migrateGroupsToPalettes', () => {

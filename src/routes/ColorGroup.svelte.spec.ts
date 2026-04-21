@@ -46,6 +46,23 @@ describe('ColorGroup.svelte', () => {
 		expect(onColorChange).toHaveBeenCalledWith(1, { name: 'accent' });
 	});
 
+	it('ignores empty lightness bounds and clamps finite values', async () => {
+		const onLightnessChange = vi.fn();
+		render(ColorGroup, {
+			group: { ...group, controlledLightness: {} },
+			onLightnessChange
+		});
+
+		await page.getByRole('spinbutton', { name: 'Lightness max' }).fill('');
+		expect(onLightnessChange).not.toHaveBeenCalled();
+
+		await page.getByRole('spinbutton', { name: 'Lightness max' }).fill('1.25');
+		expect(onLightnessChange).toHaveBeenCalledWith({ lightnessMax: 1 });
+
+		await page.getByRole('spinbutton', { name: 'Lightness min' }).fill('-0.25');
+		expect(onLightnessChange).toHaveBeenCalledWith({ lightnessMin: 0 });
+	});
+
 	it('reports controlled step resets through callbacks', async () => {
 		const onLightnessChange = vi.fn();
 		render(ColorGroup, { group, onLightnessChange });

@@ -11,16 +11,23 @@
 	let cssDialogOpen = $state(false);
 	let cssVarPrefix = $state('color-');
 	let kiniro = new Kiniro(loadPalettes());
+
+	function parseTabId(value: string): number | null {
+		if (value === '') return null;
+		const id = Number(value);
+		return Number.isFinite(id) ? id : null;
+	}
+
 	const paletteTabs = new Tabs<string>({
 		value: () => String(kiniro.activePaletteId ?? ''),
 		onValueChange: (value) => {
-			kiniro.activePaletteId = Number(value);
+			kiniro.activePaletteId = parseTabId(value);
 			kiniro.activeVariantId = kiniro.activePalette?.variants[0]?.id ?? null;
 		}
 	});
 	const variantTabs = new Tabs<string>({
 		value: () => String(kiniro.activeVariantId ?? ''),
-		onValueChange: (value) => (kiniro.activeVariantId = Number(value))
+		onValueChange: (value) => (kiniro.activeVariantId = parseTabId(value))
 	});
 
 	const activeVariableNamespace = $derived.by(() => {

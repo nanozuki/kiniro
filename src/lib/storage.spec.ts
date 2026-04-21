@@ -134,6 +134,25 @@ describe('parsePalettesJson', () => {
 		});
 	});
 
+	it('normalizes palette files that are missing variants', () => {
+		const parsed = parsePalettesJson(
+			JSON.stringify([
+				{
+					id: 1,
+					name: 'Brand',
+					groups: [{ id: 1, name: 'brand', colors: [] }],
+					variants: []
+				}
+			])
+		);
+
+		expect(parsed?.[0].variants[0]).toMatchObject({ id: 1, name: 'Default' });
+		expect(parsed?.[0].variants[0].groups[1]).toMatchObject({
+			lightnessMax: 0.95,
+			lightnessMin: 0.16
+		});
+	});
+
 	it('rejects invalid JSON and invalid palette shape', () => {
 		expect(parsePalettesJson('not-json')).toBeNull();
 		expect(parsePalettesJson(JSON.stringify([{ id: 'bad' }]))).toBeNull();

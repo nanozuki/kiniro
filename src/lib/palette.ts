@@ -94,13 +94,15 @@ export function buildVariantGroups(palette: PaletteData, variant: PaletteVariant
 // Keeps variant group settings aligned with the palette's shared group structure.
 export function syncVariantGroups(palette: PaletteData): PaletteData {
 	const groupIds = new Set(palette.groups.map((group) => group.id));
+	const variants =
+		palette.variants.length > 0 ? palette.variants : [createDefaultVariant(palette.groups, 1, 'Default')];
 	return {
 		...palette,
 		groups: palette.groups.map((group) => ({
 			...group,
 			colors: group.colors.map((color) => ({ ...color }))
 		})),
-		variants: palette.variants.map((variant) => {
+		variants: variants.map((variant) => {
 			const groups: Record<number, GroupLightnessSettings> = {};
 			for (const group of palette.groups) {
 				groups[group.id] = variant.groups[group.id] ?? createDefaultLightnessSettings();
