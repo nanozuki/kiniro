@@ -1,5 +1,25 @@
 import { browser } from '$app/environment';
 import { z } from 'zod';
+import {
+	createDefaultPalette,
+	migrateGroupsToPalettes,
+	syncVariantGroups,
+	type ColorData,
+	type GroupData,
+	type GroupLightnessSettings,
+	type PaletteData,
+	type PaletteGroupData,
+	type PaletteVariantData
+} from './palette';
+
+export type {
+	ColorData,
+	GroupData,
+	GroupLightnessSettings,
+	PaletteData,
+	PaletteGroupData,
+	PaletteVariantData
+};
 
 const STORAGE_KEY = 'kiniro-palettes';
 
@@ -9,64 +29,83 @@ const ColorDataSchema = z.object({
 	hex: z.string()
 });
 
-const GroupDataSchema = z.object({
-	id: z.number(),
-	name: z.string(),
+const GroupLightnessSettingsSchema = z.object({
 	lightnessMax: z.number(),
 	lightnessMin: z.number(),
 	controlledLightness: z.record(z.coerce.number(), z.number()).default({}),
 	reversed: z.boolean().default(false),
 	stepsCount: z.number().min(3).max(9).default(9),
 	halfStepBefore: z.boolean().default(false),
-	halfStepAfter: z.boolean().default(false),
+	halfStepAfter: z.boolean().default(false)
+});
+
+const LegacyGroupDataSchema = GroupLightnessSettingsSchema.extend({
+	id: z.number(),
+	name: z.string(),
 	colors: z.array(ColorDataSchema)
 });
 
-const StorageSchema = z.array(GroupDataSchema);
+const PaletteGroupDataSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	colors: z.array(ColorDataSchema)
+});
 
-export type ColorData = z.infer<typeof ColorDataSchema>;
-export type GroupData = z.infer<typeof GroupDataSchema>;
+const PaletteVariantDataSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	groups: z.record(z.coerce.number(), GroupLightnessSettingsSchema)
+});
 
-const DEFAULT_GROUPS: GroupData[] = [
-	{
-		id: 1,
-		name: 'palette',
-		lightnessMax: 0.95,
-		lightnessMin: 0.16,
-		controlledLightness: {},
-		reversed: false,
-		stepsCount: 9,
-		halfStepBefore: false,
-		halfStepAfter: false,
-		colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
-	}
-];
+const PaletteDataSchema = z.object({
+	id: z.number(),
+	name: z.string(),
+	groups: z.array(PaletteGroupDataSchema),
+	variants: z.array(PaletteVariantDataSchema)
+});
 
-// Loads saved palette groups in the browser and falls back to the default palette.
-export function loadGroups(): GroupData[] {
+const StorageSchema = z.array(PaletteDataSchema);
+const LegacyStorageSchema = z.array(LegacyGroupDataSchema);
+
+function normalizePalettes(palettes: PaletteData[]): PaletteData[] {
+	return palettes.length > 0 ? palettes.map(syncVariantGroups) : [createDefaultPalette()];
+}
+
+function parseStorageValue(value: unknown): PaletteData[] | null {
+	const result = StorageSchema.safeParse(value);
+	if (result.success) return normalizePalettes(result.data);
+
+	const legacyResult = LegacyStorageSchema.safeParse(value);
+	if (legacyResult.success) return migrateGroupsToPalettes(legacyResult.data);
+
+	return null;
+}
+
+// Loads saved palettes in the browser, falls back to the default palette there,
+// and returns an empty array during SSR.
+export function loadPalettes(): PaletteData[] {
 	if (!browser) return [];
 	try {
 		const saved = localStorage.getItem(STORAGE_KEY);
 		if (saved) {
-			const result = StorageSchema.safeParse(JSON.parse(saved));
-			if (result.success) return result.data;
+			const parsed = parseStorageValue(JSON.parse(saved));
+			if (parsed) return parsed;
 		}
 	} catch {
 		// Fall back to defaults when saved JSON is unavailable or invalid.
 	}
-	return DEFAULT_GROUPS;
+	return [createDefaultPalette()];
 }
 
-// Persists palette groups as JSON without storing derived color steps.
-export function saveGroups(groups: GroupData[]): void {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(groups));
+// Persists palettes as JSON without storing derived color steps.
+export function savePalettes(palettes: PaletteData[]): void {
+	localStorage.setItem(STORAGE_KEY, JSON.stringify(palettes.map(syncVariantGroups)));
 }
 
-// Validates imported palette JSON before it replaces current app state.
-export function parseGroupsJson(json: string): GroupData[] | null {
+// Validates imported palette JSON and migrates legacy group files when needed.
+export function parsePalettesJson(json: string): PaletteData[] | null {
 	try {
-		const result = StorageSchema.safeParse(JSON.parse(json));
-		return result.success ? result.data : null;
+		return parseStorageValue(JSON.parse(json));
 	} catch {
 		return null;
 	}

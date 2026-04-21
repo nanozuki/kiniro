@@ -1,19 +1,19 @@
-<script lang="ts">
+	<script lang="ts">
 	import { generateCssVariables } from '$lib/cssVariables';
-	import type { GroupData } from '$lib/storage';
+	import type { PaletteData } from '$lib/storage';
 
 	// CssVariablesDialog previews and copies the same CSS variable export users see on screen.
 	let {
-		groups,
+		palettes,
 		open = $bindable(false),
 		prefix = $bindable('color-')
-	}: { groups: GroupData[]; open: boolean; prefix: string } = $props();
+	}: { palettes: PaletteData[]; open: boolean; prefix: string } = $props();
 	let dialog: HTMLDialogElement;
 	let copied = $state(false);
 
 	// The dialog previews the exact generated export so prefix edits and copy output
 	// cannot drift apart.
-	const css = $derived(generateCssVariables(groups, prefix));
+	const css = $derived(generateCssVariables(palettes, prefix));
 
 	$effect(() => {
 		if (open) {
@@ -43,7 +43,7 @@
 		<div class="prefix-row">
 			<label for="prefix">Prefix</label>
 			<input id="prefix" type="text" bind:value={prefix} placeholder="color-" />
-			<span class="example">e.g. <code>--{prefix}primary-500</code></span>
+			<span class="example">e.g. <code>--{prefix}brand-light-base-primary-500</code></span>
 		</div>
 		<div class="code-wrapper">
 			<pre>{css}</pre>

@@ -7,10 +7,19 @@
 	const LIGHTNESS_DEFAULT = [0.95, 0.87, 0.78, 0.68, 0.57, 0.46, 0.36, 0.26, 0.16];
 
 	let {
-		name = $bindable('primary'),
-		hex = $bindable('#907aa9'),
+		name = 'primary',
+		hex = '#907aa9',
 		lightness = LIGHTNESS_DEFAULT,
-		steps = STEPS_DEFAULT
+		steps = STEPS_DEFAULT,
+		onNameChange = () => {},
+		onHexChange = () => {}
+	}: {
+		name?: string;
+		hex?: string;
+		lightness?: number[];
+		steps?: number[];
+		onNameChange?: (name: string) => void;
+		onHexChange?: (hex: string) => void;
 	} = $props();
 
 	type Swatch = { step: number; hex: string; lightness: number };
@@ -28,9 +37,19 @@
 
 <div class="color-row">
 	<div class="inputs">
-		<input type="text" bind:value={name} placeholder="color name" />
-		<input type="color" bind:value={hex} />
-		<input type="text" bind:value={hex} placeholder="#rrggbb" />
+		<input
+			type="text"
+			value={name}
+			placeholder="color name"
+			oninput={(e) => onNameChange(e.currentTarget.value)}
+		/>
+		<input type="color" value={hex} oninput={(e) => onHexChange(e.currentTarget.value)} />
+		<input
+			type="text"
+			value={hex}
+			placeholder="#rrggbb"
+			oninput={(e) => onHexChange(e.currentTarget.value)}
+		/>
 		{#if base}
 			<span class="oklch-label">oklch({base.l.toFixed(2)} {base.c.toFixed(3)} {base.h.toFixed(1)}°)</span>
 		{/if}
