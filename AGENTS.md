@@ -53,7 +53,7 @@ cases. Don't add meaningless tests that only mirror implementation details.
 
 ## Verification
 
-After each file change, run:
+Before committing changes, run both
 
 `pnpm run check` and `pnpm run test`
 
