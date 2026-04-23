@@ -1,2 +1,2 @@
-local settings = require("config.settings")
-settings.agent = "codex"
+local settings = require('config.settings')
+settings.agent = 'claude'
