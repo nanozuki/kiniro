@@ -29,12 +29,8 @@
               nodejs
               pnpm
               svelte-language-server
-              typos
               vtsls
             ];
-            shellHook = ''
-              export ESLINT_USE_FLAT_CONFIG="true"
-            '';
           };
         };
     };
