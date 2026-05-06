@@ -1,5 +1,14 @@
 # Repository Guidelines
 
+Read @README.md to get an overview of this project.
+
+## Documentation Map
+
+- `docs/terminology.md`: Shared domain terms for themes, variants, palettes,
+  color families, color ramps, swatches, source colors, and generated values.
+- `docs/prototype.md`: Current prototype design, including page layouts,
+  component responsibilities, component hierarchy, and component-owned behavior.
+
 ## Project
 
 Kiniro is a SvelteKit app for making OKLCH color palettes. The palette model is

@@ -46,8 +46,8 @@ scale indexes or ordinal indexes, but not both.
 
 ## Step
 
-A Step is one OKLCH lightness value in a Step Scale. Each Step has a unique index
-within its Step Scale.
+A Step is one OKLCH lightness value in a Step Scale. Each Step has a unique
+index within its Step Scale.
 
 The index is a label, not the lightness value itself. Kiniro supports two index
 styles:
