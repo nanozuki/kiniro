@@ -50,7 +50,7 @@ four sections:
 
 +------------------------------------------------------------------------------+
 | Natural [Settings] [Rename] [Delete]                                         |
-| StepScale:    100:0.9500  200:0.8500  300:0.7500  ...                        |
+| Steps:        100:0.9500  200:0.8500  300:0.7500  ...                        |
 +------------++-----------+-----------+-----------+----------------------------+
 | #191724    || #EEECFF   | #CECCDE   | #AF99FF   |                            |
 | C: 0.0255  || L: 0.9500 | L: 0.8500 | L: 0.7500 |                            |
@@ -278,6 +278,12 @@ Families are reorderable with drag-and-drop using drag handles. Reordering is
 undoable and structural. Color family cards are not collapsible. Palette does
 not provide filtering/searching for families or ramps.
 
+Each color family is a distinct working section with a strong header and clear
+visual boundary. When the palette scrolls through a long family, the family
+header is sticky within that family section. The sticky header includes the
+family name, family actions, and compact StepScale summary so users keep the
+swatch column context while scrolling.
+
 Hierarchy:
 
 ```text
@@ -305,9 +311,18 @@ Color family names are unique within the shared variant structure.
 
 Show and Edit the step scale of the color family.
 
-Each color family has exactly one StepScale. StepScale settings are edited
-inline after entering edit mode. Changes apply immediately. When focus leaves
-the StepScale editing area, exit edit mode.
+Each color family has exactly one StepScale. Show a compact StepScale summary by
+default, including each step index and lightness value. The compact summary stays
+visible when StepScale settings are expanded. StepScale settings are edited
+inline after entering edit mode, not in a dialog, so users can see palette
+feedback while editing. Changes apply immediately. When focus leaves the
+StepScale editing area, exit edit mode.
+
+Split expanded StepScale settings by scope:
+
+- Step structure: shared by all variants in this theme. Includes step count,
+  index style, and half-step settings.
+- Step values: current variant only. Includes lightness values and reverse.
 
 **setStepCount(count)**: the count of steps, from 5 to 9. Preserve overrides by
 step index when the index still exists, and remove overrides for indexes that no
@@ -329,7 +344,7 @@ step, convert this step to a controlled step.
 **resetLightness(stepIndex)**: reset the lightness value of a step to the
 generated value, convert this step to an uncontrolled step.
 **reverse()**: Reverse generated lightness values, step overrides, and swatch
-overrides in ramps. Index labels are not reversed.
+overrides in ramps for the current variant only. Index labels are not reversed.
 **<background>generateLightness()**: Distinguish controlled steps and
 uncontrolled steps. The controlled steps are start step, end step, and all
 overridden steps, and the rest steps are uncontrolled. Lightness of controlled
@@ -406,9 +421,10 @@ channels continue to follow generated values. A swatch lightness override affect
 only that swatch, not the StepScale.
 
 If a color is unavailable in the current gamut preview, show a small marker on
-the swatch. The marker tooltip says either "Unavailable in sRGB" or "Unavailable
-in sRGB and P3". The swatch modal also shows a gamut warning for the edited
-swatch when needed. Swatch modal preview uses the clamped preview color.
+the swatch. The marker tooltip says either "Outside sRGB. Preview is clamped."
+or "Outside sRGB and P3. Preview is clamped." The swatch modal also shows a
+gamut warning for the edited swatch when needed. Swatch modal preview uses the
+clamped preview color.
 
 Swatches show their information directly in the cell. By default, show name,
 step index, and clamped hex value for the current gamut preview. If there are
@@ -452,6 +468,8 @@ color: oklch(var(--color-main-base-100) / 1);
 ```
 
 Show that usage example in the app, but do not include it when copying CSS.
+Show a compact note that CSS export uses original OKLCH values, not clamped
+preview colors.
 
 CSS output uses one format in v1: channel-triple custom properties wrapped in
 `:root { ... }`. Show the generated CSS in a read-only code block without syntax
@@ -501,7 +519,8 @@ them, and show the result in <CheckResult />.
 
 Use WCAG 2 contrast ratio for now. Calculate contrast from colors after clamping
 to the selected gamut, because the checker should evaluate the actual displayed
-value.
+value. Show a compact note that contrast is measured from the current preview
+gamut.
 
 Contrast checker selections do not persist. Default foreground is the first
 ramp's second swatch. Default background is the second ramp's second-to-last
@@ -547,11 +566,15 @@ confirmation creates one undo entry only when values actually changed.
 
 ### Shared Structure Warning
 
-Structural edits affect every variant in the current theme. Structural edits
-include adding/deleting/renaming/reordering color families, changing StepScale
-settings, reversing a StepScale, and adding/deleting/renaming/reordering color
-ramps. Theme and variant reordering is undoable data editing, but it is not a
-shared-structure warning case.
+Variants in the same theme share structure. Shared structure includes color
+family names and order, step count, index style, half-step settings, and color
+ramp names and order within each family. Step lightness values, ramp source
+colors, generated swatch colors, swatch channel overrides, and Reverse are
+edited per variant.
+
+Structural edits affect every variant in the current theme. Theme and variant
+reordering is undoable data editing, but it is not a shared-structure warning
+case.
 
 When a theme has multiple variants, show a non-blocking warning near the
 operation explaining that the change affects all variants. Do not show an
@@ -567,4 +590,5 @@ not part of Undo/Redo history. If P3 is unavailable on the current
 browser/monitor, disable it and show "P3 is unavailable on this monitor" in the
 switcher tooltip. If P3 was selected and becomes unavailable, fall back to sRGB
 automatically. CSS export always uses unclamped OKLCH channel values regardless
-of the selected preview gamut.
+of the selected preview gamut. Near the gamut switcher, show a compact note that
+palette and contrast previews use clamped colors in the selected gamut.
