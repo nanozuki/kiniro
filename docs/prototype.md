@@ -56,7 +56,7 @@ four sections:
 | C: 0.0255  || L: 0.9500 | L: 0.8500 | L: 0.7500 |                            |
 | H: 291.13  ||           |           | C: 0.0300 |           ...              |
 |            ||           |           |           |                            |
-| base [St.] || base-100  | base-200  | base-200  |                            |
+| base [St.] || base-100  | base-200  | base-300  |                            |
 +------------++-----------+-----------+-----------+----------------------------+
 |                                [+ Color Ramp]                                |
 +------------------------------------------------------------------------------+
@@ -72,7 +72,7 @@ At CSS Variables tab, replace <Palette /> with <CSSVariables />.
 
 ```text
 +------------------------------------------------------------------------------+
-| Kiniro                  [Undo] [Redo] [sRGB/P3]        [Export] [Import] |
+| # Kiniro                 [Undo] [Redo] [sRGB/P3]        [Export] [Import] |
 +------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------+
@@ -112,7 +112,7 @@ At Contrast Checker tab, replace <Palette /> with <ContrastChecker />.
 
 ```text
 +------------------------------------------------------------------------------+
-| Kiniro                  [Undo] [Redo] [sRGB/P3]        [Export] [Import] |
+| # Kiniro                 [Undo] [Redo] [sRGB/P3]        [Export] [Import] |
 +------------------------------------------------------------------------------+
 
 +------------------------------------------------------------------------------+
@@ -158,6 +158,9 @@ At Contrast Checker tab, replace <Palette /> with <ContrastChecker />.
 
 ## Main Components
 
+> **Convention:** `<background>` prefix marks operations that run automatically
+> without direct user action (e.g., auto-save, value generation).
+
 ### <TitleBar />
 
 This component has two states: with theme(s) and without theme. When there is no
@@ -168,14 +171,15 @@ global sRGB/P3 gamut switcher. Hide Undo/Redo, Export, and the gamut switcher in
 the empty landing state. Keep Import visible in the empty landing state. Import
 and Add first Theme use the same visual style.
 
-**export(themes)**: Open a dialog to show a list of themes, allow user to select
-themes to export, and export selected themes as a JSON file. No themes are
-selected by default, the confirm button is disabled until at least one theme is
-selected, and the dialog provides a select-all action. Export is read-only and
-does not create an Undo/Redo history entry. JSON export contains theme data only
-with `"version": 1`. Keep JSON export as small as possible by omitting derived
-data such as sanitized names and generated values. The default export filename
-is `kiniro-data.json`, and users can modify it.
+**export(themes)**: Open a dialog that lists all themes and allows the user to
+select which to export. No themes are selected by default; the confirm button is
+disabled until at least one theme is selected; the dialog provides a select-all
+action. The dialog also shows a filename field defaulting to `kiniro-data.json`,
+which the user can edit before confirming. Confirming downloads the selected
+themes as a JSON file. JSON export contains theme data only with `"version": 1`.
+Keep JSON export as small as possible by omitting derived data such as sanitized
+names and generated values. Export is read-only and does not create an Undo/Redo
+history entry.
 
 **import(file, themes)**: Open a file picker that accepts `.json` files to
 select a JSON file. Do not support browser drag-and-drop import in v1. Validate
@@ -186,8 +190,8 @@ confirm button is disabled until at least one theme is selected. If there are
 themes with the same name, ask user to overwrite or rename them. Conflict
 handling is per theme, defaults to overwrite, and overwrite completely replaces
 the existing theme. New imported themes append to the end of the theme list.
-Overwritten themes keep their current positions. After import, select the first
-changed theme from the left, select its first variant, and switch to Palette.
+Overwritten themes keep their current positions. After import, select the leftmost newly added or overwritten theme in the theme
+list, select its first variant, and switch to Palette.
 Import is one undoable action.
 
 **<background>syncLocalStorage()**: Save all data and states to local storage,
@@ -196,8 +200,8 @@ interaction, omit generated data. Startup should restore and show the UI
 immediately without a noticeable loading state. Autosave succeeds silently. If
 autosave fails, show a non-spamming auto-disappearing toast and retry after one
 minute while the app continues running normally. Persist selected theme, selected
-variant, selected workspace tab, global gamut preview, and at most 100 Undo/Redo
-history entries. Include a schema/version field. If local storage validation
+variant, selected workspace tab, global gamut preview, and at most the 100 most
+recent Undo/Redo history entries. In-memory history is not capped. Include a schema/version field. If local storage validation
 fails, ignore the invalid local storage, rebuild an empty state, and show a toast
 that the data was reset. Do not persist dialog draft inputs or "do not warn
 again" state.
@@ -318,8 +322,8 @@ Scale style uses regular indexes `100`, `200`, ..., `{count * 100}`. Half step
 start adds `50`; half step end adds `{count * 100 + 50}`. Ordinal style uses
 `1`, `2`, ..., `{count}` and has no half steps. Switching from scale to ordinal
 maps regular steps by position (`100 -> 1`, `200 -> 2`) and drops half-step
-overrides. Switching from ordinal to scale maps by position (`1 -> 100`,
-`2 -> 200`).
+overrides; the half-step settings are hidden and do not apply in ordinal mode.
+Switching from ordinal to scale maps by position (`1 -> 100`, `2 -> 200`).
 **overrideLightness(stepIndex, lightness)**: override the lightness value of a
 step, convert this step to a controlled step.
 **resetLightness(stepIndex)**: reset the lightness value of a step to the
@@ -497,10 +501,7 @@ them, and show the result in <CheckResult />.
 
 Use WCAG 2 contrast ratio for now. Calculate contrast from colors after clamping
 to the selected gamut, because the checker should evaluate the actual displayed
-value. The default gamut is sRGB, with a Display P3 option. If P3 is unavailable
-on the current browser/monitor, disable it and show "P3 is unavailable on this
-monitor" in the switcher tooltip. If P3 was selected and becomes unavailable,
-fall back to sRGB automatically.
+value.
 
 Contrast checker selections do not persist. Default foreground is the first
 ramp's second swatch. Default background is the second ramp's second-to-last
@@ -509,7 +510,7 @@ selectable, only swatches.
 
 The selected color labels use display names in the form `ramp + step`. The
 color selector uses compact selector-specific cells with no text inside the
-cells. On hover/focus, show a tooltip with `ramp + step`. V1 supports
+cells. On hover, show a tooltip with `ramp + step`. V1 supports
 pointer/mouse selection only. The preview uses fixed sample content with one
 line of large text, one line of normal text, and the existing line/block
 component preview. Provide a foreground/background swap button. Show the numeric
@@ -537,8 +538,8 @@ empty.
 Inputs outside dialogs update live and do not create undo entries per keystroke.
 They create one undo entry on blur only if the final value actually changed.
 Invalid non-dialog names fall back to default names using established naming
-rules. Duplicate non-dialog names are fixed by appending a number, for example
-`Name 2`.
+rules. Duplicate non-dialog names or sanitized-name collisions are fixed by
+appending a number, for example `Name 2`.
 
 Dialogs show validation in real time and block confirmation while any value is
 invalid, including duplicate names or sanitized-name collisions. Dialog
@@ -562,5 +563,8 @@ for the current browser session.
 
 Palette and Contrast Checker share the same global sRGB/P3 preview switcher. The
 selected gamut preview is global app state, persists in local storage, and is
-not part of Undo/Redo history. CSS export always uses unclamped OKLCH channel
-values regardless of the selected preview gamut.
+not part of Undo/Redo history. If P3 is unavailable on the current
+browser/monitor, disable it and show "P3 is unavailable on this monitor" in the
+switcher tooltip. If P3 was selected and becomes unavailable, fall back to sRGB
+automatically. CSS export always uses unclamped OKLCH channel values regardless
+of the selected preview gamut.
