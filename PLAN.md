@@ -52,7 +52,7 @@ Notes:
 - Sanitized CSS name collisions are treated separately from exact display-name
   duplicates.
 
-### 3. Step scale and lightness module
+### 3. Step scale and lightness module — Done
 
 - Extend current lightness helpers for scale and ordinal index styles.
 - Add half-step handling, controlled lightness interpolation, override cleanup,
@@ -60,6 +60,17 @@ Notes:
 - Add mapping helpers for index-style changes.
 - Add tests for step indexes, interpolation, controlled values, half steps, and
   reverse behavior.
+
+Notes:
+
+- Added next step-scale helpers in `src/lib/next/lightness.ts` for scale and
+  ordinal step labels, half-step positions, controlled interpolation, cleanup,
+  index-style mapping, and reverse helpers.
+- Index-style mapping maps regular scale steps by position and drops half-step
+  overrides. Mapped endpoint values are preserved so the future state manager can
+  decide whether to apply them to endpoints or clean them as overrides.
+- Reverse helpers include both step lightness values and swatch override key
+  remapping for future ramp operations.
 
 ### 4. Color and gamut module
 
