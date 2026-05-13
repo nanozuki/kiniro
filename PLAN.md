@@ -35,12 +35,22 @@ Notes:
 - Added tests in `src/lib/next/model.spec.ts` for default creation and
   shared-structure syncing.
 
-### 2. Naming and validation module
+### 2. Naming and validation module — Done
 
 - Add display-name normalization and CSS-name sanitization helpers.
 - Add uniqueness/collision helpers for themes, variants, families, and ramps.
 - Add fallback default-name helpers.
 - Add tests for invalid names, duplicate names, and sanitized-name collisions.
+
+Notes:
+
+- Added naming helpers in `src/lib/next/naming.ts` for display-name trimming,
+  CSS-name sanitization, validation, collision detection, scoped name lists, and
+  default-name generation.
+- Invalid inline names can be repaired with `ensureUniqueName`; dialog-style
+  blocking validation can use `validateName`.
+- Sanitized CSS name collisions are treated separately from exact display-name
+  duplicates.
 
 ### 3. Step scale and lightness module
 
