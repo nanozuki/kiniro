@@ -15,27 +15,45 @@ Read @README.md to get an overview of this project.
 - Use SvelteKit and Svelte 5. Use runes for reactivity.
 - Put route-level UI in `src/routes` and reusable logic in `src/lib`.
 - Use `color.js` for color calculations.
-- Use `melt-ui` next version to build components
+- Use the next version of `melt-ui` to build components.
+- Update related documentation when changing domain concepts, layout behavior,
+  or component responsibilities.
 
 ## Comments
 
-Add comment for each exported function, and Svelte component. Keep comments
-brief, descriptive, and natural. Focus on motivation, usage, and non-obvious
-constraints. Avoid unnecessary styles and labels and do not include obvious
-information or repeat code step-by-step.
+Write comments for modules' interfaces, except when they are obvious enough.
+"Module" here means any structure that provides an abstraction boundary, such as
+classes, components, file/directory modules, subsystems, and services. Prefer
+deep modules: simple interfaces that hide meaningful complexity. Avoid shallow
+modules, including pure re-export modules, that add indirection without hiding
+complexity.
 
-Place comments immediately before the code they describe. Use line comments
-rather than block comments.
+"Interface" here means everything another module needs to know to use this
+module correctly, including exported functions, parameters, return values,
+props, events, errors, side effects, and important invariants.
+
+Module comments should explain the motivation, usage, and non-obvious
+constraints of the module. They should be brief, descriptive, and natural. Do
+not add comments just to satisfy this rule; omit comments when the interface is
+self-explanatory. Avoid unnecessary styles and labels.
+
+In-module comments only for non-obvious implementation details, such as complex
+algorithms, edge case handling, and important invariants. Avoid comments that
+only mirror the code or explain obvious steps.
+
+Prefer line comments over block comments.
 
 ## Testing
 
-Add valuable tests for each exported function and Svelte component (except
-`+page.svelte`), focusing on user-visible behavior, domain rules, and edge
-cases. Don't add meaningless tests that only mirror implementation details.
+Write tests for reusable modules and non-trivial behavior.
+
+Test cases should be meaningful and focused on user-visible behavior. They
+should cover domain rules, edge cases, and potential failure points. Avoid tests
+that only mirror implementation details or verify trivial behavior.
 
 ## Verification
 
-After each file change, run:
+Before committing, run:
 
 `pnpm run check` and `pnpm run test`
 
