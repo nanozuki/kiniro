@@ -285,7 +285,7 @@ Notes:
 - Delegate family editing to `ColorFamily`.
 - Add component tests for empty palette and family creation behavior.
 
-### 18. ColorFamily component
+### 18. ColorFamily component — Done
 
 - Implement family boundary, sticky header, family title actions, step scale
   summary, family delete, and ramp list.

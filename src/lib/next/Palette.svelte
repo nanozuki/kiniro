@@ -1,10 +1,23 @@
 <script lang="ts">
+	import ColorFamily from './ColorFamily.svelte';
 	import type { ColorFamilyStructure, ThemeVariant } from './model';
 
-	let { families, variant, onaddfamily = () => {} } = $props<{
+	let {
+		families,
+		variant,
+		variantCount = 1,
+		onaddfamily = () => {},
+		onrenamefamily = (_id: string, _name: string) => {},
+		ondeletefamily = (_id: string) => {},
+		onaddramp = (_familyId: string) => {}
+	} = $props<{
 		families: ColorFamilyStructure[];
 		variant: ThemeVariant;
+		variantCount?: number;
 		onaddfamily?: () => void;
+		onrenamefamily?: (id: string, name: string) => void;
+		ondeletefamily?: (id: string) => void;
+		onaddramp?: (familyId: string) => void;
 	}>();
 </script>
 
@@ -19,10 +32,7 @@
 	{:else}
 		<div class="families">
 			{#each families as family (family.id)}
-				<section aria-label={`Color family ${family.name}`} class="family-placeholder">
-					<h3>{family.name}</h3>
-					<p>{variant.values.families[family.id]?.ramps ? family.ramps.length : 0} ramps</p>
-				</section>
+				<ColorFamily {family} {variant} {variantCount} onrename={onrenamefamily} ondelete={ondeletefamily} {onaddramp} />
 			{/each}
 		</div>
 	{/if}
@@ -31,5 +41,4 @@
 <style>
 	.palette, .families { display: grid; gap: 1rem; }
 	header { display: flex; justify-content: space-between; gap: 1rem; align-items: center; }
-	.family-placeholder { border: 1px solid currentColor; border-radius: 0.5rem; padding: 1rem; }
 </style>

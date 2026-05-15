@@ -22,6 +22,6 @@ describe('Palette', () => {
 		render(Palette, { families: theme.structure.families, variant: theme.variants[0] });
 
 		await expect.element(page.getByRole('heading', { name: 'Neutrals' })).toBeInTheDocument();
-		await expect.element(page.getByText('0 ramps')).toBeInTheDocument();
+		await expect.element(page.getByText('No color ramps yet.')).toBeInTheDocument();
 	});
 });
