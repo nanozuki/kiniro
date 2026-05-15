@@ -273,7 +273,7 @@ Notes:
 - Drag-and-drop reorder UI is left for later integration with concrete DnD
   behavior.
 
-### 16. WorkspaceTabs component
+### 16. WorkspaceTabs component — Done
 
 - Implement Palette, CSS Variables, and Contrast Checker tabs.
 - Disable dependent tabs when the current variant has no ramps.
