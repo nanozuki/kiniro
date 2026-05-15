@@ -231,12 +231,18 @@ Notes:
   connection, empty landing state, editor placeholders, workspace tab state,
   gamut preview state, dialog/toast placeholders, and route-level tests.
 
-### 13. Shared UI primitives
+### 13. Shared UI primitives — Done
 
 - Add reusable inline-name editor, numeric OKLCH input, dialog shell,
   confirmation dialog, toast area, tab button, and compact color cell primitives.
 - Keep primitives data-light and reusable across feature components.
 - Add component tests for user-visible behavior.
+
+Notes:
+
+- Added data-light Svelte primitives in `src/lib/next/ui`: inline name editor,
+  numeric OKLCH input, dialog shell, confirmation dialog, toast area, tab button,
+  and compact color cell, with browser component tests.
 
 ### 14. TitleBar component
 
