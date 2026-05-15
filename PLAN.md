@@ -279,7 +279,7 @@ Notes:
 - Disable dependent tabs when the current variant has no ramps.
 - Add component tests for enabled/disabled tab behavior.
 
-### 17. Palette component
+### 17. Palette component — Done
 
 - Implement the family list workspace and Add Color Family flow.
 - Delegate family editing to `ColorFamily`.
