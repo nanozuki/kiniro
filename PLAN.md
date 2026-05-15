@@ -257,13 +257,21 @@ Notes:
 - Added `src/lib/next/TitleBar.svelte` with landing/editor states, delegated
   import/export/undo/redo/gamut/add-theme callbacks, and component tests.
 
-### 15. ThemeManager component
+### 15. ThemeManager component — Done
 
 - Implement theme and variant navigation, add actions, rename actions, delete
   actions, and reorder entry points.
 - Keep title actions below navigation.
 - Surface shared state through the app state manager only.
 - Add component tests for selection, create, rename, and delete behavior.
+
+Notes:
+
+- Added `src/lib/next/ThemeManager.svelte` with theme/variant navigation,
+  create, inline rename, delete entry points, title actions below navigation, and
+  callbacks intended to be wired to the app state manager.
+- Drag-and-drop reorder UI is left for later integration with concrete DnD
+  behavior.
 
 ### 16. WorkspaceTabs component
 
