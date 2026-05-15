@@ -215,7 +215,7 @@ Notes:
   with version validation, friendly validation failures, overwrite-in-place, and
   rename-and-append conflict handling.
 
-### 12. `/next` route shell scaffold
+### 12. `/next` route shell scaffold — Done
 
 - Create `src/routes/next/+page.svelte` while the root route remains stable.
 - Connect app state manager, storage sync, selected theme/variant/tab, and gamut
@@ -224,6 +224,12 @@ Notes:
   workspace content, dialogs, and toasts.
 - Verify initial empty state and populated editor state in `/next`.
 - Add route-level tests for shell behavior.
+
+Notes:
+
+- Added `/next` shell with local-storage bootstrap/sync, app-state manager
+  connection, empty landing state, editor placeholders, workspace tab state,
+  gamut preview state, dialog/toast placeholders, and route-level tests.
 
 ### 13. Shared UI primitives
 
