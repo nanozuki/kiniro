@@ -184,7 +184,7 @@ Notes:
   hook for minimal UI repair by the app state manager.
 - UI state remains outside history entries.
 
-### 10. Storage module
+### 10. Storage module — Done
 
 - Add next-version persistence with versioned local storage state.
 - Persist app data, selected state, global preview state, and capped saved
@@ -194,6 +194,12 @@ Notes:
 - Ignore invalid stored data safely and expose reset/error status for UI toasts.
 - Add tests for schema validation, defaults, invalid storage, derived-data
   omission, and history capping.
+
+Notes:
+
+- Added versioned next local-storage helpers in `src/lib/next/storage.ts` with
+  durable UI state, capped saved history, safe invalid-data reset, and explicit
+  persisted shape that omits derived/transient UI data.
 
 ### 11. Import/export module
 
