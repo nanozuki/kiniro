@@ -315,7 +315,7 @@ Notes:
 - Confirm as one undoable change and discard canceled drafts.
 - Add component tests for validation, format switching, confirm, and cancel.
 
-### 22. ColorSwatch component and swatch modal
+### 22. ColorSwatch component and swatch modal — Done
 
 - Implement swatch display cell, override indicators, gamut warning marker, and
   edit modal.
@@ -323,7 +323,15 @@ Notes:
 - Add component tests for displayed values, override controls, and gamut
   warnings.
 
-### 23. CSSVariables component
+Notes:
+
+- Added `src/lib/next/ColorSwatch.svelte` with swatch preview cells, override and
+  gamut indicators, an inline edit modal, per-channel override/reset callbacks,
+  and reset-all callback wiring through `ColorRamp`.
+- Added component tests for displayed values, override controls, and gamut
+  warnings.
+
+### 23. CSSVariables component — Done
 
 - Implement CSS workspace tab with prefix editing, generated code block, usage
   example, export note, and copy action.
@@ -331,7 +339,16 @@ Notes:
 - Add component tests for output rendering, prefix blur fallback, and copy
   success/failure feedback.
 
-### 24. ContrastChecker component
+Notes:
+
+- Added `src/lib/next/CSSVariables.svelte` with prefix editing, generated CSS,
+  usage example, export note, and copy feedback.
+- Prefix changes delegate to the route/state manager; undo history integration is
+  still represented by the manager boundary rather than a full history UI.
+- Added component tests for rendered output, fallback prefix behavior, and copy
+  success/failure feedback.
+
+### 24. ContrastChecker component — Done
 
 - Implement showcase, color selector, foreground/background target controls,
   swap action, and result table.
@@ -339,7 +356,15 @@ Notes:
 - Add component tests for default selections, target selection, swap, and
   pass/fail rendering.
 
-### 25. Import/export dialogs
+Notes:
+
+- Added `src/lib/next/ContrastChecker.svelte` using generated current-variant
+  swatches as selectable foreground/background targets.
+- Implemented showcase preview, target selectors, swap behavior, contrast ratio,
+  and WCAG-style pass/fail result table.
+- Added component tests for defaults, target changes, swap, and pass/fail output.
+
+### 25. Import/export dialogs — Done
 
 - Implement export theme selection and filename dialog.
 - Implement import file picker flow, validation summary, theme selection, and
@@ -348,7 +373,18 @@ Notes:
 - Add component tests for disabled confirm states, conflict choices, and
   successful callbacks.
 
-### 26. Route shell promotion
+Notes:
+
+- Added `src/lib/next/ImportExportDialogs.svelte` with export theme selection,
+  filename input, import file picker, validation summary, selectable imported
+  themes, and conflict choices.
+- Import/export callbacks are route-level boundaries; import is applied as a
+  single state-manager mutation in the promoted shell and export remains
+  read-only.
+- Added component tests for disabled confirm states, invalid import summaries,
+  conflict choices, and successful callbacks.
+
+### 26. Route shell promotion — Done
 
 - Replace placeholder sections in `src/routes/next/+page.svelte` as feature
   components become available.
@@ -356,13 +392,28 @@ Notes:
   passes checks.
 - Add or update route-level tests for promoted shell behavior.
 
-### 27. Obsolete code cleanup
+Notes:
+
+- Replaced `/next` placeholders with the next feature components and wired them
+  to `NextAppManager`, generated palettes, storage, import/export, gamut preview,
+  and workspace tab state.
+- Promoted the composition to `src/routes/+page.svelte` and updated route shell
+  tests for the new component labels.
+
+### 27. Obsolete code cleanup — Done
 
 - Remove old route components and old model modules after the promoted shell
   passes checks.
 - Migrate or delete obsolete tests.
 - Keep useful helper tests by moving them to the new modules.
 - Run full verification after cleanup.
+
+Notes:
+
+- Removed obsolete top-level palette/model helper modules and old route
+  components/tests after the new shell was promoted.
+- Kept the next-model helper tests under `src/lib/next` and verified the cleaned
+  suite with `pnpm run check` and `pnpm run test`.
 
 ## Verification Rule
 
