@@ -106,13 +106,21 @@ Notes:
   UI/export modules can show override indicators without persisting derived
   palette data.
 
-### 6. CSS variables module
+### 6. CSS variables module — Done
 
 - Add next-version CSS export for the current variant only.
 - Use theme-level prefix, sanitized names, family grouping, and OKLCH channel
   triples.
 - Preserve palette order from generated data.
 - Add tests for names, precision, grouping, empty families, and copy output.
+
+Notes:
+
+- Added CSS export helpers in `src/lib/next/cssVariables.ts` that export only
+  the selected variant, normalize the theme prefix, sanitize variant/ramp names,
+  preserve generated palette order, and render grouped `:root` channel triples.
+- Empty families are emitted as family comments, and usage examples are returned
+  separately from copied CSS output.
 
 ### 7. Contrast module
 
