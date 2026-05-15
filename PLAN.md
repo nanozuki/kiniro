@@ -163,7 +163,7 @@ Notes:
 - Dialog drafts, focus, scroll, edit mode, history, and persistence remain for
   later actions.
 
-### 9. Undo/redo module
+### 9. Undo/redo module — Done
 
 - Add history handling for app data changes only, using snapshot-based entries
   for v1 unless performance forces a patch-based implementation.
@@ -176,6 +176,13 @@ Notes:
   do not automatically switch to, scroll to, or focus the changed component.
 - Add tests for undo/redo stack behavior, redo clearing, action labels, data/UI
   separation, and invalid-selection repair.
+
+Notes:
+
+- Added snapshot-based App data history in `src/lib/next/history.ts` with undo,
+  redo, redo clearing, action labels, capped persistence snapshots, and a restore
+  hook for minimal UI repair by the app state manager.
+- UI state remains outside history entries.
 
 ### 10. Storage module
 
