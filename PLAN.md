@@ -308,7 +308,7 @@ Notes:
 - Open Add/Edit Color Ramp dialog for ramp name and source color.
 - Add component tests for ramp rendering, edit opening, and delete behavior.
 
-### 21. ColorRampDialog component
+### 21. ColorRampDialog component — Done
 
 - Implement structured OKLCH/Hex/RGB/HSL source controls.
 - Validate names and source color drafts in real time.
