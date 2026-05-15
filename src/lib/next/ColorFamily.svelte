@@ -1,7 +1,7 @@
 <script lang="ts">
-	import { formatLightness } from './color';
 	import { generateFamily } from './palette';
-	import type { ColorFamilyStructure, ThemeVariant } from './model';
+	import StepScale from './StepScale.svelte';
+	import type { ColorFamilyStructure, StepIndexStyle, ThemeVariant } from './model';
 
 	let {
 		family,
@@ -9,7 +9,14 @@
 		variantCount = 1,
 		onrename = (_id: string, _name: string) => {},
 		ondelete = (_id: string) => {},
-		onaddramp = (_familyId: string) => {}
+		onaddramp = (_familyId: string) => {},
+		onstepcount = (_familyId: string, _count: number) => {},
+		onindexstyle = (_familyId: string, _style: StepIndexStyle) => {},
+		onhalfsteps = (_familyId: string, _start: boolean, _end: boolean) => {},
+		onrange = (_familyId: string, _start: number, _end: number) => {},
+		onoverride = (_familyId: string, _index: string, _lightness: number) => {},
+		onreset = (_familyId: string, _index: string) => {},
+		onreverse = (_familyId: string) => {}
 	} = $props<{
 		family: ColorFamilyStructure;
 		variant: ThemeVariant;
@@ -17,6 +24,13 @@
 		onrename?: (id: string, name: string) => void;
 		ondelete?: (id: string) => void;
 		onaddramp?: (familyId: string) => void;
+		onstepcount?: (familyId: string, count: number) => void;
+		onindexstyle?: (familyId: string, style: StepIndexStyle) => void;
+		onhalfsteps?: (familyId: string, start: boolean, end: boolean) => void;
+		onrange?: (familyId: string, start: number, end: number) => void;
+		onoverride?: (familyId: string, index: string, lightness: number) => void;
+		onreset?: (familyId: string, index: string) => void;
+		onreverse?: (familyId: string) => void;
 	}>();
 
 	let editingName = $state(false);
@@ -32,11 +46,17 @@
 			{:else}
 				<h3>{family.name}</h3>
 			{/if}
-			<div aria-label="Step scale summary" class="step-summary">
-				{#each generated.steps as step}
-					<span>{step.index}: {formatLightness(step.lightness)}</span>
-				{/each}
-			</div>
+			<StepScale
+				structure={family.stepScale}
+				values={variant.values.families[family.id].stepScale}
+				onstepcount={(count) => onstepcount(family.id, count)}
+				onindexstyle={(style) => onindexstyle(family.id, style)}
+				onhalfsteps={(start, end) => onhalfsteps(family.id, start, end)}
+				onrange={(start, end) => onrange(family.id, start, end)}
+				onoverride={(index, lightness) => onoverride(family.id, index, lightness)}
+				onreset={(index) => onreset(family.id, index)}
+				onreverse={() => onreverse(family.id)}
+			/>
 		</div>
 		<div class="actions">
 			<button type="button" onclick={() => { nameDraft = family.name; editingName = true; }}>Rename family</button>
@@ -66,7 +86,7 @@
 <style>
 	.color-family { border: 1px solid currentColor; border-radius: 0.75rem; padding: 1rem; display: grid; gap: 1rem; }
 	.family-header { position: sticky; top: 0; display: flex; justify-content: space-between; gap: 1rem; align-items: start; background: Canvas; padding-block: 0.25rem; }
-	.step-summary, .actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
+	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 	.warning { color: #92400e; }
 	.ramps { display: grid; gap: 0.75rem; }
 	.ramp-placeholder { border: 1px dashed currentColor; border-radius: 0.5rem; padding: 0.75rem; }

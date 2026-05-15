@@ -293,7 +293,7 @@ Notes:
 - Add component tests for family actions and shared-structure warning
   visibility.
 
-### 19. StepScale component
+### 19. StepScale component — Done
 
 - Implement compact summary and expanded inline editing.
 - Wire structure controls and variant-value controls to state manager
