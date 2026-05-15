@@ -1,335 +1,112 @@
 <script lang="ts">
-	import { Tabs } from 'melt/builders';
-	import { Kiniro } from '$lib/kiniro.svelte';
-	import { slugifyCssIdent } from '$lib/cssVariables';
-	import { loadPalettes, parsePalettesJson, savePalettes } from '$lib/storage';
-	import ColorGroup from './ColorGroup.svelte';
-	import ColorPlayground from './ColorPlayground.svelte';
-	import CssVariablesDialog from './CssVariablesDialog.svelte';
+	import { browser } from '$app/environment';
+	import CSSVariables from '$lib/next/CSSVariables.svelte';
+	import ContrastChecker from '$lib/next/ContrastChecker.svelte';
+	import ImportExportDialogs from '$lib/next/ImportExportDialogs.svelte';
+	import Palette from '$lib/next/Palette.svelte';
+	import ThemeManager from '$lib/next/ThemeManager.svelte';
+	import WorkspaceTabs from '$lib/next/WorkspaceTabs.svelte';
+	import { createSourceColor } from '$lib/next/color';
+	import { applyThemeImport, type ImportThemeChoice, type ThemeExportFile } from '$lib/next/importExport';
+	import { generateVariantPalette } from '$lib/next/palette';
+	import { createNextAppManager } from '$lib/next/state';
+	import { createDefaultPersistedState, loadNextState, saveNextState } from '$lib/next/storage';
 
-	// The page coordinates the reactive Kiniro model with route-level import, export, and editing UI.
-	let cssDialogOpen = $state(false);
-	let cssVarPrefix = $state('color-');
-	let kiniro = new Kiniro(loadPalettes());
-
-	function parseTabId(value: string): number | null {
-		if (value === '') return null;
-		const id = Number(value);
-		return Number.isFinite(id) ? id : null;
-	}
-
-	const paletteTabs = new Tabs<string>({
-		value: () => String(kiniro.activePaletteId ?? ''),
-		onValueChange: (value) => {
-			kiniro.activePaletteId = parseTabId(value);
-			kiniro.activeVariantId = kiniro.activePalette?.variants[0]?.id ?? null;
+	const loaded = browser ? loadNextState(localStorage) : { ok: true, state: createDefaultPersistedState(), reset: false, error: null };
+	const manager = createNextAppManager({
+		data: loaded.state.data,
+		ui: {
+			selection: { themeId: loaded.state.ui.selectedThemeId, variantId: loaded.state.ui.selectedVariantId },
+			workspaceTab: loaded.state.ui.workspaceTab,
+			gamutPreview: loaded.state.ui.gamutPreview
 		}
 	});
-	const variantTabs = new Tabs<string>({
-		value: () => String(kiniro.activeVariantId ?? ''),
-		onValueChange: (value) => (kiniro.activeVariantId = parseTabId(value))
-	});
 
-	const activeVariableNamespace = $derived.by(() => {
-		const palette = kiniro.activePalette;
-		const variant = kiniro.activeVariant;
-		return palette && variant
-			? `${slugifyCssIdent(palette.name)}-${slugifyCssIdent(variant.name)}-`
-			: '';
-	});
+	let app = manager;
+	let revision = $state(0);
+	let toast = $state(loaded.reset ? 'Stored data was reset because it was invalid.' : '');
+	let selectedTheme = $derived.by(() => { revision; return app.selectedTheme; });
+	let selectedVariant = $derived.by(() => { revision; return app.selectedVariant; });
+	let palette = $derived(selectedTheme && selectedVariant ? generateVariantPalette(selectedTheme, selectedVariant) : null);
 
-	$effect(() => {
-		// Persist the palette model, not generated swatches, so OKLCH rules can evolve
-		// without locking old files to derived display colors.
-		savePalettes(kiniro.snapshot());
-	});
-
-	function exportJson() {
-		const json = JSON.stringify(kiniro.snapshot(), null, 2);
-		const blob = new Blob([json], { type: 'application/json' });
-		const url = URL.createObjectURL(blob);
-		const a = document.createElement('a');
-		a.href = url;
-		a.download = 'kiniro-palettes.json';
-		a.click();
-		URL.revokeObjectURL(url);
+	function mutate(change: () => void) { change(); revision += 1; syncStorage(); }
+	function addFirstTheme() { mutate(() => void app.addTheme()); }
+	function download(filename: string, json: string) {
+		if (!browser) return;
+		const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+		const link = document.createElement('a');
+		link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
 	}
-
-	function importJson() {
-		const input = document.createElement('input');
-		input.type = 'file';
-		input.accept = 'application/json,.json';
-		input.onchange = () => {
-			const file = input.files?.[0];
-			if (!file) return;
-			const reader = new FileReader();
-			reader.onload = () => {
-				const parsed = parsePalettesJson(reader.result as string);
-				if (parsed) {
-					kiniro.replaceAll(parsed);
-				} else {
-					alert('Invalid palette file.');
-				}
-			};
-			reader.readAsText(file);
-		};
-		input.click();
+	function importThemes(file: ThemeExportFile, choices: ImportThemeChoice[]) {
+		mutate(() => {
+			const result = applyThemeImport(app.data.themes, file.themes, choices);
+			app.data.themes = result.themes;
+			app.ui.selection.themeId = result.selectedThemeId;
+			app.ui.selection.variantId = app.selectedTheme?.variants[0]?.id ?? null;
+			app.repairUiState();
+		});
+	}
+	function syncStorage() {
+		if (!browser) return;
+		try {
+			saveNextState(localStorage, { version: 1, data: app.data, ui: { selectedThemeId: app.ui.selection.themeId, selectedVariantId: app.ui.selection.variantId, workspaceTab: app.ui.workspaceTab, gamutPreview: app.ui.gamutPreview }, history: { past: [], future: [] } });
+		} catch { toast = 'Autosave failed. Kiniro will retry later.'; }
 	}
 </script>
 
-<main>
-	<div class="header">
-		<h1>OKLCH Color Palette Maker</h1>
-		<div class="header-actions">
-			<button class="tool-btn" onclick={() => (cssDialogOpen = true)}>CSS Variables</button>
-			<button class="tool-btn" onclick={exportJson}>Export JSON</button>
-			<button class="tool-btn" onclick={importJson}>Import JSON</button>
+<svelte:head><title>Kiniro</title></svelte:head>
+
+<main class="next-shell" data-revision={revision}>
+	<section aria-label="TitleBar" class="panel title-bar">
+		<div><h1>Kiniro</h1><p>Make OKLCH color palettes and export CSS variables.</p></div>
+		<div class="actions">
+			{#if selectedTheme}
+				<button disabled>Undo</button><button disabled>Redo</button>
+				<button aria-pressed={app.ui.gamutPreview === 'srgb'} onclick={() => mutate(() => app.setGamutPreview('srgb'))}>sRGB</button>
+				<button aria-pressed={app.ui.gamutPreview === 'p3'} onclick={() => mutate(() => app.setGamutPreview('p3'))}>P3</button>
+			{/if}
+			<ImportExportDialogs themes={app.data.themes} onexport={download} onimport={importThemes} />
+			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
 		</div>
-	</div>
+	</section>
 
-	{#if kiniro.activePalette && kiniro.activeVariant}
-		<section class="model-controls" aria-label="Palette and variant controls">
-			<div class="tab-section">
-				<span class="tab-label">Palette</span>
-				<div class="tabs" {...paletteTabs.triggerList}>
-					{#each kiniro.palettes as palette (palette.id)}
-						<button type="button" class="tab-trigger" {...paletteTabs.getTrigger(String(palette.id))}>
-							{palette.name}
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			{#each kiniro.palettes as palette (palette.id)}
-				<div class="control-block" {...paletteTabs.getContent(String(palette.id))}>
-					{#if palette.id === kiniro.activePaletteId}
-						<input
-							type="text"
-							value={kiniro.activePalette.name}
-							aria-label="Palette name"
-							oninput={(e) =>
-								kiniro.activePaletteId &&
-								kiniro.updatePalette(kiniro.activePaletteId, { name: e.currentTarget.value })}
-						/>
-						<button class="tool-btn" onclick={() => kiniro.addPalette()}>+ Add palette</button>
-						<button
-							class="tool-btn danger"
-							disabled={kiniro.palettes.length <= 1}
-							onclick={() => kiniro.activePaletteId && kiniro.deletePalette(kiniro.activePaletteId)}
-						>
-							Delete palette
-						</button>
-					{/if}
-				</div>
-			{/each}
-
-			<div class="tab-section">
-				<span class="tab-label">Variant</span>
-				<div class="tabs" {...variantTabs.triggerList}>
-					{#each kiniro.activePalette.variants as variant (variant.id)}
-						<button type="button" class="tab-trigger" {...variantTabs.getTrigger(String(variant.id))}>
-							{variant.name}
-						</button>
-					{/each}
-				</div>
-			</div>
-
-			{#each kiniro.activePalette.variants as variant (variant.id)}
-				<div class="control-block" {...variantTabs.getContent(String(variant.id))}>
-					{#if variant.id === kiniro.activeVariantId}
-						<input
-							type="text"
-							value={kiniro.activeVariant.name}
-							aria-label="Variant name"
-							oninput={(e) =>
-								kiniro.activeVariantId &&
-								kiniro.updateVariant(kiniro.activeVariantId, { name: e.currentTarget.value })}
-						/>
-						<button class="tool-btn" onclick={() => kiniro.addVariant()}>+ Add variant</button>
-						<button
-							class="tool-btn danger"
-							disabled={kiniro.activePalette.variants.length <= 1}
-							onclick={() => kiniro.activeVariantId && kiniro.deleteVariant(kiniro.activeVariantId)}
-						>
-							Delete variant
-						</button>
-					{/if}
-				</div>
-			{/each}
+	{#if selectedTheme && selectedVariant}
+		<section class="panel">
+			<ThemeManager
+				themes={app.data.themes}
+				selectedThemeId={app.ui.selection.themeId}
+				selectedVariantId={app.ui.selection.variantId}
+				onselecttheme={(id) => mutate(() => app.selectTheme(id))}
+				onselectvariant={(id) => mutate(() => app.selectVariant(id))}
+				onaddtheme={() => mutate(() => void app.addTheme())}
+				onaddvariant={() => mutate(() => void app.addVariant())}
+				onrenametheme={(id, name) => mutate(() => app.renameTheme(id, name))}
+				onrenamevariant={(id, name) => mutate(() => app.renameVariant(id, name))}
+				ondeletetheme={(id) => mutate(() => app.deleteTheme(id))}
+				ondeletevariant={(id) => mutate(() => app.deleteVariant(id))}
+			/>
 		</section>
 
-		{#each kiniro.activeGroups as group (group.id)}
-			<div class="group-wrapper">
-				<ColorGroup
-					{group}
-					onGroupChange={(patch) => kiniro.updateGroup(group.id, patch)}
-					onLightnessChange={(patch) => kiniro.updateGroupLightness(group.id, patch)}
-					onColorChange={(colorId, patch) => kiniro.updateColor(group.id, colorId, patch)}
-					onAddColor={() => kiniro.addColor(group.id)}
-					onDeleteColor={(colorId) => kiniro.deleteColor(group.id, colorId)}
-				/>
-				<button class="delete-btn" onclick={() => kiniro.deleteGroup(group.id)}>✕</button>
-			</div>
-		{/each}
-		<button class="add-btn" onclick={() => kiniro.addGroup()}>+ Add group</button>
-		<ColorPlayground
-			groups={kiniro.activeGroups}
-			prefix={cssVarPrefix}
-			variableNamespace={activeVariableNamespace}
-		/>
+		<section class="panel"><WorkspaceTabs theme={selectedTheme} activeTab={app.ui.workspaceTab} onselect={(tab) => mutate(() => app.setWorkspaceTab(tab))} /></section>
+
+		<section aria-label="Workspace" class="panel">
+			{#if app.ui.workspaceTab === 'palette'}
+				<Palette families={selectedTheme.structure.families} variant={selectedVariant} variantCount={selectedTheme.variants.length} onaddfamily={() => mutate(() => void app.addFamily())} onrenamefamily={(id, name) => mutate(() => app.renameFamily(id, name))} ondeletefamily={(id) => mutate(() => app.deleteFamily(id))} onaddramp={(familyId) => mutate(() => void app.addRamp(familyId, createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 0 })))} />
+			{:else if app.ui.workspaceTab === 'cssVariables'}
+				<CSSVariables theme={selectedTheme} variant={selectedVariant} onprefix={(prefix) => mutate(() => app.setThemeCssPrefix(selectedTheme.id, prefix))} />
+			{:else if palette}
+				<ContrastChecker {palette} gamutPreview={app.ui.gamutPreview} />
+			{/if}
+		</section>
 	{/if}
+
+	{#if toast}<aside aria-label="Toasts">{toast}</aside>{/if}
 </main>
 
-<CssVariablesDialog palettes={kiniro.palettes} bind:open={cssDialogOpen} bind:prefix={cssVarPrefix} />
-
 <style>
-	main {
-		padding: 2rem;
-		font-family: sans-serif;
-		display: flex;
-		flex-direction: column;
-		gap: 1rem;
-	}
-
-	.header {
-		display: flex;
-		align-items: center;
-		gap: 1rem;
-	}
-
-	h1 {
-		font-size: 1.5rem;
-		flex: 1;
-	}
-
-	.header-actions,
-	.control-block,
-	.tabs {
-		display: flex;
-		gap: 0.5rem;
-		flex-wrap: wrap;
-	}
-
-	.model-controls {
-		display: flex;
-		flex-direction: column;
-		gap: 0.75rem;
-		padding: 1rem;
-		border: 1px solid #e5e7eb;
-		border-radius: 8px;
-	}
-
-	.control-block {
-		align-items: center;
-	}
-
-	.control-block input {
-		padding: 0.25rem 0.5rem;
-		border: 1px solid #ccc;
-		border-radius: 4px;
-		font-size: 0.875rem;
-	}
-
-	.tab-section {
-		display: flex;
-		align-items: center;
-		gap: 0.75rem;
-		flex-wrap: wrap;
-	}
-
-	.tab-label {
-		width: 4rem;
-		font-size: 0.875rem;
-		font-weight: 600;
-		color: #555;
-	}
-
-	.tabs {
-		align-items: center;
-	}
-
-	.tab-trigger {
-		padding: 0.35rem 0.7rem;
-		background: #fff;
-		border: 1px solid #d1d5db;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-		color: #555;
-	}
-
-	.tab-trigger:hover {
-		border-color: #907aa9;
-		color: #4f3d61;
-	}
-
-	.tab-trigger[data-active] {
-		background: #f3f0f7;
-		border-color: #907aa9;
-		color: #4f3d61;
-	}
-
-	.group-wrapper {
-		display: flex;
-		align-items: flex-start;
-		gap: 0.5rem;
-	}
-
-	.delete-btn {
-		margin-top: 1rem;
-		padding: 0.25rem 0.5rem;
-		background: none;
-		border: 1px solid #ccc;
-		border-radius: 4px;
-		cursor: pointer;
-		color: #888;
-		font-size: 0.75rem;
-		line-height: 1;
-	}
-
-	.delete-btn:hover {
-		border-color: #e55;
-		color: #e55;
-	}
-
-	.add-btn {
-		align-self: flex-start;
-		padding: 0.4rem 0.8rem;
-		background: none;
-		border: 1px dashed #aaa;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-		color: #555;
-	}
-
-	.add-btn:hover {
-		border-color: #555;
-		color: #111;
-	}
-
-	.tool-btn {
-		padding: 0.4rem 0.8rem;
-		background: none;
-		border: 1px solid #aaa;
-		border-radius: 4px;
-		cursor: pointer;
-		font-size: 0.875rem;
-		color: #555;
-	}
-
-	.tool-btn:hover:not(:disabled) {
-		border-color: #555;
-		color: #111;
-	}
-
-	.tool-btn:disabled {
-		cursor: not-allowed;
-		opacity: 0.45;
-	}
-
-	.tool-btn.danger:hover:not(:disabled) {
-		border-color: #e55;
-		color: #e55;
-	}
+	.next-shell { display: grid; gap: 1rem; padding: 1rem; }
+	.panel { border: 1px solid currentColor; border-radius: 0.5rem; padding: 1rem; }
+	.title-bar { display: flex; justify-content: space-between; gap: 1rem; }
+	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: start; }
+	[aria-pressed='true'] { font-weight: 700; }
 </style>

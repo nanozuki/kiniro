@@ -1,5 +1,14 @@
 <script lang="ts">
 	import { browser } from '$app/environment';
+	import CSSVariables from '$lib/next/CSSVariables.svelte';
+	import ContrastChecker from '$lib/next/ContrastChecker.svelte';
+	import ImportExportDialogs from '$lib/next/ImportExportDialogs.svelte';
+	import Palette from '$lib/next/Palette.svelte';
+	import ThemeManager from '$lib/next/ThemeManager.svelte';
+	import WorkspaceTabs from '$lib/next/WorkspaceTabs.svelte';
+	import { createSourceColor } from '$lib/next/color';
+	import { applyThemeImport, type ImportThemeChoice, type ThemeExportFile } from '$lib/next/importExport';
+	import { generateVariantPalette } from '$lib/next/palette';
 	import { createNextAppManager } from '$lib/next/state';
 	import { createDefaultPersistedState, loadNextState, saveNextState } from '$lib/next/storage';
 
@@ -16,101 +25,81 @@
 	let app = manager;
 	let revision = $state(0);
 	let toast = $state(loaded.reset ? 'Stored data was reset because it was invalid.' : '');
+	let selectedTheme = $derived.by(() => { revision; return app.selectedTheme; });
+	let selectedVariant = $derived.by(() => { revision; return app.selectedVariant; });
+	let palette = $derived(selectedTheme && selectedVariant ? generateVariantPalette(selectedTheme, selectedVariant) : null);
 
-	function addFirstTheme() {
-		app.addTheme();
-		revision += 1;
-		syncStorage();
+	function mutate(change: () => void) { change(); revision += 1; syncStorage(); }
+	function addFirstTheme() { mutate(() => void app.addTheme()); }
+	function download(filename: string, json: string) {
+		if (!browser) return;
+		const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
+		const link = document.createElement('a');
+		link.href = url; link.download = filename; link.click(); URL.revokeObjectURL(url);
 	}
-
-	function setTab(tab: 'palette' | 'cssVariables' | 'contrastChecker') {
-		app.setWorkspaceTab(tab);
-		revision += 1;
-		syncStorage();
+	function importThemes(file: ThemeExportFile, choices: ImportThemeChoice[]) {
+		mutate(() => {
+			const result = applyThemeImport(app.data.themes, file.themes, choices);
+			app.data.themes = result.themes;
+			app.ui.selection.themeId = result.selectedThemeId;
+			app.ui.selection.variantId = app.selectedTheme?.variants[0]?.id ?? null;
+			app.repairUiState();
+		});
 	}
-
-	function setGamut(gamut: 'srgb' | 'p3') {
-		app.setGamutPreview(gamut);
-		revision += 1;
-		syncStorage();
-	}
-
-	function hasThemes(_revision: number) {
-		return app.data.themes.length > 0;
-	}
-
 	function syncStorage() {
 		if (!browser) return;
 		try {
-			saveNextState(localStorage, {
-				version: 1,
-				data: app.data,
-				ui: {
-					selectedThemeId: app.ui.selection.themeId,
-					selectedVariantId: app.ui.selection.variantId,
-					workspaceTab: app.ui.workspaceTab,
-					gamutPreview: app.ui.gamutPreview
-				},
-				history: { past: [], future: [] }
-			});
-		} catch {
-			toast = 'Autosave failed. Kiniro will retry later.';
-		}
+			saveNextState(localStorage, { version: 1, data: app.data, ui: { selectedThemeId: app.ui.selection.themeId, selectedVariantId: app.ui.selection.variantId, workspaceTab: app.ui.workspaceTab, gamutPreview: app.ui.gamutPreview }, history: { past: [], future: [] } });
+		} catch { toast = 'Autosave failed. Kiniro will retry later.'; }
 	}
 </script>
 
-<svelte:head>
-	<title>Kiniro Next</title>
-</svelte:head>
+<svelte:head><title>Kiniro</title></svelte:head>
 
 <main class="next-shell" data-revision={revision}>
 	<section aria-label="TitleBar" class="panel title-bar">
-		<div>
-			<h1>Kiniro</h1>
-			<p>Make OKLCH color palettes and export CSS variables.</p>
-		</div>
+		<div><h1>Kiniro</h1><p>Make OKLCH color palettes and export CSS variables.</p></div>
 		<div class="actions">
-			{#if hasThemes(revision)}
-				<button disabled>Undo</button>
-				<button disabled>Redo</button>
-				<button aria-pressed={app.ui.gamutPreview === 'srgb'} onclick={() => setGamut('srgb')}>sRGB</button>
-				<button aria-pressed={app.ui.gamutPreview === 'p3'} onclick={() => setGamut('p3')}>P3</button>
-				<button>Export</button>
+			{#if selectedTheme}
+				<button disabled>Undo</button><button disabled>Redo</button>
+				<button aria-pressed={app.ui.gamutPreview === 'srgb'} onclick={() => mutate(() => app.setGamutPreview('srgb'))}>sRGB</button>
+				<button aria-pressed={app.ui.gamutPreview === 'p3'} onclick={() => mutate(() => app.setGamutPreview('p3'))}>P3</button>
 			{/if}
-			<button>Import</button>
-			{#if !hasThemes(revision)}
-				<button onclick={addFirstTheme}>Add first Theme</button>
-			{/if}
+			<ImportExportDialogs themes={app.data.themes} onexport={download} onimport={importThemes} />
+			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
 		</div>
 	</section>
 
-	{#if hasThemes(revision)}
-		<section aria-label="ThemeManager" class="panel">
-			<p>Themes: {app.selectedTheme?.name}</p>
-			<p>Variants: {app.selectedVariant?.name}</p>
+	{#if selectedTheme && selectedVariant}
+		<section class="panel">
+			<ThemeManager
+				themes={app.data.themes}
+				selectedThemeId={app.ui.selection.themeId}
+				selectedVariantId={app.ui.selection.variantId}
+				onselecttheme={(id) => mutate(() => app.selectTheme(id))}
+				onselectvariant={(id) => mutate(() => app.selectVariant(id))}
+				onaddtheme={() => mutate(() => void app.addTheme())}
+				onaddvariant={() => mutate(() => void app.addVariant())}
+				onrenametheme={(id, name) => mutate(() => app.renameTheme(id, name))}
+				onrenamevariant={(id, name) => mutate(() => app.renameVariant(id, name))}
+				ondeletetheme={(id) => mutate(() => app.deleteTheme(id))}
+				ondeletevariant={(id) => mutate(() => app.deleteVariant(id))}
+			/>
 		</section>
 
-		<nav aria-label="WorkspaceTabs" class="panel tabs">
-			<button aria-current={app.ui.workspaceTab === 'palette'} onclick={() => setTab('palette')}>Palette</button>
-			<button aria-current={app.ui.workspaceTab === 'cssVariables'} onclick={() => setTab('cssVariables')}>CSS Variables</button>
-			<button aria-current={app.ui.workspaceTab === 'contrastChecker'} onclick={() => setTab('contrastChecker')}>Contrast Checker</button>
-		</nav>
+		<section class="panel"><WorkspaceTabs theme={selectedTheme} activeTab={app.ui.workspaceTab} onselect={(tab) => mutate(() => app.setWorkspaceTab(tab))} /></section>
 
 		<section aria-label="Workspace" class="panel">
 			{#if app.ui.workspaceTab === 'palette'}
-				<h2>Palette</h2>
-				<p>Palette workspace placeholder</p>
+				<Palette families={selectedTheme.structure.families} variant={selectedVariant} variantCount={selectedTheme.variants.length} onaddfamily={() => mutate(() => void app.addFamily())} onrenamefamily={(id, name) => mutate(() => app.renameFamily(id, name))} ondeletefamily={(id) => mutate(() => app.deleteFamily(id))} onaddramp={(familyId) => mutate(() => void app.addRamp(familyId, createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 0 })))} />
 			{:else if app.ui.workspaceTab === 'cssVariables'}
-				<h2>CSS Variables</h2>
-				<p>CSS Variables workspace placeholder</p>
-			{:else}
-				<h2>Contrast Checker</h2>
-				<p>Contrast Checker workspace placeholder</p>
+				<CSSVariables theme={selectedTheme} variant={selectedVariant} onprefix={(prefix) => mutate(() => app.setThemeCssPrefix(selectedTheme.id, prefix))} />
+			{:else if palette}
+				<ContrastChecker {palette} gamutPreview={app.ui.gamutPreview} />
 			{/if}
 		</section>
 	{/if}
 
-	<section aria-label="Dialogs" hidden>Dialogs placeholder</section>
 	{#if toast}<aside aria-label="Toasts">{toast}</aside>{/if}
 </main>
 
@@ -118,6 +107,6 @@
 	.next-shell { display: grid; gap: 1rem; padding: 1rem; }
 	.panel { border: 1px solid currentColor; border-radius: 0.5rem; padding: 1rem; }
 	.title-bar { display: flex; justify-content: space-between; gap: 1rem; }
-	.actions, .tabs { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-	[aria-current='true'], [aria-pressed='true'] { font-weight: 700; }
+	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; align-items: start; }
+	[aria-pressed='true'] { font-weight: 700; }
 </style>

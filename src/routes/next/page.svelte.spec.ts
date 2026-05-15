@@ -16,8 +16,8 @@ describe('/next shell', () => {
 		render(NextPage);
 		await page.getByRole('button', { name: 'Add first Theme' }).click();
 
-		await expect.element(page.getByLabelText('ThemeManager')).toBeInTheDocument();
-		await expect.element(page.getByLabelText('WorkspaceTabs')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Theme manager')).toBeInTheDocument();
+		await expect.element(page.getByLabelText('Workspace tabs')).toBeInTheDocument();
 		await expect.element(page.getByRole('heading', { name: 'Palette' })).toBeInTheDocument();
 	});
 });
