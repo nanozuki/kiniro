@@ -72,7 +72,7 @@ Notes:
 - Reverse helpers include both step lightness values and swatch override key
   remapping for future ramp operations.
 
-### 4. Color and gamut module
+### 4. Color and gamut module — Done
 
 - Expand color parsing and conversion around OKLCH, Hex, RGB, and HSL source
   formats.
@@ -80,6 +80,15 @@ Notes:
   out-of-gamut detection.
 - Add numeric formatting helpers for lightness, chroma, and hue.
 - Add tests for parsing, formatting, clamping, and gamut warnings.
+
+Notes:
+
+- Added next color helpers in `src/lib/next/color.ts` for source-color parsing,
+  OKLCH conversion, source serialization, sRGB/P3 preview CSS, clamped preview
+  hex, gamut warning status, and numeric channel normalization/formatting.
+- Preview helpers expose original gamut status and clamped colors separately so
+  later generated palette, swatch, and contrast modules can keep persisted data
+  unclamped while showing display-safe previews.
 
 ### 5. Generated palette module
 
