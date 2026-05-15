@@ -1,6 +1,7 @@
 <script lang="ts">
+	import ColorSwatch from './ColorSwatch.svelte';
 	import { formatChroma, formatHue, getPreviewColor } from './color';
-	import type { GamutPreview } from './model';
+	import type { GamutPreview, OklchChannel } from './model';
 	import type { GeneratedColorRamp } from './palette';
 
 	let {
@@ -9,7 +10,10 @@
 		gamutPreview = 'srgb',
 		onedit = (_id: string) => {},
 		ondelete = (_id: string) => {},
-		onmove = (_id: string, _direction: 'up' | 'down') => {}
+		onmove = (_id: string, _direction: 'up' | 'down') => {},
+		onoverride = (_rampId: string, _stepIndex: string, _channel: OklchChannel, _value: number) => {},
+		onreset = (_rampId: string, _stepIndex: string, _channel: OklchChannel) => {},
+		onresetall = (_rampId: string, _stepIndex: string) => {}
 	} = $props<{
 		ramp: GeneratedColorRamp;
 		sourceValue: string;
@@ -17,6 +21,9 @@
 		onedit?: (id: string) => void;
 		ondelete?: (id: string) => void;
 		onmove?: (id: string, direction: 'up' | 'down') => void;
+		onoverride?: (rampId: string, stepIndex: string, channel: OklchChannel, value: number) => void;
+		onreset?: (rampId: string, stepIndex: string, channel: OklchChannel) => void;
+		onresetall?: (rampId: string, stepIndex: string) => void;
 	}>();
 
 	let sourcePreview = $derived(getPreviewColor(ramp.sourceColor, gamutPreview));
@@ -33,11 +40,13 @@
 	</div>
 	<div class="swatches">
 		{#each ramp.swatches as swatch}
-			{@const preview = getPreviewColor(swatch.oklch, gamutPreview)}
-			<div class="swatch" style={`background: ${preview.css}`} aria-label={`${swatch.name} ${preview.hex}`}>
-				<strong>{swatch.stepIndex}</strong>
-				<span>{preview.hex}</span>
-			</div>
+			<ColorSwatch
+				{swatch}
+				{gamutPreview}
+				onoverride={(stepIndex, channel, value) => onoverride(ramp.id, stepIndex, channel, value)}
+				onreset={(stepIndex, channel) => onreset(ramp.id, stepIndex, channel)}
+				onresetall={(stepIndex) => onresetall(ramp.id, stepIndex)}
+			/>
 		{/each}
 	</div>
 	<div class="actions">
@@ -53,5 +62,4 @@
 	.source-cell, .actions { display: flex; gap: 0.5rem; align-items: center; flex-wrap: wrap; }
 	.chip { inline-size: 2rem; block-size: 2rem; border: 1px solid currentColor; border-radius: 0.25rem; }
 	.swatches { display: grid; grid-template-columns: repeat(auto-fit, minmax(5rem, 1fr)); gap: 0.25rem; }
-	.swatch { min-block-size: 4rem; padding: 0.5rem; display: grid; align-content: end; color: black; text-shadow: 0 1px white; }
 </style>
