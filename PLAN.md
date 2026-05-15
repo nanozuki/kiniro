@@ -244,13 +244,18 @@ Notes:
   numeric OKLCH input, dialog shell, confirmation dialog, toast area, tab button,
   and compact color cell, with browser component tests.
 
-### 14. TitleBar component
+### 14. TitleBar component — Done
 
 - Implement empty and non-empty states.
 - Wire import/export entry points, undo/redo controls, and gamut switcher.
 - Keep actual import/export dialog logic delegated to dedicated
   components/modules.
 - Add component tests for visible controls in both states.
+
+Notes:
+
+- Added `src/lib/next/TitleBar.svelte` with landing/editor states, delegated
+  import/export/undo/redo/gamut/add-theme callbacks, and component tests.
 
 ### 15. ThemeManager component
 
