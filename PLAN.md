@@ -122,12 +122,20 @@ Notes:
 - Empty families are emitted as family comments, and usage examples are returned
   separately from copied CSS output.
 
-### 7. Contrast module
+### 7. Contrast module — Done
 
 - Add WCAG contrast helpers based on clamped preview colors.
 - Add default foreground/background selection helpers.
 - Add pass/fail result helpers for the checker table.
 - Add tests for contrast ratio, defaults, and result thresholds.
+
+Notes:
+
+- Added contrast helpers in `src/lib/next/contrast.ts` for WCAG ratio
+  calculation from clamped preview colors, selectable swatch targets, prototype
+  default foreground/background selection, and AA/AAA pass-fail table results.
+- Contrast targets are derived from generated swatches only; source color cells
+  are intentionally excluded.
 
 ### 8. App state manager module
 
