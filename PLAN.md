@@ -137,7 +137,7 @@ Notes:
 - Contrast targets are derived from generated swatches only; source color cells
   are intentionally excluded.
 
-### 8. App state manager module
+### 8. App state manager module — Done
 
 - Add a new app-level manager for the `/next` app.
 - Keep app data and UI state separate: app data contains user-authored palette
@@ -150,6 +150,18 @@ Notes:
 - Keep generated values and other derived data out of app data.
 - Add tests for each operation group, data/UI separation, selection repair, and
   cross-variant structure behavior.
+
+Notes:
+
+- Added `NextAppManager` in `src/lib/next/state.ts` as the `/next` mutation
+  boundary for app data plus durable UI state: selection, workspace tab, and
+  gamut preview.
+- Manager operations enforce unique names, shared theme structure across
+  variants, selected-variant-only color/value edits, tab repair when generated
+  workspaces are invalid, and omission of generated palette/CSS/contrast data
+  from app state.
+- Dialog drafts, focus, scroll, edit mode, history, and persistence remain for
+  later actions.
 
 ### 9. Undo/redo module
 
