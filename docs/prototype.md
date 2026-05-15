@@ -207,9 +207,12 @@ that the data was reset. Do not persist dialog draft inputs or "do not warn
 again" state.
 
 **undo() / redo()**: Undo/Redo tracks data changes only, not navigation,
-selection, dialogs, focus, or edit mode. Undo/Redo buttons are disabled when
-unavailable and use generic labels. After undo or redo, show a visible hint that
-names the action.
+selection, dialogs, focus, scroll, or edit mode. Undo/Redo buttons are disabled
+when unavailable and use generic labels. After undo or redo, show a visible hint
+that names the action. Do not automatically switch tabs, scroll, or focus the
+changed component after undo/redo. If the restored data makes the current
+selection or workspace tab invalid, repair only the minimum UI state needed to
+show a valid screen, such as selecting an existing theme or returning to Palette.
 
 ### <ThemeManager />
 
@@ -535,6 +538,35 @@ line of large text, one line of normal text, and the existing line/block
 component preview. Provide a foreground/background swap button. Show the numeric
 contrast ratio only once in the section heading. Use `Pass` and `Fail` labels in
 the result table.
+
+### State and History Design
+
+Keep application state split by responsibility:
+
+- App data contains user-authored palette data, such as themes, variants, color
+  families, step scale options, step values, color ramps, source colors, swatch
+  overrides, and theme CSS prefixes.
+- UI state contains navigation and presentation state, such as the selected
+  theme, selected variant, selected workspace tab, preview gamut, dialog drafts,
+  focus, scroll, and edit mode.
+
+Undo/Redo history tracks App data only. UI state may be persisted separately
+when useful, but it is not part of undo/redo history. Restoring history should
+replace or patch App data and let Svelte reactivity update the visible UI. Do
+not store generated or derived data in App data or history, including sanitized
+names, generated lightness values, generated swatches, CSS output, clamped
+preview colors, or contrast results.
+
+Use stable IDs for persisted entities that can be selected, reordered, deleted,
+or restored. Do not rely on array positions as persistent identity.
+
+Snapshot-based history is acceptable for v1 because undoable entries are created
+only at semantic commit points, not for every keystroke or transient draft state.
+Examples include inline input blur, dialog confirmation, deletion confirmation,
+reordering completion, import confirmation, and prefix normalization. Limit
+persisted history to the most recent 100 entries. If App data becomes too large,
+patch-based history can replace snapshots without changing the user-facing
+undo/redo model.
 
 ### Shared Naming and Validation
 

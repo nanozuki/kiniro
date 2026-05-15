@@ -106,27 +106,41 @@ Notes:
 ### 8. App state manager module
 
 - Add a new app-level manager for the `/next` app.
+- Keep app data and UI state separate: app data contains user-authored palette
+  data, while UI state contains selection, workspace tab, gamut preview, dialog
+  drafts, focus, scroll, and edit mode.
 - Implement selection, workspace tab, gamut preview, theme operations, variant
   operations, family operations, step scale operations, ramp operations, and
   swatch operations.
 - Enforce naming, shared-structure, and active-selection invariants.
-- Add tests for each operation group and cross-variant structure behavior.
+- Keep generated values and other derived data out of app data.
+- Add tests for each operation group, data/UI separation, selection repair, and
+  cross-variant structure behavior.
 
 ### 9. Undo/redo module
 
-- Add history handling for data changes only.
-- Support grouped live-input commits on blur.
-- Exclude navigation, dialogs, focus, and preview state from history.
-- Add tests for undo/redo stack behavior and action labels.
+- Add history handling for app data changes only, using snapshot-based entries
+  for v1 unless performance forces a patch-based implementation.
+- Create history entries only at semantic commit points, such as blur,
+  confirmed dialogs, deletion confirmation, reordering completion, import
+  confirmation, and prefix normalization.
+- Exclude navigation, selection history, dialogs, focus, scroll, edit mode, and
+  preview state from history.
+- After undo/redo, repair only invalid UI state needed to keep a valid screen;
+  do not automatically switch to, scroll to, or focus the changed component.
+- Add tests for undo/redo stack behavior, redo clearing, action labels, data/UI
+  separation, and invalid-selection repair.
 
 ### 10. Storage module
 
 - Add next-version persistence with versioned local storage state.
 - Persist app data, selected state, global preview state, and capped saved
   history.
+- Persist only UI state that should survive reloads; do not persist dialog
+  drafts, focus, scroll, edit mode, or "do not warn again" state.
 - Ignore invalid stored data safely and expose reset/error status for UI toasts.
-- Add tests for schema validation, defaults, invalid storage, and history
-  capping.
+- Add tests for schema validation, defaults, invalid storage, derived-data
+  omission, and history capping.
 
 ### 11. Import/export module
 
@@ -264,6 +278,6 @@ Notes:
 
 After each implementation action that changes files, run:
 
-`sh pnpm run check pnpm run test `
+`pnpm run check` and `pnpm run test`
 
 Fix all failures before moving to the next action.
