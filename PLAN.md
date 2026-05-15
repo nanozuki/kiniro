@@ -201,13 +201,19 @@ Notes:
   durable UI state, capped saved history, safe invalid-data reset, and explicit
   persisted shape that omits derived/transient UI data.
 
-### 11. Import/export module
+### 11. Import/export module — Done
 
 - Add JSON export and import helpers separate from UI dialogs.
 - Validate export file version and theme payloads.
 - Support selected-theme export data and import conflict resolution results.
 - Add tests for export shape, validation failures, overwrite behavior, and
   rename behavior.
+
+Notes:
+
+- Added theme-only JSON import/export helpers in `src/lib/next/importExport.ts`
+  with version validation, friendly validation failures, overwrite-in-place, and
+  rename-and-append conflict handling.
 
 ### 12. `/next` route shell scaffold
 
