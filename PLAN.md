@@ -301,7 +301,7 @@ Notes:
 - Add component tests for step settings, lightness overrides, reset, and
   reverse.
 
-### 20. ColorRamp component
+### 20. ColorRamp component — Done
 
 - Implement source color cell, swatch row, ramp actions, and reorder entry
   points.

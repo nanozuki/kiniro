@@ -1,4 +1,5 @@
 <script lang="ts">
+	import ColorRamp from './ColorRamp.svelte';
 	import { generateFamily } from './palette';
 	import StepScale from './StepScale.svelte';
 	import type { ColorFamilyStructure, StepIndexStyle, ThemeVariant } from './model';
@@ -16,7 +17,11 @@
 		onrange = (_familyId: string, _start: number, _end: number) => {},
 		onoverride = (_familyId: string, _index: string, _lightness: number) => {},
 		onreset = (_familyId: string, _index: string) => {},
-		onreverse = (_familyId: string) => {}
+		onreverse = (_familyId: string) => {},
+		oneditramp = (_familyId: string, _rampId: string) => {},
+		ondeleteramp = (_familyId: string, _rampId: string) => {},
+		onmoveramp = (_familyId: string, _rampId: string, _direction: 'up' | 'down') => {},
+		gamutPreview = 'srgb'
 	} = $props<{
 		family: ColorFamilyStructure;
 		variant: ThemeVariant;
@@ -31,6 +36,10 @@
 		onoverride?: (familyId: string, index: string, lightness: number) => void;
 		onreset?: (familyId: string, index: string) => void;
 		onreverse?: (familyId: string) => void;
+		oneditramp?: (familyId: string, rampId: string) => void;
+		ondeleteramp?: (familyId: string, rampId: string) => void;
+		onmoveramp?: (familyId: string, rampId: string, direction: 'up' | 'down') => void;
+		gamutPreview?: 'srgb' | 'p3';
 	}>();
 
 	let editingName = $state(false);
@@ -74,10 +83,14 @@
 	{:else}
 		<div class="ramps">
 			{#each generated.ramps as ramp}
-				<section aria-label={`Color ramp ${ramp.name}`} class="ramp-placeholder">
-					<h4>{ramp.name}</h4>
-					<p>{ramp.swatches.length} swatches</p>
-				</section>
+				<ColorRamp
+					{ramp}
+					sourceValue={variant.values.families[family.id].ramps[ramp.id].sourceColor.serialized}
+					{gamutPreview}
+					onedit={(rampId) => oneditramp(family.id, rampId)}
+					ondelete={(rampId) => ondeleteramp(family.id, rampId)}
+					onmove={(rampId, direction) => onmoveramp(family.id, rampId, direction)}
+				/>
 			{/each}
 		</div>
 	{/if}
@@ -89,5 +102,4 @@
 	.actions { display: flex; gap: 0.5rem; flex-wrap: wrap; }
 	.warning { color: #92400e; }
 	.ramps { display: grid; gap: 0.75rem; }
-	.ramp-placeholder { border: 1px dashed currentColor; border-radius: 0.5rem; padding: 0.75rem; }
 </style>
