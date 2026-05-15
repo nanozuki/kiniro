@@ -90,12 +90,21 @@ Notes:
   later generated palette, swatch, and contrast modules can keep persisted data
   unclamped while showing display-safe previews.
 
-### 5. Generated palette module
+### 5. Generated palette module — Done
 
 - Add helpers that generate color families, ramps, and swatches from model data.
 - Apply step lightness, ramp source chroma/hue, and swatch channel overrides.
 - Keep generated values out of persisted data.
 - Add tests for generated swatches and override precedence.
+
+Notes:
+
+- Added generated palette helpers in `src/lib/next/palette.ts` that derive
+  ordered families, ramps, steps, and swatches from theme structure plus current
+  variant values.
+- Swatches keep both generated OKLCH channels and final OKLCH channels so later
+  UI/export modules can show override indicators without persisting derived
+  palette data.
 
 ### 6. CSS variables module
 
