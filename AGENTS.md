@@ -53,8 +53,5 @@ that only mirror implementation details or verify trivial behavior.
 
 ## Verification
 
-Before committing, run:
-
-`pnpm run check` and `pnpm run test`
-
-And fix all issues.
+Before committing, run `pnpm run lint`, `pnpm run check` and `pnpm run test`,
+and resolve all errors and warnings.

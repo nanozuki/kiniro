@@ -7,8 +7,13 @@
 		value: number;
 		oncommit?: (value: number) => void;
 	}>();
-	let draft = $state(String(value));
-	const label = channel === 'lightness' ? 'Lightness' : channel === 'chroma' ? 'Chroma' : 'Hue';
+	let draft = $state('');
+	const label = $derived(channel === 'lightness' ? 'Lightness' : channel === 'chroma' ? 'Chroma' : 'Hue');
+
+	// Reset the draft when the parent supplies a new value (e.g. swatch swapped).
+	$effect.pre(() => {
+		draft = String(value);
+	});
 </script>
 
 <label>{label}<input aria-label={label} inputmode="decimal" bind:value={draft} oninput={() => oncommit(normalizeChannelValue(channel, Number(draft || 0)))} onblur={() => oncommit(normalizeChannelValue(channel, Number(draft || 0)))} /></label>

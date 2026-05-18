@@ -21,10 +21,19 @@
 		oncancel?: () => void;
 	}>();
 
-	let name = $state(initialName);
-	let sourceColor = $state(initialSourceColor);
-	let format = $state<SourceColorFormat>(initialSourceColor.format);
-	let textDraft = $state(initialSourceColor.serialized);
+	let name = $state('');
+	let sourceColor: SourceColor | null = $state(null);
+	let format = $state<SourceColorFormat>('oklch');
+	let textDraft = $state('');
+
+	// Re-seed local drafts whenever the dialog is opened with new initial values.
+	$effect.pre(() => {
+		if (!open) return;
+		name = initialName;
+		sourceColor = initialSourceColor;
+		format = initialSourceColor.format;
+		textDraft = initialSourceColor.serialized;
+	});
 	let nameError = $derived(validateName(name, existingNames));
 	let colorError = $derived(sourceColor ? '' : 'Enter a valid source color.');
 	let canConfirm = $derived(!nameError && !colorError && sourceColor !== null);

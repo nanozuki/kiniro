@@ -83,7 +83,7 @@
 </div>
 
 {#if exportOpen}
-	<section role="dialog" aria-modal="true" aria-label="Export themes">
+	<div class="dialog" role="dialog" aria-modal="true" aria-label="Export themes" tabindex="-1">
 		<h2>Export themes</h2>
 		<label>Filename <input value={filename} oninput={(event) => (filename = event.currentTarget.value)} /></label>
 		{#each themes as theme}
@@ -91,11 +91,11 @@
 		{/each}
 		<button type="button" onclick={confirmExport} disabled={exportSelection.length === 0}>Confirm export</button>
 		<button type="button" onclick={() => (exportOpen = false)}>Cancel export</button>
-	</section>
+	</div>
 {/if}
 
 {#if importOpen}
-	<section role="dialog" aria-modal="true" aria-label="Import themes">
+	<div class="dialog" role="dialog" aria-modal="true" aria-label="Import themes" tabindex="-1">
 		<h2>Import themes</h2>
 		<label>Import file <input type="file" accept="application/json,.json" onchange={readImport} /></label>
 		{#if importSummary}<p role="status">{importSummary}</p>{/if}
@@ -116,11 +116,11 @@
 		{/if}
 		<button type="button" onclick={confirmImport} disabled={!importFile || importChoices.length === 0}>Confirm import</button>
 		<button type="button" onclick={() => (importOpen = false)}>Cancel import</button>
-	</section>
+	</div>
 {/if}
 
 <style>
 	.entry-points { display: flex; gap: 0.5rem; flex-wrap: wrap; }
-	section { display: grid; gap: 0.75rem; border: 1px solid currentColor; border-radius: 0.5rem; padding: 1rem; margin-block-start: 1rem; }
+	.dialog { display: grid; gap: 0.75rem; border: 1px solid currentColor; border-radius: 0.5rem; padding: 1rem; margin-block-start: 1rem; }
 	.choice { display: grid; gap: 0.5rem; padding: 0.5rem; border: 1px dashed currentColor; }
 </style>

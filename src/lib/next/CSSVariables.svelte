@@ -14,9 +14,14 @@
 		copyText?: (text: string) => Promise<void>;
 	}>();
 
-	let prefixDraft = $state(theme.cssPrefix);
+	let prefixDraft = $state('');
 	let message = $state('');
 	let output = $derived(exportCssVariables(theme, variant));
+
+	// Keep the prefix draft in sync when the active theme changes externally.
+	$effect.pre(() => {
+		prefixDraft = theme.cssPrefix;
+	});
 
 	function commitPrefix() {
 		onprefix(prefixDraft);

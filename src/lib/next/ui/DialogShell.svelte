@@ -4,8 +4,8 @@
 </script>
 
 {#if open}
-	<section role="dialog" aria-modal="true" aria-label={title}>
+	<div role="dialog" aria-modal="true" aria-label={title} tabindex="-1">
 		<h2>{title}</h2>
 		{@render children?.()}
-	</section>
+	</div>
 {/if}

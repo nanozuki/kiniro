@@ -5,7 +5,12 @@
 		oncommit?: (value: string) => void;
 		onedit?: () => void;
 	}>();
-	let draft = $state(value);
+	let draft = $state('');
+
+	// Re-seed the draft when the owning component swaps the value (e.g. switching items).
+	$effect.pre(() => {
+		draft = value;
+	});
 </script>
 
 {#if editing}

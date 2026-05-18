@@ -55,7 +55,7 @@
 
 {#if editing}
 	<div class="backdrop" role="presentation">
-		<section role="dialog" aria-modal="true" aria-label={`Edit ${swatch.name}`} class="modal">
+		<div role="dialog" aria-modal="true" aria-label={`Edit ${swatch.name}`} tabindex="-1" class="modal">
 			<header>
 				<h3>{swatch.name}</h3>
 				<button type="button" aria-label="Close swatch editor" onclick={() => (editing = false)}>×</button>
@@ -71,7 +71,7 @@
 				</button>
 			{/each}
 			<button type="button" disabled={!hasOverrides} onclick={() => onresetall(swatch.stepIndex)}>Reset all channels</button>
-		</section>
+		</div>
 	</div>
 {/if}
 
