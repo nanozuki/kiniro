@@ -46,4 +46,16 @@ describe('theme import/export', () => {
 		expect(result.themes.map((theme) => theme.name)).toEqual(['Same', 'Same 2']);
 		expect(result.themes.map((theme) => theme.id)).toEqual(['old', 'new']);
 	});
+
+	it('imports themes from proxy-backed values', () => {
+		const existing = [createDefaultTheme({ id: 'old', name: 'Existing' })];
+		const importedTheme = new Proxy(createDefaultTheme({ id: 'new', name: 'Imported' }), {});
+		const imported = new Proxy([importedTheme], {});
+		const choices = new Proxy([{ themeId: 'new' }], {});
+
+		const result = applyThemeImport(existing, imported, choices);
+
+		expect(result.themes.map((theme) => theme.id)).toEqual(['old', 'new']);
+		expect(result.selectedThemeId).toBe('new');
+	});
 });

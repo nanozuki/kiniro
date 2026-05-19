@@ -85,5 +85,5 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 }
 
 function clone<T>(value: T): T {
-	return structuredClone(value);
+	return JSON.parse(JSON.stringify(value)) as T;
 }

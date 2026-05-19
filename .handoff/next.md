@@ -1,6 +1,6 @@
 # next
 
-Created: 2026-05-18 21:00 Updated: 2026-05-18 22:00
+Created: 2026-05-18 21:00 Updated: 2026-05-19 00:22
 
 ## Goal
 
@@ -44,9 +44,40 @@ Verification passed:
 - `pnpm run check` — clean
 - `pnpm run test` — all tests passing
 
-**Next: Manual testing and refinement.** The implementation passes automated
-checks, but needs hands-on testing to identify UX issues, edge cases, and areas
-for improvement. Expect adjustments and improvements based on real usage.
+**Current focus: pre-merge documentation cleanup.** Consolidate docs around the
+implemented `/next` modules, remove repeated module-specific behavior from
+`docs/prototype.md`, and keep shared rules in central docs only.
+
+Investigation notes:
+
+- `src/routes/+page.svelte` still inlines the title bar shell instead of using
+  `src/lib/next/TitleBar.svelte`
+- Import/export responsibilities are split between the route,
+  `ImportExportDialogs.svelte`, and `importExport.ts`
+- Several `/next` modules already have brief interface comments, but the
+  detailed behavior source of truth still lives mostly in `docs/prototype.md`
+
+Added fixture:
+
+- `testdata/rose-pine.json` — export/import test data with one `Rose Pine` theme
+  and three variants (`Main`, `Moon`, `Dawn`) based on Rose Pine palette values.
+
+Found and fixed an import bug:
+
+- Clicking `Confirm import` could throw `DOMException: Proxy object could not be cloned`
+- Cause: `applyThemeImport()` used `structuredClone()` on Svelte proxy-backed
+  import state from the dialog
+- Fix: `src/lib/next/importExport.ts` now clones theme payloads via JSON-safe
+  data cloning, which matches the import/export file format and works with proxy-backed values
+
+Non-app 404 noticed during manual testing:
+
+- Requests to `/api/v1/events` appeared in the browser console/network log
+- Repo search found no matching route or client code in Kiniro
+- Likely source is a browser extension, devtools integration, or other injected
+  tooling rather than the app itself
+- Next session: confirm via DevTools Network → request `Initiator`, or retry in
+  an incognito/profile with extensions disabled.
 
 ## Key Decisions
 
@@ -108,4 +139,13 @@ for improvement. Expect adjustments and improvements based on real usage.
 
 ## Open Questions
 
-None. The prototype is complete and verified.
+- Confirm whether the `Rose Pine` fixture shape is sufficient for the intended
+  import/export checks, or if additional fixtures are needed.
+- Decide the documentation boundary before merge:
+  - `README.md` for product overview only
+  - `docs/terminology.md` for shared domain terms only
+  - `docs/prototype.md` for screen structure and cross-module rules only
+  - module comments in `src/lib/next/*` for module-specific behavior and
+    invariants
+- Decide whether to document the current inline route shell as-is, or first
+  refactor `src/routes/+page.svelte` to consistently use `TitleBar.svelte`.

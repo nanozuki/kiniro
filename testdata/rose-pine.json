@@ -1,0 +1,682 @@
+{
+  "version": 1,
+  "themes": [
+    {
+      "id": "theme-rose-pine",
+      "name": "Rose Pine",
+      "cssPrefix": "rose-pine",
+      "structure": {
+        "families": [
+          {
+            "id": "family-rose-pine",
+            "name": "Rose Pine",
+            "stepScale": {
+              "stepCount": 9,
+              "indexStyle": "scale",
+              "halfStepStart": false,
+              "halfStepEnd": false
+            },
+            "ramps": [
+              {
+                "id": "ramp-base",
+                "name": "Base"
+              },
+              {
+                "id": "ramp-surface",
+                "name": "Surface"
+              },
+              {
+                "id": "ramp-overlay",
+                "name": "Overlay"
+              },
+              {
+                "id": "ramp-muted",
+                "name": "Muted"
+              },
+              {
+                "id": "ramp-subtle",
+                "name": "Subtle"
+              },
+              {
+                "id": "ramp-text",
+                "name": "Text"
+              },
+              {
+                "id": "ramp-love",
+                "name": "Love"
+              },
+              {
+                "id": "ramp-gold",
+                "name": "Gold"
+              },
+              {
+                "id": "ramp-rose",
+                "name": "Rose"
+              },
+              {
+                "id": "ramp-pine",
+                "name": "Pine"
+              },
+              {
+                "id": "ramp-foam",
+                "name": "Foam"
+              },
+              {
+                "id": "ramp-iris",
+                "name": "Iris"
+              },
+              {
+                "id": "ramp-highlight-low",
+                "name": "Highlight Low"
+              },
+              {
+                "id": "ramp-highlight-med",
+                "name": "Highlight Med"
+              },
+              {
+                "id": "ramp-highlight-high",
+                "name": "Highlight High"
+              }
+            ]
+          }
+        ]
+      },
+      "variants": [
+        {
+          "id": "variant-main",
+          "name": "Main",
+          "values": {
+            "families": {
+              "family-rose-pine": {
+                "stepScale": {
+                  "lightnessStart": 0.95,
+                  "lightnessEnd": 0.05,
+                  "lightnessOverrides": {},
+                  "reversed": false
+                },
+                "ramps": {
+                  "ramp-base": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.21335496622814745,
+                        "chroma": 0.02546581569613856,
+                        "hue": 291.1310106842185
+                      },
+                      "serialized": "#191724"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-surface": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.24133392769454184,
+                        "chroma": 0.032223772281990554,
+                        "hue": 289.13585738302135
+                      },
+                      "serialized": "#1f1d2e"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-overlay": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.2707789721207659,
+                        "chroma": 0.04227474471395488,
+                        "hue": 289.23313233006303
+                      },
+                      "serialized": "#26233a"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-muted": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.5382751397318635,
+                        "chroma": 0.0435482995131326,
+                        "hue": 291.41215025715104
+                      },
+                      "serialized": "#6e6a86"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-subtle": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6538776159854421,
+                        "chroma": 0.044409533242704795,
+                        "hue": 291.23248600149725
+                      },
+                      "serialized": "#908caa"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-text": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.9087872125059505,
+                        "chroma": 0.029850476355262355,
+                        "hue": 289.9689933423003
+                      },
+                      "serialized": "#e0def4"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-love": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6977012664774928,
+                        "chroma": 0.15646019521982188,
+                        "hue": 4.22422610694025
+                      },
+                      "serialized": "#eb6f92"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-gold": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8429022002706794,
+                        "chroma": 0.1100442089894633,
+                        "hue": 74.60185343028667
+                      },
+                      "serialized": "#f6c177"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-rose": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8362735530948442,
+                        "chroma": 0.05441002045207268,
+                        "hue": 21.141032462348107
+                      },
+                      "serialized": "#ebbcba"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-pine": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.5276669740751738,
+                        "chroma": 0.07926995531397442,
+                        "hue": 227.71593654041087
+                      },
+                      "serialized": "#31748f"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-foam": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8219128010271272,
+                        "chroma": 0.05432991611183798,
+                        "hue": 209.55884562180952
+                      },
+                      "serialized": "#9ccfd8"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-iris": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.7759731972181075,
+                        "chroma": 0.09450568067850913,
+                        "hue": 304.9944771491809
+                      },
+                      "serialized": "#c4a7e7"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-low": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.25116512982112693,
+                        "chroma": 0.0263005554024514,
+                        "hue": 287.61552251985154
+                      },
+                      "serialized": "#21202e"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-med": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.3717369220043172,
+                        "chroma": 0.035824689496153396,
+                        "hue": 291.0972835309056
+                      },
+                      "serialized": "#403d52"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-high": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.4399294125159159,
+                        "chroma": 0.03922985672085574,
+                        "hue": 290.4171077673528
+                      },
+                      "serialized": "#524f67"
+                    },
+                    "swatchOverrides": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "variant-moon",
+          "name": "Moon",
+          "values": {
+            "families": {
+              "family-rose-pine": {
+                "stepScale": {
+                  "lightnessStart": 0.95,
+                  "lightnessEnd": 0.05,
+                  "lightnessOverrides": {},
+                  "reversed": false
+                },
+                "ramps": {
+                  "ramp-base": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.2603516564143941,
+                        "chroma": 0.038996787073703736,
+                        "hue": 287.7295432825787
+                      },
+                      "serialized": "#232136"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-surface": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.2875476022376157,
+                        "chroma": 0.043475710257577585,
+                        "hue": 289.0886015669098
+                      },
+                      "serialized": "#2a273f"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-overlay": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.3462906306854808,
+                        "chroma": 0.05019369663916549,
+                        "hue": 289.83420556143267
+                      },
+                      "serialized": "#393552"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-muted": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.5382751397318635,
+                        "chroma": 0.0435482995131326,
+                        "hue": 291.41215025715104
+                      },
+                      "serialized": "#6e6a86"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-subtle": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6538776159854421,
+                        "chroma": 0.044409533242704795,
+                        "hue": 291.23248600149725
+                      },
+                      "serialized": "#908caa"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-text": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.9087872125059505,
+                        "chroma": 0.029850476355262355,
+                        "hue": 289.9689933423003
+                      },
+                      "serialized": "#e0def4"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-love": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6977012664774928,
+                        "chroma": 0.15646019521982188,
+                        "hue": 4.22422610694025
+                      },
+                      "serialized": "#eb6f92"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-gold": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8429022002706794,
+                        "chroma": 0.1100442089894633,
+                        "hue": 74.60185343028667
+                      },
+                      "serialized": "#f6c177"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-rose": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.7651200399179867,
+                        "chroma": 0.09667363798701527,
+                        "hue": 21.91923772260236
+                      },
+                      "serialized": "#ea9a97"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-pine": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6137857528724503,
+                        "chroma": 0.09255742270800296,
+                        "hue": 228.0032430422377
+                      },
+                      "serialized": "#3e8fb0"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-foam": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8219128010271272,
+                        "chroma": 0.05432991611183798,
+                        "hue": 209.55884562180952
+                      },
+                      "serialized": "#9ccfd8"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-iris": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.7759731972181075,
+                        "chroma": 0.09450568067850913,
+                        "hue": 304.9944771491809
+                      },
+                      "serialized": "#c4a7e7"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-low": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.289396138734792,
+                        "chroma": 0.039829997083402846,
+                        "hue": 287.80068859523146
+                      },
+                      "serialized": "#2a283e"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-med": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.38873917663635543,
+                        "chroma": 0.042126402100386116,
+                        "hue": 289.78580628503516
+                      },
+                      "serialized": "#44415a"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-high": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.4535347714321152,
+                        "chroma": 0.04544501573137588,
+                        "hue": 291.0183620691479
+                      },
+                      "serialized": "#56526e"
+                    },
+                    "swatchOverrides": {}
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "id": "variant-dawn",
+          "name": "Dawn",
+          "values": {
+            "families": {
+              "family-rose-pine": {
+                "stepScale": {
+                  "lightnessStart": 0.95,
+                  "lightnessEnd": 0.05,
+                  "lightnessOverrides": {},
+                  "reversed": false
+                },
+                "ramps": {
+                  "ramp-base": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.9698720723623928,
+                        "chroma": 0.011322103110491597,
+                        "hue": 71.89986806241848
+                      },
+                      "serialized": "#faf4ed"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-surface": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.987030093703314,
+                        "chroma": 0.010688160903105471,
+                        "hue": 76.60032355774871
+                      },
+                      "serialized": "#fffaf3"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-overlay": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.9388893078150651,
+                        "chroma": 0.01452267075073529,
+                        "hue": 64.3380517736976
+                      },
+                      "serialized": "#f2e9e1"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-muted": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6733765401466991,
+                        "chroma": 0.026792529763289042,
+                        "hue": 298.36954174771404
+                      },
+                      "serialized": "#9893a5"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-subtle": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.5768414823798744,
+                        "chroma": 0.04583762533992773,
+                        "hue": 291.00061620018886
+                      },
+                      "serialized": "#797593"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-text": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.4597400439039313,
+                        "chroma": 0.06291941482043005,
+                        "hue": 289.55608938032935
+                      },
+                      "serialized": "#575279"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-love": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.5988906044111026,
+                        "chroma": 0.10712940079575246,
+                        "hue": 2.6554738063348395
+                      },
+                      "serialized": "#b4637a"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-gold": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.7554863116231132,
+                        "chroma": 0.1459299468659494,
+                        "hue": 69.74327895715192
+                      },
+                      "serialized": "#ea9d34"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-rose": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6957348262122668,
+                        "chroma": 0.10577379887145047,
+                        "hue": 23.032805189329622
+                      },
+                      "serialized": "#d7827e"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-pine": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.4909481866240276,
+                        "chroma": 0.07698809448496276,
+                        "hue": 227.9983476281608
+                      },
+                      "serialized": "#286983"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-foam": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6289005491755333,
+                        "chroma": 0.0660667853555366,
+                        "hue": 210.1227978030082
+                      },
+                      "serialized": "#56949f"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-iris": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.6171051052623255,
+                        "chroma": 0.07376986669683668,
+                        "hue": 305.6979603329751
+                      },
+                      "serialized": "#907aa9"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-low": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.9501720505471143,
+                        "chroma": 0.010124342252191195,
+                        "hue": 58.21397226644058
+                      },
+                      "serialized": "#f4ede8"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-med": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8920248246475371,
+                        "chroma": 0.005662424901227018,
+                        "hue": 31.054844983754947
+                      },
+                      "serialized": "#dfdad9"
+                    },
+                    "swatchOverrides": {}
+                  },
+                  "ramp-highlight-high": {
+                    "sourceColor": {
+                      "format": "hex",
+                      "oklch": {
+                        "lightness": 0.8430782434764563,
+                        "chroma": 0.0060076405876156175,
+                        "hue": 333.9972104490095
+                      },
+                      "serialized": "#cecacd"
+                    },
+                    "swatchOverrides": {}
+                  }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  ]
+}
