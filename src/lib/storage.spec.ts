@@ -1,160 +1,83 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
+import { createDefaultTheme } from './model';
 import {
-	loadPalettes,
-	parsePalettesJson,
-	savePalettes,
-	type GroupData,
-	type PaletteData
+	createDefaultPersistedState,
+	STORAGE_KEY,
+	loadState,
+	saveState,
+	type StorageLike
 } from './storage';
 
-afterEach(() => {
-	vi.unstubAllGlobals();
-});
+function memoryStorage(initial: Record<string, string> = {}): StorageLike {
+	const data = { ...initial };
+	return {
+		getItem: (key) => data[key] ?? null,
+		setItem: (key, value) => (data[key] = value),
+		removeItem: (key) => delete data[key]
+	};
+}
 
-describe('loadPalettes', () => {
-	it('does not read browser storage during server-side rendering', () => {
-		expect(loadPalettes()).toEqual([]);
-	});
-});
+describe('storage', () => {
+	it('round trips app data, durable UI state, and capped history', () => {
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [createDefaultTheme()];
+		state.ui = {
+			selectedThemeId: 'theme-1',
+			selectedVariantId: 'variant-1',
+			workspaceTab: 'cssVariables',
+			gamutPreview: 'p3'
+		};
+		state.history.past = Array.from({ length: 105 }, (_, index) => ({
+			label: `Action ${index}`,
+			data: { themes: [] }
+		}));
 
-describe('savePalettes', () => {
-	it('stores the palette model as JSON', () => {
-		const setItem = vi.fn();
-		vi.stubGlobal('localStorage', { setItem });
-		const palettes: PaletteData[] = [
-			{
-				id: 1,
-				name: 'Brand',
-				groups: [{ id: 1, name: 'brand', colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }],
-				variants: [
-					{
-						id: 1,
-						name: 'Light',
-						groups: {
-							1: {
-								lightnessMax: 0.95,
-								lightnessMin: 0.16,
-								controlledLightness: {},
-								reversed: false,
-								stepsCount: 3,
-								halfStepBefore: false,
-								halfStepAfter: false
-							}
-						}
-					}
-				]
-			}
-		];
+		saveState(storage, state);
+		const loaded = loadState(storage);
 
-		savePalettes(palettes);
-
-		expect(setItem).toHaveBeenCalledWith('kiniro-palettes', JSON.stringify(palettes));
-	});
-});
-
-describe('parsePalettesJson', () => {
-	it('parses the new palette shape', () => {
-		const palettes: PaletteData[] = [
-			{
-				id: 1,
-				name: 'Brand',
-				groups: [{ id: 1, name: 'brand', colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }],
-				variants: [
-					{
-						id: 1,
-						name: 'Dark',
-						groups: {
-							1: {
-								lightnessMax: 0.9,
-								lightnessMin: 0.1,
-								controlledLightness: {},
-								reversed: true,
-								stepsCount: 3,
-								halfStepBefore: false,
-								halfStepAfter: false
-							}
-						}
-					}
-				]
-			}
-		];
-
-		expect(parsePalettesJson(JSON.stringify(palettes))).toEqual(palettes);
+		expect(loaded.ok).toBe(true);
+		expect(loaded.state.data.themes).toHaveLength(1);
+		expect(loaded.state.ui.workspaceTab).toBe('cssVariables');
+		expect(loaded.state.history.past).toHaveLength(100);
+		expect(loaded.state.history.past[0].label).toBe('Action 5');
 	});
 
-	it('migrates older palette group files', () => {
-		const groups: GroupData[] = [
-			{
-				id: 1,
-				name: 'legacy',
-				lightnessMax: 0.9,
-				lightnessMin: 0.1,
-				controlledLightness: {},
-				reversed: false,
-				stepsCount: 9,
-				halfStepBefore: false,
-				halfStepAfter: false,
-				colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
-			}
-		];
+	it('ignores invalid stored data safely and reports reset status', () => {
+		const storage = memoryStorage({ [STORAGE_KEY]: '{bad json' });
 
-		const parsed = parsePalettesJson(JSON.stringify(groups));
+		const loaded = loadState(storage);
 
-		expect(parsed?.[0]).toMatchObject({
-			id: 1,
-			name: 'Palette',
-			groups: [{ id: 1, name: 'legacy', colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }]
+		expect(loaded.ok).toBe(false);
+		expect(loaded.reset).toBe(true);
+		expect(loaded.state).toEqual(createDefaultPersistedState());
+		expect(storage.getItem(STORAGE_KEY)).toBeNull();
+	});
+
+	it('rejects unsupported versions and invalid UI values', () => {
+		const storage = memoryStorage({
+			[STORAGE_KEY]: JSON.stringify({
+				...createDefaultPersistedState(),
+				version: 2,
+				ui: { workspaceTab: 'bad' }
+			})
 		});
-		expect(parsed?.[0].variants[0].groups[1]).toMatchObject({
-			lightnessMax: 0.9,
-			lightnessMin: 0.1,
-			stepsCount: 9
-		});
+
+		expect(loadState(storage).ok).toBe(false);
 	});
 
-	it('applies legacy schema defaults for older group files', () => {
-		const parsed = parsePalettesJson(
-			JSON.stringify([
-				{
-					id: 1,
-					name: 'legacy',
-					lightnessMax: 0.9,
-					lightnessMin: 0.1,
-					colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
-				}
-			])
-		);
+	it('omits derived data by only saving the explicit persisted shape', () => {
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState() as ReturnType<
+			typeof createDefaultPersistedState
+		> & { generated?: unknown; dialogDraft?: unknown };
+		state.generated = { css: ':root {}' };
+		state.dialogDraft = { name: 'Draft' };
 
-		expect(parsed?.[0].variants[0].groups[1]).toMatchObject({
-			controlledLightness: {},
-			reversed: false,
-			stepsCount: 9,
-			halfStepBefore: false,
-			halfStepAfter: false
-		});
-	});
+		saveState(storage, state);
+		const raw = storage.getItem(STORAGE_KEY) ?? '';
 
-	it('normalizes palette files that are missing variants', () => {
-		const parsed = parsePalettesJson(
-			JSON.stringify([
-				{
-					id: 1,
-					name: 'Brand',
-					groups: [{ id: 1, name: 'brand', colors: [] }],
-					variants: []
-				}
-			])
-		);
-
-		expect(parsed?.[0].variants[0]).toMatchObject({ id: 1, name: 'Default' });
-		expect(parsed?.[0].variants[0].groups[1]).toMatchObject({
-			lightnessMax: 0.95,
-			lightnessMin: 0.16
-		});
-	});
-
-	it('rejects invalid JSON and invalid palette shape', () => {
-		expect(parsePalettesJson('not-json')).toBeNull();
-		expect(parsePalettesJson(JSON.stringify([{ id: 'bad' }]))).toBeNull();
+		expect(raw).not.toContain('generated');
+		expect(raw).not.toContain('dialogDraft');
 	});
 });

@@ -182,7 +182,7 @@ names and generated values. Export is read-only and does not create an Undo/Redo
 history entry.
 
 **import(file, themes)**: Open a file picker that accepts `.json` files to
-select a JSON file. Do not support browser drag-and-drop import in v1. Validate
+select a JSON file. Do not support browser drag-and-drop import yet. Validate
 the whole file before showing theme selection. Missing or unsupported `version`
 fails validation. Validation errors show a user-friendly summary with
 collapsible technical details. Allow user to select themes to import; the
@@ -207,9 +207,12 @@ that the data was reset. Do not persist dialog draft inputs or "do not warn
 again" state.
 
 **undo() / redo()**: Undo/Redo tracks data changes only, not navigation,
-selection, dialogs, focus, or edit mode. Undo/Redo buttons are disabled when
-unavailable and use generic labels. After undo or redo, show a visible hint that
-names the action.
+selection, dialogs, focus, scroll, or edit mode. Undo/Redo buttons are disabled
+when unavailable and use generic labels. After undo or redo, show a visible hint
+that names the action. Do not automatically switch tabs, scroll, or focus the
+changed component after undo/redo. If the restored data makes the current
+selection or workspace tab invalid, repair only the minimum UI state needed to
+show a valid screen, such as selecting an existing theme or returning to Palette.
 
 ### <ThemeManager />
 
@@ -458,7 +461,7 @@ Generated variable names use:
 The output value is an OKLCH channel triple, not a full `oklch(...)` function:
 
 ```css
---color-main-base-100: 0.9500 0.0255 291;
+--color-main-base-100: 0.95 0.0255 291;
 ```
 
 This supports alpha usage:
@@ -471,7 +474,7 @@ Show that usage example in the app, but do not include it when copying CSS.
 Show a compact note that CSS export uses original OKLCH values, not clamped
 preview colors.
 
-CSS output uses one format in v1: channel-triple custom properties wrapped in
+CSS output uses one format: channel-triple custom properties wrapped in
 `:root { ... }`. Show the generated CSS in a read-only code block without syntax
 highlighting. Group output by color family using a leading family-name comment
 for each family, including empty families. Put one blank line between family
@@ -529,12 +532,41 @@ selectable, only swatches.
 
 The selected color labels use display names in the form `ramp + step`. The
 color selector uses compact selector-specific cells with no text inside the
-cells. On hover, show a tooltip with `ramp + step`. V1 supports
+cells. On hover, show a tooltip with `ramp + step`. It supports
 pointer/mouse selection only. The preview uses fixed sample content with one
 line of large text, one line of normal text, and the existing line/block
 component preview. Provide a foreground/background swap button. Show the numeric
 contrast ratio only once in the section heading. Use `Pass` and `Fail` labels in
 the result table.
+
+### State and History Design
+
+Keep application state split by responsibility:
+
+- App data contains user-authored palette data, such as themes, variants, color
+  families, step scale options, step values, color ramps, source colors, swatch
+  overrides, and theme CSS prefixes.
+- UI state contains navigation and presentation state, such as the selected
+  theme, selected variant, selected workspace tab, preview gamut, dialog drafts,
+  focus, scroll, and edit mode.
+
+Undo/Redo history tracks App data only. UI state may be persisted separately
+when useful, but it is not part of undo/redo history. Restoring history should
+replace or patch App data and let Svelte reactivity update the visible UI. Do
+not store generated or derived data in App data or history, including sanitized
+names, generated lightness values, generated swatches, CSS output, clamped
+preview colors, or contrast results.
+
+Use stable IDs for persisted entities that can be selected, reordered, deleted,
+or restored. Do not rely on array positions as persistent identity.
+
+Snapshot-based history is acceptable because undoable entries are created
+only at semantic commit points, not for every keystroke or transient draft state.
+Examples include inline input blur, dialog confirmation, deletion confirmation,
+reordering completion, import confirmation, and prefix normalization. Limit
+persisted history to the most recent 100 entries. If App data becomes too large,
+patch-based history can replace snapshots without changing the user-facing
+undo/redo model.
 
 ### Shared Naming and Validation
 

@@ -1,112 +1,115 @@
-import { browser } from '$app/environment';
-import { z } from 'zod';
-import {
-	createDefaultPalette,
-	migrateGroupsToPalettes,
-	syncVariantGroups,
-	type ColorData,
-	type GroupData,
-	type GroupLightnessSettings,
-	type PaletteData,
-	type PaletteGroupData,
-	type PaletteVariantData
-} from './palette';
+import type { AppState, GamutPreview, Id, WorkspaceTab } from './model';
+import type { HistoryState } from './history';
 
-export type {
-	ColorData,
-	GroupData,
-	GroupLightnessSettings,
-	PaletteData,
-	PaletteGroupData,
-	PaletteVariantData
+export const STORAGE_KEY = 'kiniro';
+export const STORAGE_VERSION = 1;
+export const PERSISTED_HISTORY_LIMIT = 100;
+
+export type PersistedUiState = {
+	selectedThemeId: Id | null;
+	selectedVariantId: Id | null;
+	workspaceTab: WorkspaceTab;
+	gamutPreview: GamutPreview;
 };
 
-const STORAGE_KEY = 'kiniro-palettes';
+export type PersistedState = {
+	version: 1;
+	data: AppState;
+	ui: PersistedUiState;
+	history: HistoryState;
+};
 
-const ColorDataSchema = z.object({
-	id: z.number(),
-	name: z.string(),
-	hex: z.string()
-});
+export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
-const GroupLightnessSettingsSchema = z.object({
-	lightnessMax: z.number(),
-	lightnessMin: z.number(),
-	controlledLightness: z.record(z.coerce.number(), z.number()).default({}),
-	reversed: z.boolean().default(false),
-	stepsCount: z.number().min(3).max(9).default(9),
-	halfStepBefore: z.boolean().default(false),
-	halfStepAfter: z.boolean().default(false)
-});
+export type LoadStorageResult =
+	| { ok: true; state: PersistedState; reset: false; error: null }
+	| { ok: false; state: PersistedState; reset: true; error: string };
 
-const LegacyGroupDataSchema = GroupLightnessSettingsSchema.extend({
-	id: z.number(),
-	name: z.string(),
-	colors: z.array(ColorDataSchema)
-});
-
-const PaletteGroupDataSchema = z.object({
-	id: z.number(),
-	name: z.string(),
-	colors: z.array(ColorDataSchema)
-});
-
-const PaletteVariantDataSchema = z.object({
-	id: z.number(),
-	name: z.string(),
-	groups: z.record(z.coerce.number(), GroupLightnessSettingsSchema)
-});
-
-const PaletteDataSchema = z.object({
-	id: z.number(),
-	name: z.string(),
-	groups: z.array(PaletteGroupDataSchema),
-	variants: z.array(PaletteVariantDataSchema)
-});
-
-const StorageSchema = z.array(PaletteDataSchema);
-const LegacyStorageSchema = z.array(LegacyGroupDataSchema);
-
-function normalizePalettes(palettes: PaletteData[]): PaletteData[] {
-	return palettes.length > 0 ? palettes.map(syncVariantGroups) : [createDefaultPalette()];
+// Storage persists authored App data plus durable UI choices. Derived palette,
+// CSS, previews, dialog drafts, focus, scroll, edit mode, and transient warnings
+// are intentionally excluded from the schema.
+export function createDefaultPersistedState(): PersistedState {
+	return {
+		version: STORAGE_VERSION,
+		data: { themes: [] },
+		ui: {
+			selectedThemeId: null,
+			selectedVariantId: null,
+			workspaceTab: 'palette',
+			gamutPreview: 'srgb'
+		},
+		history: { past: [], future: [] }
+	};
 }
 
-function parseStorageValue(value: unknown): PaletteData[] | null {
-	const result = StorageSchema.safeParse(value);
-	if (result.success) return normalizePalettes(result.data);
-
-	const legacyResult = LegacyStorageSchema.safeParse(value);
-	if (legacyResult.success) return migrateGroupsToPalettes(legacyResult.data);
-
-	return null;
+export function saveState(storage: StorageLike, state: PersistedState, key = STORAGE_KEY): void {
+	storage.setItem(key, JSON.stringify(capHistory(state)));
 }
 
-// Loads saved palettes in the browser, falls back to the default palette there,
-// and returns an empty array during SSR.
-export function loadPalettes(): PaletteData[] {
-	if (!browser) return [];
+export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageResult {
+	const fallback = createDefaultPersistedState();
+	const raw = storage.getItem(key);
+	if (raw == null) return { ok: true, state: fallback, reset: false, error: null };
+
 	try {
-		const saved = localStorage.getItem(STORAGE_KEY);
-		if (saved) {
-			const parsed = parseStorageValue(JSON.parse(saved));
-			if (parsed) return parsed;
+		const parsed: unknown = JSON.parse(raw);
+		if (!isPersistedState(parsed)) throw new Error('Stored Kiniro state has an invalid schema.');
+		return { ok: true, state: capHistory(parsed), reset: false, error: null };
+	} catch (error) {
+		storage.removeItem(key);
+		return {
+			ok: false,
+			state: fallback,
+			reset: true,
+			error: error instanceof Error ? error.message : 'Invalid stored state.'
+		};
+	}
+}
+
+export function capHistory(state: PersistedState, limit = PERSISTED_HISTORY_LIMIT): PersistedState {
+	return {
+		version: STORAGE_VERSION,
+		data: clone(state.data),
+		ui: { ...state.ui },
+		history: {
+			past: clone(state.history.past.slice(-limit)),
+			future: clone(state.history.future.slice(-limit))
 		}
-	} catch {
-		// Fall back to defaults when saved JSON is unavailable or invalid.
-	}
-	return [createDefaultPalette()];
+	};
 }
 
-// Persists palettes as JSON without storing derived color steps.
-export function savePalettes(palettes: PaletteData[]): void {
-	localStorage.setItem(STORAGE_KEY, JSON.stringify(palettes.map(syncVariantGroups)));
+function isPersistedState(value: unknown): value is PersistedState {
+	if (!isRecord(value) || value.version !== STORAGE_VERSION) return false;
+	if (!isAppState(value.data)) return false;
+	if (!isRecord(value.ui)) return false;
+	if (!['palette', 'cssVariables', 'contrastChecker'].includes(String(value.ui.workspaceTab)))
+		return false;
+	if (!['srgb', 'p3'].includes(String(value.ui.gamutPreview))) return false;
+	if (!(value.ui.selectedThemeId == null || typeof value.ui.selectedThemeId === 'string'))
+		return false;
+	if (!(value.ui.selectedVariantId == null || typeof value.ui.selectedVariantId === 'string'))
+		return false;
+	if (
+		!isRecord(value.history) ||
+		!Array.isArray(value.history.past) ||
+		!Array.isArray(value.history.future)
+	)
+		return false;
+	return value.history.past.every(isHistoryEntry) && value.history.future.every(isHistoryEntry);
 }
 
-// Validates imported palette JSON and migrates legacy group files when needed.
-export function parsePalettesJson(json: string): PaletteData[] | null {
-	try {
-		return parseStorageValue(JSON.parse(json));
-	} catch {
-		return null;
-	}
+function isHistoryEntry(value: unknown): boolean {
+	return isRecord(value) && typeof value.label === 'string' && isAppState(value.data);
+}
+
+function isAppState(value: unknown): value is AppState {
+	return isRecord(value) && Array.isArray(value.themes);
+}
+
+function isRecord(value: unknown): value is Record<string, unknown> {
+	return typeof value === 'object' && value !== null;
+}
+
+function clone<T>(value: T): T {
+	return structuredClone(value);
 }

@@ -1,150 +1,115 @@
-export type ColorData = {
-	id: number;
+import { buildSteps } from './lightness';
+import type {
+	ColorFamilyStructure,
+	ColorRampStructure,
+	ColorRampValues,
+	OklchColor,
+	SwatchChannelOverrides,
+	Theme,
+	ThemeVariant
+} from './model';
+
+export type GeneratedStep = {
+	index: string;
+	lightness: number;
+	controlled: boolean;
+};
+
+export type GeneratedSwatch = {
+	stepIndex: string;
 	name: string;
-	hex: string;
+	oklch: OklchColor;
+	generated: OklchColor;
+	overrides: SwatchChannelOverrides;
 };
 
-export type GroupLightnessSettings = {
-	lightnessMax: number;
-	lightnessMin: number;
-	controlledLightness: Record<number, number>;
-	reversed: boolean;
-	stepsCount: number;
-	halfStepBefore: boolean;
-	halfStepAfter: boolean;
-};
-
-export type PaletteGroupData = {
-	id: number;
+export type GeneratedColorRamp = {
+	id: string;
 	name: string;
-	colors: ColorData[];
+	sourceColor: OklchColor;
+	swatches: GeneratedSwatch[];
 };
 
-export type PaletteVariantData = {
-	id: number;
+export type GeneratedColorFamily = {
+	id: string;
 	name: string;
-	groups: Record<number, GroupLightnessSettings>;
+	steps: GeneratedStep[];
+	ramps: GeneratedColorRamp[];
 };
 
-export type PaletteData = {
-	id: number;
-	name: string;
-	groups: PaletteGroupData[];
-	variants: PaletteVariantData[];
+export type GeneratedVariantPalette = {
+	themeId: string;
+	variantId: string;
+	families: GeneratedColorFamily[];
 };
 
-export type GroupData = PaletteGroupData & GroupLightnessSettings;
-
-// Creates the default lightness settings used when a variant receives a new group.
-export function createDefaultLightnessSettings(
-	overrides: Partial<GroupLightnessSettings> = {}
-): GroupLightnessSettings {
+// Generated palette values are derived at read time from shared structure and the
+// selected variant's authored values. Callers should render or export these
+// objects, not persist them back into App data.
+export function generateVariantPalette(
+	theme: Theme,
+	variant: ThemeVariant
+): GeneratedVariantPalette {
 	return {
-		lightnessMax: 0.95,
-		lightnessMin: 0.16,
-		controlledLightness: {},
-		reversed: false,
-		stepsCount: 9,
-		halfStepBefore: false,
-		halfStepAfter: false,
-		...overrides
+		themeId: theme.id,
+		variantId: variant.id,
+		families: theme.structure.families.map((family) => generateFamily(family, variant))
 	};
 }
 
-// Creates a starter palette with one variant, one group, and one seed color.
-export function createDefaultPalette(id = 1, name = 'Palette'): PaletteData {
-	const groups: PaletteGroupData[] = [
-		{
-			id: 1,
-			name: 'palette',
-			colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
+export function generateFamily(
+	family: ColorFamilyStructure,
+	variant: ThemeVariant
+): GeneratedColorFamily {
+	const familyValues = variant.values.families[family.id];
+	const steps = familyValues ? buildSteps(family.stepScale, familyValues.stepScale) : [];
+
+	return {
+		id: family.id,
+		name: family.name,
+		steps,
+		ramps: family.ramps.map((ramp) => generateRamp(ramp, familyValues?.ramps[ramp.id], steps))
+	};
+}
+
+export function generateRamp(
+	ramp: ColorRampStructure,
+	values: ColorRampValues | undefined,
+	steps: readonly GeneratedStep[]
+): GeneratedColorRamp {
+	const sourceColor = values?.sourceColor.oklch ?? { lightness: 0.7, chroma: 0.1, hue: 0 };
+
+	return {
+		id: ramp.id,
+		name: ramp.name,
+		sourceColor,
+		swatches: steps.map((step) =>
+			generateSwatch(ramp.name, step, sourceColor, values?.swatchOverrides[step.index])
+		)
+	};
+}
+
+export function generateSwatch(
+	rampName: string,
+	step: GeneratedStep,
+	sourceColor: OklchColor,
+	overrides: SwatchChannelOverrides = {}
+): GeneratedSwatch {
+	const generated: OklchColor = {
+		lightness: step.lightness,
+		chroma: sourceColor.chroma,
+		hue: sourceColor.hue
+	};
+
+	return {
+		stepIndex: step.index,
+		name: `${rampName}-${step.index}`,
+		generated,
+		overrides: { ...overrides },
+		oklch: {
+			lightness: overrides.lightness ?? generated.lightness,
+			chroma: overrides.chroma ?? generated.chroma,
+			hue: overrides.hue ?? generated.hue
 		}
-	];
-
-	return {
-		id,
-		name,
-		groups,
-		variants: [createDefaultVariant(groups, 1, 'Default')]
 	};
-}
-
-// Creates a variant with lightness settings for every shared palette group.
-export function createDefaultVariant(
-	groups: PaletteGroupData[],
-	id = 1,
-	name = 'Variant'
-): PaletteVariantData {
-	return {
-		id,
-		name,
-		groups: Object.fromEntries(groups.map((group) => [group.id, createDefaultLightnessSettings()]))
-	};
-}
-
-// Merges shared groups with one variant's lightness settings for rendering and exports.
-export function buildVariantGroups(palette: PaletteData, variant: PaletteVariantData): GroupData[] {
-	return palette.groups.map((group) => ({
-		...group,
-		...variant.groups[group.id],
-		colors: group.colors.map((color) => ({ ...color }))
-	}));
-}
-
-// Keeps variant group settings aligned with the palette's shared group structure.
-export function syncVariantGroups(palette: PaletteData): PaletteData {
-	const groupIds = new Set(palette.groups.map((group) => group.id));
-	const variants =
-		palette.variants.length > 0 ? palette.variants : [createDefaultVariant(palette.groups, 1, 'Default')];
-	return {
-		...palette,
-		groups: palette.groups.map((group) => ({
-			...group,
-			colors: group.colors.map((color) => ({ ...color }))
-		})),
-		variants: variants.map((variant) => {
-			const groups: Record<number, GroupLightnessSettings> = {};
-			for (const group of palette.groups) {
-				groups[group.id] = variant.groups[group.id] ?? createDefaultLightnessSettings();
-			}
-			for (const [key, settings] of Object.entries(variant.groups)) {
-				const groupId = Number(key);
-				if (groupIds.has(groupId)) groups[groupId] = settings;
-			}
-			return { ...variant, groups };
-		})
-	};
-}
-
-// Converts legacy top-level groups into one palette with one default variant.
-export function migrateGroupsToPalettes(groups: GroupData[]): PaletteData[] {
-	const paletteGroups: PaletteGroupData[] = groups.map((group) => ({
-		id: group.id,
-		name: group.name,
-		colors: group.colors.map((color) => ({ ...color }))
-	}));
-
-	const variantGroups = Object.fromEntries(
-		groups.map((group) => [
-			group.id,
-			createDefaultLightnessSettings({
-				lightnessMax: group.lightnessMax,
-				lightnessMin: group.lightnessMin,
-				controlledLightness: { ...group.controlledLightness },
-				reversed: group.reversed,
-				stepsCount: group.stepsCount,
-				halfStepBefore: group.halfStepBefore,
-				halfStepAfter: group.halfStepAfter
-			})
-		])
-	);
-
-	return [
-		{
-			id: 1,
-			name: 'Palette',
-			groups: paletteGroups,
-			variants: [{ id: 1, name: 'Default', groups: variantGroups }]
-		}
-	];
 }

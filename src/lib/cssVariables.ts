@@ -1,57 +1,97 @@
-import Color from 'colorjs.io';
-import { buildVariantGroups, type PaletteData } from './palette';
-import { computeLightness, computeSteps } from './lightness';
+import { formatChroma, formatHue, formatLightness } from './color';
+import { sanitizeCssName } from './naming';
+import {
+	generateVariantPalette,
+	type GeneratedColorFamily,
+	type GeneratedVariantPalette
+} from './palette';
+import type { Theme, ThemeVariant } from './model';
 
-// Normalizes user-facing names into stable CSS custom-property name segments.
-export function slugifyCssIdent(value: string): string {
-	const slug = value
-		.trim()
-		.toLowerCase()
-		.replace(/[^a-z0-9_-]+/g, '-')
-		.replace(/^-+|-+$/g, '');
-	return slug || 'item';
+export type CssVariable = {
+	name: string;
+	value: string;
+	familyId: string;
+	rampId: string;
+	stepIndex: string;
+};
+
+export type CssVariableGroup = {
+	familyId: string;
+	familyName: string;
+	variables: CssVariable[];
+};
+
+export type CssExport = {
+	prefix: string;
+	groups: CssVariableGroup[];
+	css: string;
+	usageExample: string | null;
+};
+
+// CSS export renders only the selected variant and keeps names/value text derived
+// from generated palette data. It never writes sanitized names or CSS text back
+// into persisted theme data.
+export function exportCssVariables(theme: Theme, variant: ThemeVariant): CssExport {
+	return exportGeneratedCssVariables(generateVariantPalette(theme, variant), {
+		prefix: theme.cssPrefix,
+		variantName: variant.name
+	});
 }
 
-// Exports palettes as OKLCH CSS custom properties using shared lightness logic.
-export function generateCssVariables(palettes: PaletteData[], prefix: string): string {
-	const lines: string[] = ['/* Usage: color: oklch(var(--your-var) / 0.5); */', ':root {'];
+export function exportGeneratedCssVariables(
+	palette: GeneratedVariantPalette,
+	options: { prefix: string; variantName: string }
+): CssExport {
+	const prefix = normalizeCssPrefix(options.prefix);
+	const variantName = sanitizeCssName(options.variantName) || 'variant';
+	const groups = palette.families.map((family) => buildGroup(family, prefix, variantName));
+	const css = renderCss(groups);
+	const firstVariable = groups.flatMap((group) => group.variables)[0];
 
-	for (const palette of palettes) {
-		const paletteName = slugifyCssIdent(palette.name);
-		lines.push(`  /* ${palette.name} */`);
+	return {
+		prefix,
+		groups,
+		css,
+		usageExample: firstVariable ? `color: oklch(var(${firstVariable.name}) / 1);` : null
+	};
+}
 
-		for (const variant of palette.variants) {
-			const variantName = slugifyCssIdent(variant.name);
-			lines.push(`  /* ${palette.name} / ${variant.name} */`);
+export function normalizeCssPrefix(prefix: string): string {
+	return sanitizeCssName(prefix) || 'color';
+}
 
-			for (const group of buildVariantGroups(palette, variant)) {
-				const groupName = slugifyCssIdent(group.name);
-				const steps = computeSteps(group);
-				const lightness = computeLightness(group, steps);
+function buildGroup(
+	family: GeneratedColorFamily,
+	prefix: string,
+	variantName: string
+): CssVariableGroup {
+	return {
+		familyId: family.id,
+		familyName: family.name,
+		variables: family.ramps.flatMap((ramp) => {
+			const rampName = sanitizeCssName(ramp.name) || 'ramp';
+			return ramp.swatches.map((swatch) => {
+				const name = `--${prefix}-${variantName}-${rampName}-${swatch.stepIndex}`;
+				return {
+					name,
+					value: `${formatLightness(swatch.oklch.lightness)} ${formatChroma(swatch.oklch.chroma)} ${formatHue(swatch.oklch.hue)}`,
+					familyId: family.id,
+					rampId: ramp.id,
+					stepIndex: swatch.stepIndex
+				};
+			});
+		})
+	};
+}
 
-				for (const color of group.colors) {
-					try {
-						const oklch = new Color(color.hex).to('oklch');
-						const [, c, h] = oklch.coords;
-						const C = c == null || isNaN(c) ? 0 : c;
-						const H = h == null || isNaN(h) ? 0 : h;
-						const colorName = slugifyCssIdent(color.name);
+function renderCss(groups: readonly CssVariableGroup[]): string {
+	const lines = [':root {'];
 
-						for (let i = 0; i < steps.length; i++) {
-							const L = lightness[i];
-							lines.push(
-								`  --${prefix}${paletteName}-${variantName}-${groupName}-${colorName}-${steps[i]}: ${L.toFixed(3)} ${C.toFixed(3)} ${H.toFixed(1)};`
-							);
-						}
-					} catch {
-						// Invalid imported seed colors should not prevent exporting valid colors.
-					}
-				}
-
-				lines.push('');
-			}
-		}
-	}
+	groups.forEach((group, index) => {
+		if (index > 0) lines.push('');
+		lines.push(`  /* ${group.familyName} */`);
+		for (const variable of group.variables) lines.push(`  ${variable.name}: ${variable.value};`);
+	});
 
 	lines.push('}');
 	return lines.join('\n');

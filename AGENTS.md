@@ -9,61 +9,49 @@ Read @README.md to get an overview of this project.
 - `docs/prototype.md`: Current prototype design, including page layouts,
   component responsibilities, component hierarchy, and component-owned behavior.
 
-## Project
+## Techniques
 
-Kiniro is a SvelteKit app for making OKLCH color palettes. The palette model is
-centered on lightness: hue and chroma define the color family, and OKLCH
-lightness generates the visible scale steps.
-
-Prefer implementations that keep this model easy to reason about:
-
-- Treat lightness step generation as shared domain logic, not as view-only
-  state.
-  - Reuse helpers from `src/lib` when exporting CSS variables, rendering
-    palettes, or testing generated values.
-  - Keep UI controls aligned with OKLCH concepts: lightness, chroma, hue, step
-    count, half steps, and reversed scales.
-
-## SvelteKit Conventions
-
-- Use SvelteKit and Svelte 5 patterns already present in the codebase.
+- Use `nix flake` and `direnv` for development environment.
+- Use SvelteKit and Svelte 5. Use runes for reactivity.
 - Put route-level UI in `src/routes` and reusable logic in `src/lib`.
-- Keep browser persistence and schema handling in `src/lib/storage.ts`.
-- Keep CSS variable export behavior in `src/lib/cssVariables.ts`.
-- Avoid duplicating palette math inside file-level components when a shared
-  helper can express the same behavior.
-- Keep component state minimal and derive values from explicit inputs where
-  practical.
+- Use `color.js` for color calculations.
+- Use the next version of `melt-ui` to build components.
+- Update related documentation when changing domain concepts, layout behavior,
+  or component responsibilities.
 
 ## Comments
 
-Add comment for each exported function, and Svelte component. Keep comments
-brief, descriptive, and natural. Focus on motivation, usage, and non-obvious
-constraints. Avoid unnecessary styles and labels and do not include obvious
-information or repeat code step-by-step.
+Write comments for modules' interfaces, except when they are obvious enough.
+"Module" here means any structure that provides an abstraction boundary, such as
+classes, components, file/directory modules, subsystems, and services. Prefer
+deep modules: simple interfaces that hide meaningful complexity. Avoid shallow
+modules, including pure re-export modules, that add indirection without hiding
+complexity.
 
-Place comments immediately before the code they describe. Use line comments
-rather than block comments.
+"Interface" here means everything another module needs to know to use this
+module correctly, including exported functions, parameters, return values,
+props, events, errors, side effects, and important invariants.
+
+Module comments should explain the motivation, usage, and non-obvious
+constraints of the module. They should be brief, descriptive, and natural. Do
+not add comments just to satisfy this rule; omit comments when the interface is
+self-explanatory. Avoid unnecessary styles and labels.
+
+In-module comments only for non-obvious implementation details, such as complex
+algorithms, edge case handling, and important invariants. Avoid comments that
+only mirror the code or explain obvious steps.
+
+Prefer line comments over block comments.
 
 ## Testing
 
-Add valuable tests for each exported function and Svelte component (except
-`+page.svelte`), focusing on user-visible behavior, domain rules, and edge
-cases. Don't add meaningless tests that only mirror implementation details.
+Write tests for reusable modules and non-trivial behavior.
 
-## OKLCH Lightness Rules
-
-- Lightness is the primary mechanism for generating palette steps.
-- Step generation should remain deterministic for exports, previews, and tests.
-- Intermediate lightness controls should be documented and tested when their
-  behavior affects generated colors.
-- Reversed palettes should preserve the documented model in `PLAN.md`: compute
-  the normal lightness scale first, then reverse the final values.
+Test cases should be meaningful and focused on user-visible behavior. They
+should cover domain rules, edge cases, and potential failure points. Avoid tests
+that only mirror implementation details or verify trivial behavior.
 
 ## Verification
 
-After each file change, run:
-
-`pnpm run check` and `pnpm run test`
-
-And fix all issues.
+Before committing, run `pnpm run lint`, `pnpm run check` and `pnpm run test`,
+and resolve all errors and warnings.

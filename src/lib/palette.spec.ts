@@ -1,169 +1,84 @@
 import { describe, expect, it } from 'vitest';
-import {
-	buildVariantGroups,
-	createDefaultPalette,
-	createDefaultVariant,
-	migrateGroupsToPalettes,
-	syncVariantGroups,
-	type GroupData,
-	type PaletteData
-} from './palette';
+import { createDefaultRampValues, createDefaultTheme } from './model';
+import { generateVariantPalette } from './palette';
 
-describe('createDefaultPalette', () => {
-	it('creates one palette with shared groups and one initialized variant', () => {
-		const palette = createDefaultPalette(7, 'Brand');
+describe('generateVariantPalette', () => {
+	it('generates families, ramps, and swatches in palette order', () => {
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		family.ramps.push({ id: 'base', name: 'base' }, { id: 'accent', name: 'accent' });
+		const variant = theme.variants[0];
+		variant.values.families[family.id].ramps.base = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.7 0.2 40)',
+			oklch: { lightness: 0.7, chroma: 0.2, hue: 40 }
+		});
+		variant.values.families[family.id].ramps.accent = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.6 0.1 280)',
+			oklch: { lightness: 0.6, chroma: 0.1, hue: 280 }
+		});
 
-		expect(palette.id).toBe(7);
-		expect(palette.name).toBe('Brand');
-		expect(palette.groups).toHaveLength(1);
-		expect(palette.variants).toHaveLength(1);
-		expect(palette.variants[0].groups[palette.groups[0].id]).toMatchObject({
-			lightnessMax: 0.95,
-			lightnessMin: 0.16
+		const palette = generateVariantPalette(theme, variant);
+
+		expect(palette.families).toHaveLength(1);
+		expect(palette.families[0].ramps.map((ramp) => ramp.name)).toEqual(['base', 'accent']);
+		expect(palette.families[0].ramps[0].swatches).toHaveLength(9);
+		expect(palette.families[0].ramps[0].swatches[0]).toMatchObject({
+			name: 'base-100',
+			stepIndex: '100',
+			oklch: { lightness: 0.95, chroma: 0.2, hue: 40 }
 		});
 	});
-});
 
-describe('createDefaultVariant', () => {
-	it('creates lightness settings for every supplied group', () => {
-		const variant = createDefaultVariant(
-			[
-				{ id: 2, name: 'brand', colors: [] },
-				{ id: 4, name: 'neutral', colors: [] }
-			],
-			3,
-			'Dark'
-		);
+	it('uses step lightness with ramp source chroma and hue', () => {
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		family.stepScale.stepCount = 5;
+		family.ramps.push({ id: 'base', name: 'base' });
+		const variant = theme.variants[0];
+		variant.values.families[family.id].stepScale.lightnessStart = 0.9;
+		variant.values.families[family.id].stepScale.lightnessEnd = 0.1;
+		variant.values.families[family.id].ramps.base = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.4 0.12 210)',
+			oklch: { lightness: 0.4, chroma: 0.12, hue: 210 }
+		});
 
-		expect(variant).toMatchObject({ id: 3, name: 'Dark' });
-		expect(Object.keys(variant.groups)).toEqual(['2', '4']);
+		const swatches = generateVariantPalette(theme, variant).families[0].ramps[0].swatches;
+
+		expect(swatches.map((swatch) => swatch.stepIndex)).toEqual(['100', '200', '300', '400', '500']);
+		expect(swatches[2].oklch).toEqual({ lightness: 0.5, chroma: 0.12, hue: 210 });
 	});
-});
 
-describe('buildVariantGroups', () => {
-	it('merges palette-level groups with variant-owned lightness settings', () => {
-		const palette: PaletteData = {
-			id: 1,
-			name: 'Brand',
-			groups: [
-				{
-					id: 10,
-					name: 'accent',
-					colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
-				}
-			],
-			variants: [
-				{
-					id: 1,
-					name: 'Dark',
-					groups: {
-						10: {
-							lightnessMax: 0.8,
-							lightnessMin: 0.12,
-							controlledLightness: { 200: 0.7 },
-							reversed: true,
-							stepsCount: 3,
-							halfStepBefore: false,
-							halfStepAfter: true
-						}
-					}
-				}
-			]
+	it('applies swatch channel overrides over generated values', () => {
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		family.ramps.push({ id: 'base', name: 'base' });
+		const variant = theme.variants[0];
+		variant.values.families[family.id].ramps.base = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.7 0.2 40)',
+			oklch: { lightness: 0.7, chroma: 0.2, hue: 40 }
+		});
+		variant.values.families[family.id].ramps.base.swatchOverrides['300'] = {
+			chroma: 0.05,
+			hue: 120
 		};
 
-		expect(buildVariantGroups(palette, palette.variants[0])).toEqual([
-			{
-				id: 10,
-				name: 'accent',
-				colors: [{ id: 1, name: 'primary', hex: '#907aa9' }],
-				lightnessMax: 0.8,
-				lightnessMin: 0.12,
-				controlledLightness: { 200: 0.7 },
-				reversed: true,
-				stepsCount: 3,
-				halfStepBefore: false,
-				halfStepAfter: true
-			}
-		]);
-	});
-});
+		const swatch = generateVariantPalette(theme, variant).families[0].ramps[0].swatches[2];
 
-describe('syncVariantGroups', () => {
-	it('adds missing settings and removes stale settings for every variant', () => {
-		const synced = syncVariantGroups({
-			id: 1,
-			name: 'Brand',
-			groups: [{ id: 2, name: 'brand', colors: [] }],
-			variants: [
-				{
-					id: 1,
-					name: 'Light',
-					groups: {
-						99: {
-							lightnessMax: 0.1,
-							lightnessMin: 0.2,
-							controlledLightness: {},
-							reversed: false,
-							stepsCount: 3,
-							halfStepBefore: false,
-							halfStepAfter: false
-						}
-					}
-				}
-			]
-		});
-
-		expect(synced.variants[0].groups[2]).toMatchObject({
-			lightnessMax: 0.95,
-			lightnessMin: 0.16
-		});
-		expect(synced.variants[0].groups[99]).toBeUndefined();
+		expect(swatch.generated).toEqual({ lightness: 0.725, chroma: 0.2, hue: 40 });
+		expect(swatch.oklch).toEqual({ lightness: 0.725, chroma: 0.05, hue: 120 });
+		expect(swatch.overrides).toEqual({ chroma: 0.05, hue: 120 });
 	});
 
-	it('creates a default variant when imported palette data has none', () => {
-		const synced = syncVariantGroups({
-			id: 1,
-			name: 'Brand',
-			groups: [{ id: 2, name: 'brand', colors: [] }],
-			variants: []
-		});
+	it('does not mutate or add generated values to theme data', () => {
+		const theme = createDefaultTheme();
+		const before = structuredClone(theme);
 
-		expect(synced.variants).toHaveLength(1);
-		expect(synced.variants[0]).toMatchObject({ id: 1, name: 'Default' });
-		expect(synced.variants[0].groups[2]).toMatchObject({
-			lightnessMax: 0.95,
-			lightnessMin: 0.16
-		});
-	});
-});
+		generateVariantPalette(theme, theme.variants[0]);
 
-describe('migrateGroupsToPalettes', () => {
-	it('preserves legacy groups as shared structure and variant lightness settings', () => {
-		const groups: GroupData[] = [
-			{
-				id: 5,
-				name: 'legacy',
-				lightnessMax: 0.9,
-				lightnessMin: 0.2,
-				controlledLightness: { 200: 0.65 },
-				reversed: true,
-				stepsCount: 3,
-				halfStepBefore: true,
-				halfStepAfter: false,
-				colors: [{ id: 1, name: 'primary', hex: '#907aa9' }]
-			}
-		];
-
-		const [palette] = migrateGroupsToPalettes(groups);
-
-		expect(palette.groups).toEqual([
-			{ id: 5, name: 'legacy', colors: [{ id: 1, name: 'primary', hex: '#907aa9' }] }
-		]);
-		expect(palette.variants[0].groups[5]).toMatchObject({
-			lightnessMax: 0.9,
-			lightnessMin: 0.2,
-			controlledLightness: { 200: 0.65 },
-			reversed: true
-		});
+		expect(theme).toEqual(before);
 	});
 });

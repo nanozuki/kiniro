@@ -21,12 +21,27 @@ colors may be outside a target display gamut such as sRGB or Display P3.
 
 ## Theme
 
-A Theme is a palette family named by the user. It contains one or more Variants.
+A Theme is a palette family named by the user. It contains one or more Variants,
+owns the shared structure used by those variants, and stores the theme-level CSS
+variable prefix.
+
+## Theme Structure
+
+Theme Structure is the part of a Theme shared by all of its Variants. It
+includes the ordered Color Families, each family's Step Scale structure, and
+the ordered Color Ramps inside each family.
 
 ## Variant
 
-A Variant is a complete palette inside a Theme, named by the user. It contains
-one or more Color Families.
+A Variant is a complete palette inside a Theme, named by the user. It uses its
+Theme's shared structure and stores the variant-specific values for that
+structure.
+
+## Variant Values
+
+Variant Values are the user-authored values that differ between Variants in the
+same Theme. They include step lightness ranges and overrides, reverse state,
+ramp source colors, and per-swatch OKLCH channel overrides.
 
 ## Color Family
 
@@ -58,9 +73,15 @@ styles:
 ## Color Ramp
 
 A Color Ramp is a sequence of Swatches inside a Color Family, named by the user.
-It has a source color, which users can enter as hex, RGB, HSL, or OKLCH. Kiniro
-uses the source color's chroma and hue with the Color Family's Step Scale to
-define the Color Ramp's Swatches.
+It has a Source Color, which users can enter as hex, RGB, HSL, or OKLCH.
+Kiniro uses the source color's chroma and hue with the Color Family's Step
+Scale to define the Color Ramp's Swatches.
+
+## Source Color
+
+A Source Color is the authored color for a Color Ramp. Kiniro preserves the
+user-facing source format for editing and export, while using its OKLCH value to
+generate the ramp's default swatches.
 
 ## Swatch
 
