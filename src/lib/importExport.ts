@@ -100,6 +100,8 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }
 
+// Import/export payloads are plain JSON data. Clone through JSON so imported
+// values remain compatible with proxy-backed Svelte state used by the dialogs.
 function clone<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
 }
