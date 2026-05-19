@@ -1,6 +1,6 @@
 # next
 
-Created: 2026-05-18 21:00 Updated: 2026-05-19 00:22
+Created: 2026-05-18 21:00 Updated: 2026-05-19 12:25
 
 ## Goal
 
@@ -44,18 +44,26 @@ Verification passed:
 - `pnpm run check` — clean
 - `pnpm run test` — all tests passing
 
-**Current focus: pre-merge documentation cleanup.** Consolidate docs around the
-implemented `/next` modules, remove repeated module-specific behavior from
-`docs/prototype.md`, and keep shared rules in central docs only.
+**Current focus: final cleanup after removing the old staging namespace.** The
+app now lives under `src/lib/`, the `src/lib/next/` directory is gone,
+and starter scaffold files were removed.
+
+Found and fixed a dev-server regression after cleanup:
+
+- `src/routes/+layout.svelte` used `%sveltekit.assets%/favicon.svg` inside a
+  Svelte component head block
+- That placeholder is only valid in `src/app.html`; in route/layout markup it
+  was sent to the browser literally, causing requests with raw `%` and Vite/
+  SvelteKit to throw `URI malformed`
+- Fixed by switching the favicon link to `/favicon.svg`
 
 Investigation notes:
 
 - `src/routes/+page.svelte` still inlines the title bar shell instead of using
-  `src/lib/next/TitleBar.svelte`
+  `src/lib/TitleBar.svelte`
 - Import/export responsibilities are split between the route,
   `ImportExportDialogs.svelte`, and `importExport.ts`
-- Several `/next` modules already have brief interface comments, but the
-  detailed behavior source of truth still lives mostly in `docs/prototype.md`
+- Storage key names were simplified during cleanup to remove version suffixes
 
 Added fixture:
 
@@ -67,12 +75,13 @@ Found and fixed an import bug:
 - Clicking `Confirm import` could throw `DOMException: Proxy object could not be cloned`
 - Cause: `applyThemeImport()` used `structuredClone()` on Svelte proxy-backed
   import state from the dialog
-- Fix: `src/lib/next/importExport.ts` now clones theme payloads via JSON-safe
+- Fix: `src/lib/importExport.ts` now clones theme payloads via JSON-safe
   data cloning, which matches the import/export file format and works with proxy-backed values
 
 Non-app 404 noticed during manual testing:
 
-- Requests to `/api/v1/events` appeared in the browser console/network log
+- Requests to a versioned `/api/.../events` endpoint appeared in the browser
+  console/network log
 - Repo search found no matching route or client code in Kiniro
 - Likely source is a browser extension, devtools integration, or other injected
   tooling rather than the app itself
@@ -83,11 +92,16 @@ Non-app 404 noticed during manual testing:
 
 ### Module organization
 
-- Built next implementation alongside legacy code under `src/lib/next/`
-- Developed the new route at `/next` initially, then promoted to root
+- Built the redesign under `src/lib/next/` first, then promoted it to the root
+  route and finally renamed the module directory to `src/lib/`
+- Removed leftover starter scaffold files (`src/lib/vitest-examples/` and
+  `src/lib/index.ts`) during the cleanup
 - Kept model operations pure; app state manager enforces invariants
 - Generated palette, CSS, and contrast data are derived reactively, never
   persisted
+- SvelteKit HTML placeholders such as `%sveltekit.assets%` must stay in
+  `src/app.html`; route/layout components should use normal URLs like
+  `/favicon.svg`
 
 ### Data and UI state separation
 
@@ -109,7 +123,7 @@ Non-app 404 noticed during manual testing:
 
 ### History model
 
-- Snapshot-based undo/redo for v1 (patch-based deferred if performance requires)
+- Snapshot-based undo/redo (patch-based deferred if performance requires)
 - History entries only at semantic commit points: blur, dialog confirm, delete
   confirm, reorder complete, import confirm
 - Capped at 100 persisted entries; uncapped in-memory
@@ -141,11 +155,7 @@ Non-app 404 noticed during manual testing:
 
 - Confirm whether the `Rose Pine` fixture shape is sufficient for the intended
   import/export checks, or if additional fixtures are needed.
-- Decide the documentation boundary before merge:
-  - `README.md` for product overview only
-  - `docs/terminology.md` for shared domain terms only
-  - `docs/prototype.md` for screen structure and cross-module rules only
-  - module comments in `src/lib/next/*` for module-specific behavior and
-    invariants
-- Decide whether to document the current inline route shell as-is, or first
-  refactor `src/routes/+page.svelte` to consistently use `TitleBar.svelte`.
+- Decide whether to keep the current inline route shell or refactor
+  `src/routes/+page.svelte` to consistently use `TitleBar.svelte`.
+- Decide how much more cleanup `docs/prototype.md` still needs now that the
+  `/next` staging namespace is gone.

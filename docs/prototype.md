@@ -182,7 +182,7 @@ names and generated values. Export is read-only and does not create an Undo/Redo
 history entry.
 
 **import(file, themes)**: Open a file picker that accepts `.json` files to
-select a JSON file. Do not support browser drag-and-drop import in v1. Validate
+select a JSON file. Do not support browser drag-and-drop import yet. Validate
 the whole file before showing theme selection. Missing or unsupported `version`
 fails validation. Validation errors show a user-friendly summary with
 collapsible technical details. Allow user to select themes to import; the
@@ -461,7 +461,7 @@ Generated variable names use:
 The output value is an OKLCH channel triple, not a full `oklch(...)` function:
 
 ```css
---color-main-base-100: 0.9500 0.0255 291;
+--color-main-base-100: 0.95 0.0255 291;
 ```
 
 This supports alpha usage:
@@ -474,7 +474,7 @@ Show that usage example in the app, but do not include it when copying CSS.
 Show a compact note that CSS export uses original OKLCH values, not clamped
 preview colors.
 
-CSS output uses one format in v1: channel-triple custom properties wrapped in
+CSS output uses one format: channel-triple custom properties wrapped in
 `:root { ... }`. Show the generated CSS in a read-only code block without syntax
 highlighting. Group output by color family using a leading family-name comment
 for each family, including empty families. Put one blank line between family
@@ -532,7 +532,7 @@ selectable, only swatches.
 
 The selected color labels use display names in the form `ramp + step`. The
 color selector uses compact selector-specific cells with no text inside the
-cells. On hover, show a tooltip with `ramp + step`. V1 supports
+cells. On hover, show a tooltip with `ramp + step`. It supports
 pointer/mouse selection only. The preview uses fixed sample content with one
 line of large text, one line of normal text, and the existing line/block
 component preview. Provide a foreground/background swap button. Show the numeric
@@ -560,7 +560,7 @@ preview colors, or contrast results.
 Use stable IDs for persisted entities that can be selected, reordered, deleted,
 or restored. Do not rely on array positions as persistent identity.
 
-Snapshot-based history is acceptable for v1 because undoable entries are created
+Snapshot-based history is acceptable because undoable entries are created
 only at semantic commit points, not for every keystroke or transient draft state.
 Examples include inline input blur, dialog confirmation, deletion confirmation,
 reordering completion, import confirmation, and prefix normalization. Limit
