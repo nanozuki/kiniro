@@ -6,7 +6,7 @@
 -->
 
 <script lang="ts">
-	import type { Theme, ThemeVariant } from '$lib/model';
+	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
 	let {
 		themes,
 		selectedThemeId,
@@ -18,7 +18,8 @@
 		onrenametheme = (_id: string, _name: string) => {},
 		onrenamevariant = (_id: string, _name: string) => {},
 		ondeletetheme = (_id: string) => {},
-		ondeletevariant = (_id: string) => {}
+		ondeletevariant = (_id: string) => {},
+		onthemegamut = (_id: string, _gamut: Gamut) => {}
 	} = $props<{
 		themes: Theme[];
 		selectedThemeId: string | null;
@@ -31,6 +32,7 @@
 		onrenamevariant?: (id: string, name: string) => void;
 		ondeletetheme?: (id: string) => void;
 		ondeletevariant?: (id: string) => void;
+		onthemegamut?: (id: string, gamut: Gamut) => void;
 	}>();
 
 	let editingTheme = $state(false);
@@ -88,6 +90,16 @@
 				>
 			{/if}
 			<button onclick={() => ondeletetheme(selectedTheme.id)}>Delete theme</button>
+			<label>
+				Target gamut
+				<select
+					value={selectedTheme.targetGamut}
+					onchange={(event) => onthemegamut(selectedTheme.id, event.currentTarget.value as Gamut)}
+				>
+					<option value="srgb">sRGB</option>
+					<option value="p3">Display P3</option>
+				</select>
+			</label>
 
 			{#if selectedVariant}
 				{#if editingVariant}

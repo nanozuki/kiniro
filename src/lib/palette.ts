@@ -1,8 +1,10 @@
+import { getRelativeChroma, getRelativeChromaRatio } from './color';
 import { buildSteps } from './lightness';
 import type {
 	ColorFamilyStructure,
 	ColorRampStructure,
 	ColorRampValues,
+	Gamut,
 	OklchColor,
 	SwatchChannelOverrides,
 	Theme,
@@ -53,13 +55,16 @@ export function generateVariantPalette(
 	return {
 		themeId: theme.id,
 		variantId: variant.id,
-		families: theme.structure.families.map((family) => generateFamily(family, variant))
+		families: theme.structure.families.map((family) =>
+			generateFamily(family, variant, theme.targetGamut)
+		)
 	};
 }
 
 export function generateFamily(
 	family: ColorFamilyStructure,
-	variant: ThemeVariant
+	variant: ThemeVariant,
+	gamut: Gamut
 ): GeneratedColorFamily {
 	const familyValues = variant.values.families[family.id];
 	const steps = familyValues ? buildSteps(family.stepScale, familyValues.stepScale) : [];
@@ -68,23 +73,34 @@ export function generateFamily(
 		id: family.id,
 		name: family.name,
 		steps,
-		ramps: family.ramps.map((ramp) => generateRamp(ramp, familyValues?.ramps[ramp.id], steps))
+		ramps: family.ramps.map((ramp) =>
+			generateRamp(ramp, familyValues?.ramps[ramp.id], steps, gamut)
+		)
 	};
 }
 
 export function generateRamp(
 	ramp: ColorRampStructure,
 	values: ColorRampValues | undefined,
-	steps: readonly GeneratedStep[]
+	steps: readonly GeneratedStep[],
+	gamut: Gamut
 ): GeneratedColorRamp {
 	const sourceColor = values?.sourceColor.oklch ?? { lightness: 0.7, chroma: 0.1, hue: 0 };
+	const chromaRatio = getRelativeChromaRatio(sourceColor, gamut);
 
 	return {
 		id: ramp.id,
 		name: ramp.name,
 		sourceColor,
 		swatches: steps.map((step) =>
-			generateSwatch(ramp.name, step, sourceColor, values?.swatchOverrides[step.index])
+			generateSwatch(
+				ramp.name,
+				step,
+				sourceColor,
+				chromaRatio,
+				gamut,
+				values?.swatchOverrides[step.index]
+			)
 		)
 	};
 }
@@ -93,11 +109,13 @@ export function generateSwatch(
 	rampName: string,
 	step: GeneratedStep,
 	sourceColor: OklchColor,
+	chromaRatio: number,
+	gamut: Gamut,
 	overrides: SwatchChannelOverrides = {}
 ): GeneratedSwatch {
 	const generated: OklchColor = {
 		lightness: step.lightness,
-		chroma: sourceColor.chroma,
+		chroma: getRelativeChroma(step.lightness, sourceColor.hue, chromaRatio, gamut),
 		hue: sourceColor.hue
 	};
 

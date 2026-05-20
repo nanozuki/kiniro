@@ -7,14 +7,14 @@
 
 <script lang="ts">
 	import ColorSwatch from './ColorSwatch.svelte';
-	import { formatChroma, formatHue, getPreviewColor } from '../color';
-	import type { GamutPreview, OklchChannel } from '../model';
+	import { formatChroma, formatHue, formatLightness, getPreviewColor } from '../color';
+	import type { Gamut, OklchChannel } from '../model';
 	import type { GeneratedColorRamp } from '../palette';
 
 	let {
 		ramp,
 		sourceValue,
-		gamutPreview = 'srgb',
+		gamut,
 		onedit = (_id: string) => {},
 		ondelete = (_id: string) => {},
 		onmove = (_id: string, _direction: 'up' | 'down') => {},
@@ -29,7 +29,7 @@
 	} = $props<{
 		ramp: GeneratedColorRamp;
 		sourceValue: string;
-		gamutPreview?: GamutPreview;
+		gamut: Gamut;
 		onedit?: (id: string) => void;
 		ondelete?: (id: string) => void;
 		onmove?: (id: string, direction: 'up' | 'down') => void;
@@ -38,7 +38,7 @@
 		onresetall?: (rampId: string, stepIndex: string) => void;
 	}>();
 
-	let sourcePreview = $derived(getPreviewColor(ramp.sourceColor, gamutPreview));
+	let sourcePreview = $derived(getPreviewColor(ramp.sourceColor, gamut));
 </script>
 
 <section aria-label={`Color ramp ${ramp.name}`} class="color-ramp">
@@ -47,14 +47,17 @@
 		<div>
 			<h4>{ramp.name}</h4>
 			<p>{sourceValue}</p>
-			<p>C {formatChroma(ramp.sourceColor.chroma)} H {formatHue(ramp.sourceColor.hue)}</p>
+			<p>
+				L {formatLightness(ramp.sourceColor.lightness)} C {formatChroma(ramp.sourceColor.chroma)} H
+				{formatHue(ramp.sourceColor.hue)}
+			</p>
 		</div>
 	</div>
 	<div class="swatches">
 		{#each ramp.swatches as swatch}
 			<ColorSwatch
 				{swatch}
-				{gamutPreview}
+				{gamut}
 				onoverride={(stepIndex, channel, value) => onoverride(ramp.id, stepIndex, channel, value)}
 				onreset={(stepIndex, channel) => onreset(ramp.id, stepIndex, channel)}
 				onresetall={(stepIndex) => onresetall(ramp.id, stepIndex)}

@@ -13,12 +13,12 @@
 		type ContrastTarget
 	} from '$lib/contrast';
 	import { getPreviewColor } from '$lib/color';
-	import type { GamutPreview } from '$lib/model';
+	import type { Gamut } from '$lib/model';
 	import type { GeneratedVariantPalette } from '$lib/palette';
 
-	let { palette, gamutPreview = 'srgb' } = $props<{
+	let { palette, gamut } = $props<{
 		palette: GeneratedVariantPalette;
-		gamutPreview?: GamutPreview;
+		gamut: Gamut;
 	}>();
 
 	let targets = $derived(getContrastTargets(palette));
@@ -28,9 +28,7 @@
 	let foreground = $derived(findTarget(targets, foregroundKey) ?? defaults?.foreground ?? null);
 	let background = $derived(findTarget(targets, backgroundKey) ?? defaults?.background ?? null);
 	let result = $derived(
-		foreground && background
-			? getContrastResult(foreground.color, background.color, gamutPreview)
-			: null
+		foreground && background ? getContrastResult(foreground.color, background.color, gamut) : null
 	);
 
 	function key(target: ContrastTarget) {
@@ -55,7 +53,7 @@
 	{#if foreground && background && result}
 		<div
 			class="showcase"
-			style={`color: ${getPreviewColor(foreground.color, gamutPreview).css}; background: ${getPreviewColor(background.color, gamutPreview).css}`}
+			style={`color: ${getPreviewColor(foreground.color, gamut).css}; background: ${getPreviewColor(background.color, gamut).css}`}
 		>
 			<strong>Showcase text</strong>
 			<span>{foreground.label} on {background.label}</span>

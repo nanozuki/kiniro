@@ -22,8 +22,9 @@ colors may be outside a target display gamut such as sRGB or Display P3.
 ## Theme
 
 A Theme is a palette family named by the user. It contains one or more Variants,
-owns the shared structure used by those variants, and stores the theme-level CSS
-variable prefix.
+owns the shared structure used by those variants, stores the theme-level CSS
+variable prefix, and defines the target gamut used for palette generation and
+preview.
 
 ## Theme Structure
 
@@ -74,8 +75,9 @@ styles:
 
 A Color Ramp is a sequence of Swatches inside a Color Family, named by the user.
 It has a Source Color, which users can enter as hex, RGB, HSL, or OKLCH.
-Kiniro uses the source color's chroma and hue with the Color Family's Step
-Scale to define the Color Ramp's Swatches.
+Kiniro uses the source color's lightness, chroma, and hue with the Theme's
+target gamut and the Color Family's Step Scale to define the Color Ramp's
+Swatches.
 
 ## Source Color
 
@@ -86,6 +88,7 @@ generate the ramp's default swatches.
 ## Swatch
 
 A Swatch is one color in a Color Ramp, associated with one Step. Each Swatch is
-represented as an OKLCH color. It uses lightness from its Step and chroma/hue
-from its Color Ramp's source color unless its OKLCH lightness, chroma, or hue is
-adjusted.
+represented as an OKLCH color. It uses lightness from its Step and hue from its
+Color Ramp's source color. Its default chroma is generated from the source
+color's relative chroma within the Theme's target gamut unless its OKLCH
+lightness, chroma, or hue is adjusted.

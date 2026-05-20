@@ -7,11 +7,12 @@
 
 <script lang="ts">
 	import ColorFamily from '$lib/ui/ColorFamily.svelte';
-	import type { ColorFamilyStructure, ThemeVariant } from '$lib/model';
+	import type { ColorFamilyStructure, Gamut, ThemeVariant } from '$lib/model';
 
 	let {
 		families,
 		variant,
+		targetGamut,
 		variantCount = 1,
 		onaddfamily = () => {},
 		onrenamefamily = (_id: string, _name: string) => {},
@@ -20,6 +21,7 @@
 	} = $props<{
 		families: ColorFamilyStructure[];
 		variant: ThemeVariant;
+		targetGamut: Gamut;
 		variantCount?: number;
 		onaddfamily?: () => void;
 		onrenamefamily?: (id: string, name: string) => void;
@@ -42,6 +44,7 @@
 				<ColorFamily
 					{family}
 					{variant}
+					gamut={targetGamut}
 					{variantCount}
 					onrename={onrenamefamily}
 					ondelete={ondeletefamily}

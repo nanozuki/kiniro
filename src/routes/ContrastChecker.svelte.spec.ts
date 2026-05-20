@@ -23,14 +23,14 @@ function palette() {
 
 describe('ContrastChecker', () => {
 	it('selects default foreground and background from generated swatches', async () => {
-		render(ContrastChecker, { palette: palette() });
+		render(ContrastChecker, { palette: palette(), gamut: 'srgb' });
 
 		await expect.element(page.getByText('Neutral 200 on Accent 800')).toBeInTheDocument();
 		await expect.element(page.getByLabelText('Contrast ratio')).toHaveTextContent(/:1/);
 	});
 
 	it('updates target selections and swaps colors', async () => {
-		render(ContrastChecker, { palette: palette() });
+		render(ContrastChecker, { palette: palette(), gamut: 'srgb' });
 
 		await page.getByLabelText('Foreground color').selectOptions('family-1:ramp-2:100');
 		await page.getByLabelText('Background color').selectOptions('family-1:ramp-1:900');
@@ -45,7 +45,7 @@ describe('ContrastChecker', () => {
 	});
 
 	it('renders pass and fail results', async () => {
-		render(ContrastChecker, { palette: palette() });
+		render(ContrastChecker, { palette: palette(), gamut: 'srgb' });
 
 		await expect.element(page.getByRole('cell', { name: 'Pass (7:1)' })).toBeInTheDocument();
 		await expect.element(page.getByRole('cell', { name: 'N/A' })).toBeInTheDocument();

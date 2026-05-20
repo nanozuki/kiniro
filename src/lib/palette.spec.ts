@@ -27,11 +27,12 @@ describe('generateVariantPalette', () => {
 		expect(palette.families[0].ramps[0].swatches[0]).toMatchObject({
 			name: 'base-100',
 			stepIndex: '100',
-			oklch: { lightness: 0.95, chroma: 0.2, hue: 40 }
+			oklch: { lightness: 0.95, hue: 40 }
 		});
+		expect(palette.families[0].ramps[0].swatches[0].oklch.chroma).toBeLessThan(0.2);
 	});
 
-	it('uses step lightness with ramp source chroma and hue', () => {
+	it('uses step lightness with hue and relative chroma from the source color', () => {
 		const theme = createDefaultTheme();
 		const family = theme.structure.families[0];
 		family.stepScale.stepCount = 5;
@@ -41,14 +42,44 @@ describe('generateVariantPalette', () => {
 		variant.values.families[family.id].stepScale.lightnessEnd = 0.1;
 		variant.values.families[family.id].ramps.base = createDefaultRampValues({
 			format: 'oklch',
-			serialized: 'oklch(0.4 0.12 210)',
-			oklch: { lightness: 0.4, chroma: 0.12, hue: 210 }
+			serialized: 'oklch(0.7 0.12 210)',
+			oklch: { lightness: 0.7, chroma: 0.12, hue: 210 }
 		});
 
 		const swatches = generateVariantPalette(theme, variant).families[0].ramps[0].swatches;
 
 		expect(swatches.map((swatch) => swatch.stepIndex)).toEqual(['100', '200', '300', '400', '500']);
-		expect(swatches[2].oklch).toEqual({ lightness: 0.5, chroma: 0.12, hue: 210 });
+		expect(swatches[2].oklch.hue).toBe(210);
+		expect(swatches[2].oklch.lightness).toBe(0.5);
+		expect(swatches[2].oklch.chroma).toBeLessThan(0.12);
+		expect(new Set(swatches.map((swatch) => swatch.oklch.chroma)).size).toBeGreaterThan(1);
+		expect(swatches.every((swatch) => swatch.oklch.hue === 210)).toBe(true);
+	});
+
+	it('uses source lightness to preserve the source chroma ratio', () => {
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		family.stepScale.stepCount = 5;
+		family.ramps.push({ id: 'base', name: 'base' });
+		const variant = theme.variants[0];
+		variant.values.families[family.id].stepScale.lightnessStart = 0.9;
+		variant.values.families[family.id].stepScale.lightnessEnd = 0.1;
+		variant.values.families[family.id].ramps.base = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.7 0.12 210)',
+			oklch: { lightness: 0.7, chroma: 0.12, hue: 210 }
+		});
+		const sourceMid = generateVariantPalette(theme, variant).families[0].ramps[0].swatches[1];
+
+		variant.values.families[family.id].ramps.base = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.4 0.12 210)',
+			oklch: { lightness: 0.4, chroma: 0.12, hue: 210 }
+		});
+		const sourceDark = generateVariantPalette(theme, variant).families[0].ramps[0].swatches[1];
+
+		expect(sourceMid.oklch.chroma).toBeCloseTo(0.12, 3);
+		expect(sourceDark.oklch.chroma).not.toBe(sourceMid.oklch.chroma);
 	});
 
 	it('applies swatch channel overrides over generated values', () => {
@@ -68,7 +99,8 @@ describe('generateVariantPalette', () => {
 
 		const swatch = generateVariantPalette(theme, variant).families[0].ramps[0].swatches[2];
 
-		expect(swatch.generated).toEqual({ lightness: 0.725, chroma: 0.2, hue: 40 });
+		expect(swatch.generated).toMatchObject({ lightness: 0.725, hue: 40 });
+		expect(swatch.generated.chroma).toBeLessThan(0.2);
 		expect(swatch.oklch).toEqual({ lightness: 0.725, chroma: 0.05, hue: 120 });
 		expect(swatch.overrides).toEqual({ chroma: 0.05, hue: 120 });
 	});

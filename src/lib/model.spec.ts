@@ -22,7 +22,8 @@ describe('createDefaultTheme', () => {
 		expect(theme).toMatchObject({
 			id: 'theme-7',
 			name: 'Brand',
-			cssPrefix: 'color'
+			cssPrefix: 'color',
+			targetGamut: 'srgb'
 		});
 		expect(theme.structure.families).toEqual([
 			{

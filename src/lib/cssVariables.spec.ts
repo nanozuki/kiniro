@@ -15,8 +15,8 @@ describe('exportCssVariables', () => {
 
 		const css = exportCssVariables(theme, variant);
 
-		expect(css.css).toContain('--color-main-base-color-100: 0.9500 0.0255 291.13;');
-		expect(css.css).toContain('--color-main-base-color-900: 0.0500 0.0255 291.13;');
+		expect(css.css).toContain('--color-main-base-color-100: 0.9500 0.0038 291.13;');
+		expect(css.css).toContain('--color-main-base-color-900: 0.0500 0.0043 291.13;');
 		expect(css.usageExample).toBe('color: oklch(var(--color-main-base-color-100) / 1);');
 	});
 

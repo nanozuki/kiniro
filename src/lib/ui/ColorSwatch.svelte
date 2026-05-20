@@ -13,25 +13,25 @@
 		getPreviewColor,
 		normalizeChannelValue
 	} from '../color';
-	import type { GamutPreview, OklchChannel } from '../model';
+	import type { Gamut, OklchChannel } from '../model';
 	import type { GeneratedSwatch } from '../palette';
 
 	let {
 		swatch,
-		gamutPreview = 'srgb',
+		gamut,
 		onoverride = (_stepIndex: string, _channel: OklchChannel, _value: number) => {},
 		onreset = (_stepIndex: string, _channel: OklchChannel) => {},
 		onresetall = (_stepIndex: string) => {}
 	} = $props<{
 		swatch: GeneratedSwatch;
-		gamutPreview?: GamutPreview;
+		gamut: Gamut;
 		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
 		onreset?: (stepIndex: string, channel: OklchChannel) => void;
 		onresetall?: (stepIndex: string) => void;
 	}>();
 
 	let editing = $state(false);
-	let preview = $derived(getPreviewColor(swatch.oklch, gamutPreview));
+	let preview = $derived(getPreviewColor(swatch.oklch, gamut));
 	let hasOverrides = $derived(Object.keys(swatch.overrides).length > 0);
 
 	const channels: { key: OklchChannel; label: string; step: string }[] = [

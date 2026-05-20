@@ -11,7 +11,14 @@ describe('ColorFamily', () => {
 		const onrename = vi.fn();
 		const ondelete = vi.fn();
 		const onaddramp = vi.fn();
-		render(ColorFamily, { family, variant: theme.variants[0], onrename, ondelete, onaddramp });
+		render(ColorFamily, {
+			family,
+			variant: theme.variants[0],
+			gamut: 'srgb',
+			onrename,
+			ondelete,
+			onaddramp
+		});
 
 		await expect.element(page.getByText('100: 0.9500')).toBeInTheDocument();
 		await page.getByRole('button', { name: 'Rename family' }).click();
@@ -29,13 +36,14 @@ describe('ColorFamily', () => {
 		const { rerender } = render(ColorFamily, {
 			family,
 			variant: theme.variants[0],
+			gamut: 'srgb',
 			variantCount: 1
 		});
 
 		await expect
 			.element(page.getByText('Family structure is shared by all variants in this theme.'))
 			.not.toBeInTheDocument();
-		await rerender({ family, variant: theme.variants[0], variantCount: 2 });
+		await rerender({ family, variant: theme.variants[0], gamut: 'srgb', variantCount: 2 });
 		await expect
 			.element(page.getByText('Family structure is shared by all variants in this theme.'))
 			.toBeInTheDocument();

@@ -13,6 +13,7 @@ describe('Palette', () => {
 		render(Palette, {
 			families: theme.structure.families,
 			variant: theme.variants[0],
+			targetGamut: 'srgb',
 			onaddfamily
 		});
 
@@ -23,7 +24,11 @@ describe('Palette', () => {
 
 	it('renders the current family list', async () => {
 		const theme = createDefaultTheme({ familyName: 'Neutrals' });
-		render(Palette, { families: theme.structure.families, variant: theme.variants[0] });
+		render(Palette, {
+			families: theme.structure.families,
+			variant: theme.variants[0],
+			targetGamut: 'srgb'
+		});
 
 		await expect.element(page.getByRole('heading', { name: 'Neutrals' })).toBeInTheDocument();
 		await expect.element(page.getByText('No color ramps yet.')).toBeInTheDocument();

@@ -1,4 +1,4 @@
-import type { AppState, GamutPreview, Id, WorkspaceTab } from './model';
+import type { AppState, Id, WorkspaceTab } from './model';
 import type { HistoryState } from './history';
 
 export const STORAGE_KEY = 'kiniro';
@@ -9,7 +9,6 @@ export type PersistedUiState = {
 	selectedThemeId: Id | null;
 	selectedVariantId: Id | null;
 	workspaceTab: WorkspaceTab;
-	gamutPreview: GamutPreview;
 };
 
 export type PersistedState = {
@@ -35,8 +34,7 @@ export function createDefaultPersistedState(): PersistedState {
 		ui: {
 			selectedThemeId: null,
 			selectedVariantId: null,
-			workspaceTab: 'palette',
-			gamutPreview: 'srgb'
+			workspaceTab: 'palette'
 		},
 		history: { past: [], future: [] }
 	};
@@ -84,7 +82,6 @@ function isPersistedState(value: unknown): value is PersistedState {
 	if (!isRecord(value.ui)) return false;
 	if (!['palette', 'cssVariables', 'contrastChecker'].includes(String(value.ui.workspaceTab)))
 		return false;
-	if (!['srgb', 'p3'].includes(String(value.ui.gamutPreview))) return false;
 	if (!(value.ui.selectedThemeId == null || typeof value.ui.selectedThemeId === 'string'))
 		return false;
 	if (!(value.ui.selectedVariantId == null || typeof value.ui.selectedVariantId === 'string'))

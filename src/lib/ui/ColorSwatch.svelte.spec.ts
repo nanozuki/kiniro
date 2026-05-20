@@ -16,7 +16,7 @@ function swatch(overrides = {}): GeneratedSwatch {
 
 describe('ColorSwatch', () => {
 	it('renders displayed values and override indicators', async () => {
-		render(ColorSwatch, { swatch: swatch({ chroma: 0.2 }) });
+		render(ColorSwatch, { swatch: swatch({ chroma: 0.2 }), gamut: 'srgb' });
 
 		await expect
 			.element(page.getByRole('button', { name: /Accent-100 .* overridden/ }))
@@ -28,7 +28,13 @@ describe('ColorSwatch', () => {
 		const onoverride = vi.fn();
 		const onreset = vi.fn();
 		const onresetall = vi.fn();
-		render(ColorSwatch, { swatch: swatch({ chroma: 0.2 }), onoverride, onreset, onresetall });
+		render(ColorSwatch, {
+			swatch: swatch({ chroma: 0.2 }),
+			gamut: 'srgb',
+			onoverride,
+			onreset,
+			onresetall
+		});
 
 		await page.getByRole('button', { name: /Accent-100/ }).click();
 		await page.getByLabelText(/Hue/).fill('180');
@@ -41,7 +47,7 @@ describe('ColorSwatch', () => {
 	});
 
 	it('marks colors outside the selected gamut', async () => {
-		render(ColorSwatch, { swatch: swatch({ chroma: 0.37 }), gamutPreview: 'srgb' });
+		render(ColorSwatch, { swatch: swatch({ chroma: 0.37 }), gamut: 'srgb' });
 
 		await expect.element(page.getByText('⚠')).toBeInTheDocument();
 	});

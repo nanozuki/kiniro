@@ -18,7 +18,7 @@ import {
 	type ColorFamilyStructure,
 	type ColorFamilyValues,
 	type ColorRampStructure,
-	type GamutPreview,
+	type Gamut,
 	type Id,
 	type OklchChannel,
 	type SourceColor,
@@ -48,7 +48,6 @@ export type SelectionState = {
 export type UiState = {
 	selection: SelectionState;
 	workspaceTab: WorkspaceTab;
-	gamutPreview: GamutPreview;
 };
 
 export type AppManagerState = {
@@ -78,7 +77,6 @@ export class AppManager {
 		this.ui = {
 			selection: { themeId: null, variantId: null, ...selection },
 			workspaceTab: 'palette',
-			gamutPreview: 'srgb',
 			...uiOptions
 		};
 		this.idFactory = options.idFactory ?? createSequentialIdFactory();
@@ -116,8 +114,9 @@ export class AppManager {
 		this.repairUiState();
 	}
 
-	setGamutPreview(gamutPreview: GamutPreview): void {
-		this.ui.gamutPreview = gamutPreview;
+	setThemeTargetGamut(themeId: Id, gamut: Gamut): void {
+		const theme = this.data.themes.find((item) => item.id === themeId);
+		if (theme) theme.targetGamut = gamut;
 	}
 
 	addTheme(name = defaultThemeName(this.data.themes)): Theme {

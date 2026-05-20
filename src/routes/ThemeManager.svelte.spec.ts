@@ -76,6 +76,7 @@ describe('ThemeManager', () => {
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
 		await page.getByLabelText('Theme name').fill('Rosé');
+		await page.getByRole('button', { name: 'Delete theme' }).click();
 		await page.getByRole('button', { name: 'Rename variant' }).click();
 		await page.getByLabelText('Variant name').fill('Dawn');
 		await page.getByRole('button', { name: 'Delete theme' }).click();

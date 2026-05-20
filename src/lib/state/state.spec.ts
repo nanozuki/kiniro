@@ -21,12 +21,14 @@ describe('AppManager selection and UI state', () => {
 		expect(manager.ui.workspaceTab).toBe('palette');
 	});
 
-	it('keeps gamut preview in UI state only', () => {
-		const manager = createAppManager();
-		manager.setGamutPreview('p3');
+	it('stores theme target gamut in app data', () => {
+		const manager = createAppManager({
+			data: { themes: [createDefaultTheme({ id: 'theme', variantId: 'variant' })] }
+		});
+		manager.setThemeTargetGamut('theme', 'p3');
 
-		expect(manager.ui.gamutPreview).toBe('p3');
-		expect(manager.data).toEqual({ themes: [] });
+		expect(manager.selectedTheme?.targetGamut).toBe('p3');
+		expect(manager.ui.workspaceTab).toBe('palette');
 	});
 
 	it('repairs selection after imported themes replace app data', () => {

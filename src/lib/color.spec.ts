@@ -5,7 +5,10 @@ import {
 	formatHue,
 	formatLightness,
 	getGamutStatus,
+	getMaxChroma,
 	getPreviewColor,
+	getRelativeChroma,
+	getRelativeChromaRatio,
 	normalizeChannelValue,
 	parseSourceColor,
 	serializeSourceColor,
@@ -77,6 +80,29 @@ describe('preview gamut conversion', () => {
 		expect(preview.gamut).toBe('p3');
 		expect(preview.css).toMatch(/^color\(display-p3 /);
 		expect(preview.hex).toMatch(/^#[0-9a-f]{6}$/);
+	});
+});
+
+describe('relative chroma helpers', () => {
+	it('finds the maximum in-gamut chroma for a lightness and hue', () => {
+		const max = getMaxChroma(0.7, 210, 'srgb');
+
+		expect(max).toBeGreaterThan(0.11);
+		expect(max).toBeLessThan(0.13);
+	});
+
+	it('preserves source chroma at the source lightness and scales other swatches by ratio', () => {
+		const source = { lightness: 0.7, chroma: 0.12, hue: 210 };
+		const ratio = getRelativeChromaRatio(source, 'srgb');
+
+		expect(ratio).toBeGreaterThan(0.9);
+		expect(ratio).toBeLessThanOrEqual(1);
+		expect(getRelativeChroma(0.7, 210, ratio, 'srgb')).toBeCloseTo(0.12, 3);
+		expect(getRelativeChroma(0.95, 210, ratio, 'srgb')).toBeLessThan(0.12);
+	});
+
+	it('caps out-of-gamut source chroma ratios at 1', () => {
+		expect(getRelativeChromaRatio({ lightness: 0.7, chroma: 0.37, hue: 210 }, 'srgb')).toBe(1);
 	});
 });
 

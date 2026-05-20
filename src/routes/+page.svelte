@@ -33,8 +33,7 @@
 				themeId: loaded.state.ui.selectedThemeId,
 				variantId: loaded.state.ui.selectedVariantId
 			},
-			workspaceTab: loaded.state.ui.workspaceTab,
-			gamutPreview: loaded.state.ui.gamutPreview
+			workspaceTab: loaded.state.ui.workspaceTab
 		}
 	});
 
@@ -95,8 +94,7 @@
 				ui: {
 					selectedThemeId: app.ui.selection.themeId,
 					selectedVariantId: app.ui.selection.variantId,
-					workspaceTab: app.ui.workspaceTab,
-					gamutPreview: app.ui.gamutPreview
+					workspaceTab: app.ui.workspaceTab
 				},
 				history: { past: [], future: [] }
 			});
@@ -117,14 +115,6 @@
 		<div class="actions">
 			{#if selectedTheme}
 				<button disabled>Undo</button><button disabled>Redo</button>
-				<button
-					aria-pressed={app.ui.gamutPreview === 'srgb'}
-					onclick={() => mutate(() => app.setGamutPreview('srgb'))}>sRGB</button
-				>
-				<button
-					aria-pressed={app.ui.gamutPreview === 'p3'}
-					onclick={() => mutate(() => app.setGamutPreview('p3'))}>P3</button
-				>
 			{/if}
 			<ImportExportDialogs themes={app.data.themes} onexport={download} onimport={importThemes} />
 			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
@@ -145,6 +135,7 @@
 				onrenamevariant={(id, name) => mutate(() => app.renameVariant(id, name))}
 				ondeletetheme={(id) => mutate(() => app.deleteTheme(id))}
 				ondeletevariant={(id) => mutate(() => app.deleteVariant(id))}
+				onthemegamut={(id, gamut) => mutate(() => app.setThemeTargetGamut(id, gamut))}
 			/>
 		</section>
 
@@ -161,6 +152,7 @@
 				<Palette
 					families={selectedTheme.structure.families}
 					variant={selectedVariant}
+					targetGamut={selectedTheme.targetGamut}
 					variantCount={selectedTheme.variants.length}
 					onaddfamily={() => mutate(() => void app.addFamily())}
 					onrenamefamily={(id, name) => mutate(() => app.renameFamily(id, name))}
@@ -181,7 +173,7 @@
 					onprefix={(prefix) => mutate(() => app.setThemeCssPrefix(selectedTheme.id, prefix))}
 				/>
 			{:else if palette}
-				<ContrastChecker {palette} gamutPreview={app.ui.gamutPreview} />
+				<ContrastChecker {palette} gamut={selectedTheme.targetGamut} />
 			{/if}
 		</section>
 	{/if}
@@ -210,8 +202,5 @@
 		gap: 0.5rem;
 		flex-wrap: wrap;
 		align-items: start;
-	}
-	[aria-pressed='true'] {
-		font-weight: 700;
 	}
 </style>

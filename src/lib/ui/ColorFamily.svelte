@@ -9,7 +9,7 @@
 	import ColorRamp from './ColorRamp.svelte';
 	import { generateFamily } from '../palette';
 	import StepScale from './StepScale.svelte';
-	import type { ColorFamilyStructure, StepIndexStyle, ThemeVariant } from '../model';
+	import type { ColorFamilyStructure, Gamut, StepIndexStyle, ThemeVariant } from '../model';
 
 	let {
 		family,
@@ -28,7 +28,7 @@
 		oneditramp = (_familyId: string, _rampId: string) => {},
 		ondeleteramp = (_familyId: string, _rampId: string) => {},
 		onmoveramp = (_familyId: string, _rampId: string, _direction: 'up' | 'down') => {},
-		gamutPreview = 'srgb'
+		gamut
 	} = $props<{
 		family: ColorFamilyStructure;
 		variant: ThemeVariant;
@@ -46,12 +46,12 @@
 		oneditramp?: (familyId: string, rampId: string) => void;
 		ondeleteramp?: (familyId: string, rampId: string) => void;
 		onmoveramp?: (familyId: string, rampId: string, direction: 'up' | 'down') => void;
-		gamutPreview?: 'srgb' | 'p3';
+		gamut: Gamut;
 	}>();
 
 	let editingName = $state(false);
 	let nameDraft = $state('');
-	let generated = $derived(generateFamily(family, variant));
+	let generated = $derived(generateFamily(family, variant, gamut));
 </script>
 
 <section aria-label={`Color family ${family.name}`} class="color-family">
@@ -107,7 +107,7 @@
 				<ColorRamp
 					{ramp}
 					sourceValue={variant.values.families[family.id].ramps[ramp.id].sourceColor.serialized}
-					{gamutPreview}
+					{gamut}
 					onedit={(rampId) => oneditramp(family.id, rampId)}
 					ondelete={(rampId) => ondeleteramp(family.id, rampId)}
 					onmove={(rampId, direction) => onmoveramp(family.id, rampId, direction)}

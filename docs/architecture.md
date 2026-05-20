@@ -22,10 +22,10 @@ Use a small file-structure rule set:
 Kiniro keeps state in two layers:
 
 - **App data**: user-authored palette data such as themes, variants, shared
-  family/ramp structure, step-scale values, source colors, swatch overrides, and
-  theme CSS prefixes.
+  family/ramp structure, step-scale values, source colors, swatch overrides,
+  theme CSS prefixes, and each Theme's target gamut.
 - **UI state**: navigation and presentation state such as the selected theme,
-  selected variant, selected workspace tab, and preview gamut.
+  selected variant, and selected workspace tab.
 
 Generated or derived values do not belong in either persisted data or undo
 history. That includes sanitized names, generated lightness values, generated
@@ -83,12 +83,14 @@ When a theme has multiple variants, structural edits should show a nearby,
 non-blocking warning. The warning explains that the edit affects every variant
 in the theme. This warning is separate from destructive delete confirmations.
 
-## Gamut Preview
+## Theme Target Gamut
 
-Palette preview and contrast checking use one global sRGB/P3 switch.
+Palette generation, palette preview, and contrast checking use each Theme's
+target gamut.
 
-- the selected preview gamut is app-level UI state
-- it persists across reloads
-- previewed colors may be clamped to the selected gamut
+- the target gamut is authored Theme data
+- it persists across reloads and exports with the Theme
+- generated swatch chroma uses relative chroma within that gamut
+- previewed colors may be clamped to the Theme's target gamut
 - CSS export always uses the original OKLCH channel values, not preview-clamped
   colors

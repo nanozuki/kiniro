@@ -15,14 +15,18 @@ describe('ColorRamp', () => {
 			sourceColor: createSourceColor({ lightness: 0.7, chroma: 0.12, hue: 210 }),
 			swatchOverrides: {}
 		};
-		return generateFamily(family, theme.variants[0]).ramps[0];
+		return generateFamily(family, theme.variants[0], theme.targetGamut).ramps[0];
 	}
 
 	it('renders the source cell and generated swatches', async () => {
-		render(ColorRamp, { ramp: rampFixture(), sourceValue: 'oklch(0.7000 0.1200 210.00)' });
+		render(ColorRamp, {
+			ramp: rampFixture(),
+			sourceValue: 'oklch(0.7000 0.1200 210.00)',
+			gamut: 'srgb'
+		});
 
 		await expect.element(page.getByRole('heading', { name: 'Accent' })).toBeInTheDocument();
-		await expect.element(page.getByText('C 0.1200 H 210.00')).toBeInTheDocument();
+		await expect.element(page.getByText('L 0.7000 C 0.1200 H 210.00')).toBeInTheDocument();
 		await expect.element(page.getByLabelText(/Accent-100/)).toBeInTheDocument();
 	});
 
@@ -32,6 +36,7 @@ describe('ColorRamp', () => {
 		render(ColorRamp, {
 			ramp: rampFixture(),
 			sourceValue: 'oklch(0.7000 0.1200 210.00)',
+			gamut: 'srgb',
 			onedit,
 			ondelete
 		});

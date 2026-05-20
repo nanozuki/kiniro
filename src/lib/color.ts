@@ -1,5 +1,6 @@
 import Color from 'colorjs.io';
 import type {
+	Gamut,
 	GamutPreview,
 	OklchChannel,
 	OklchColor,
@@ -118,6 +119,37 @@ export function getPreviewColor(oklch: OklchColor, gamut: GamutPreview): Preview
 		css: gamut === 'srgb' ? toHex(color, 'srgb') : serializeP3(color),
 		color
 	};
+}
+
+export function getMaxChroma(lightness: number, hue: number, gamut: Gamut): number {
+	const normalizedLightness = normalizeChannelValue('lightness', lightness);
+	const normalizedHue = normalizeChannelValue('hue', hue);
+	let low = 0;
+	let high = CHANNEL_FORMATS.chroma.max;
+
+	for (let iteration = 0; iteration < 24; iteration += 1) {
+		const chroma = (low + high) / 2;
+		const color = new Color('oklch', [normalizedLightness, chroma, normalizedHue]);
+		if (color.inGamut(gamut)) low = chroma;
+		else high = chroma;
+	}
+
+	return normalizeChannelValue('chroma', low);
+}
+
+export function getRelativeChromaRatio(source: OklchColor, gamut: Gamut): number {
+	const maxChroma = getMaxChroma(source.lightness, source.hue, gamut);
+	if (maxChroma <= 0) return 0;
+	return floorTo(clamp(source.chroma / maxChroma, 0, 1), 4);
+}
+
+export function getRelativeChroma(
+	lightness: number,
+	hue: number,
+	ratio: number,
+	gamut: Gamut
+): number {
+	return normalizeChannelValue('chroma', getMaxChroma(lightness, hue, gamut) * ratio);
 }
 
 export function toHex(color: Color, gamut: GamutPreview | 'srgb' = 'srgb'): string {

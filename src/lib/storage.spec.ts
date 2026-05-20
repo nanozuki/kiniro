@@ -22,11 +22,11 @@ describe('storage', () => {
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
 		state.data.themes = [createDefaultTheme()];
+		state.data.themes[0].targetGamut = 'p3';
 		state.ui = {
 			selectedThemeId: 'theme-1',
 			selectedVariantId: 'variant-1',
-			workspaceTab: 'cssVariables',
-			gamutPreview: 'p3'
+			workspaceTab: 'cssVariables'
 		};
 		state.history.past = Array.from({ length: 105 }, (_, index) => ({
 			label: `Action ${index}`,
@@ -39,6 +39,7 @@ describe('storage', () => {
 		expect(loaded.ok).toBe(true);
 		expect(loaded.state.data.themes).toHaveLength(1);
 		expect(loaded.state.ui.workspaceTab).toBe('cssVariables');
+		expect(loaded.state.data.themes[0].targetGamut).toBe('p3');
 		expect(loaded.state.history.past).toHaveLength(100);
 		expect(loaded.state.history.past[0].label).toBe('Action 5');
 	});

@@ -1,7 +1,8 @@
 export type Id = string;
 
 export type WorkspaceTab = 'palette' | 'cssVariables' | 'contrastChecker';
-export type GamutPreview = 'srgb' | 'p3';
+export type Gamut = 'srgb' | 'p3';
+export type GamutPreview = Gamut;
 export type StepIndexStyle = 'scale' | 'ordinal';
 export type SourceColorFormat = 'oklch' | 'hex' | 'rgb' | 'hsl';
 export type OklchChannel = 'lightness' | 'chroma' | 'hue';
@@ -74,6 +75,7 @@ export type Theme = {
 	id: Id;
 	name: string;
 	cssPrefix: string;
+	targetGamut: Gamut;
 	structure: ThemeStructure;
 	variants: ThemeVariant[];
 };
@@ -118,6 +120,7 @@ export function createDefaultTheme(options: DefaultThemeOptions = {}): Theme {
 		id: options.id ?? 'theme-1',
 		name: options.name ?? 'Theme 1',
 		cssPrefix: 'color',
+		targetGamut: 'srgb',
 		structure,
 		variants: [
 			createThemeVariant(structure, {
@@ -199,6 +202,7 @@ export function createVariantValues(
 export function syncThemeVariantValues(theme: Theme): Theme {
 	return {
 		...theme,
+		targetGamut: theme.targetGamut === 'p3' ? 'p3' : 'srgb',
 		structure: clone(theme.structure),
 		variants: theme.variants.map((variant) => ({
 			...variant,
