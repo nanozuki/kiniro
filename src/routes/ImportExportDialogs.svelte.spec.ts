@@ -2,8 +2,8 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ImportExportDialogs from './ImportExportDialogs.svelte';
-import { exportThemes } from './importExport';
-import { createDefaultTheme } from './model';
+import { exportThemes } from '$lib/importExport';
+import { createDefaultTheme } from '$lib/model';
 
 function themes() {
 	return [createDefaultTheme({ id: 'theme-1', name: 'Theme 1' })];

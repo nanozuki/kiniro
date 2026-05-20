@@ -2,9 +2,9 @@ import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ContrastChecker from './ContrastChecker.svelte';
-import { createSourceColor } from './color';
-import { createDefaultTheme } from './model';
-import { generateVariantPalette } from './palette';
+import { createSourceColor } from '$lib/color';
+import { createDefaultTheme } from '$lib/model';
+import { generateVariantPalette } from '$lib/palette';
 
 function palette() {
 	const theme = createDefaultTheme();

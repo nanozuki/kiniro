@@ -1,6 +1,13 @@
+<!--
+@component
+- The main palette editor for the selected variant.
+- Renders color families as separate work sections.
+- With no families, it keeps only the add action visible.
+-->
+
 <script lang="ts">
-	import ColorFamily from './ColorFamily.svelte';
-	import type { ColorFamilyStructure, ThemeVariant } from './model';
+	import ColorFamily from '$lib/ui/ColorFamily.svelte';
+	import type { ColorFamilyStructure, ThemeVariant } from '$lib/model';
 
 	let {
 		families,

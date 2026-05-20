@@ -2,8 +2,8 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import CSSVariables from './CSSVariables.svelte';
-import { createSourceColor } from './color';
-import { createDefaultTheme } from './model';
+import { createSourceColor } from '$lib/color';
+import { createDefaultTheme } from '$lib/model';
 
 function fixture() {
 	const theme = createDefaultTheme();

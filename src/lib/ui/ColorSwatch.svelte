@@ -1,3 +1,10 @@
+<!--
+@component
+- A swatch preview cell that also opens the per-swatch override editor.
+- Stores overrides per OKLCH channel.
+- Gamut warnings reflect the current preview space rather than the raw authored color.
+-->
+
 <script lang="ts">
 	import {
 		formatChroma,
@@ -5,9 +12,9 @@
 		formatLightness,
 		getPreviewColor,
 		normalizeChannelValue
-	} from './color';
-	import type { GamutPreview, OklchChannel } from './model';
-	import type { GeneratedSwatch } from './palette';
+	} from '../color';
+	import type { GamutPreview, OklchChannel } from '../model';
+	import type { GeneratedSwatch } from '../palette';
 
 	let {
 		swatch,

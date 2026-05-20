@@ -1,7 +1,14 @@
+<!--
+@component
+- Inline editor for one family's step scale.
+- Structure edits are shared by all variants in the theme.
+- Lightness values and overrides belong only to the current variant.
+-->
+
 <script lang="ts">
-	import { formatLightness } from './color';
-	import { buildSteps } from './lightness';
-	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from './model';
+	import { formatLightness } from '../color';
+	import { buildSteps } from '../lightness';
+	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
 
 	let {
 		structure,

@@ -1,8 +1,15 @@
+<!--
+@component
+- One color-family editing section inside the palette.
+- Combines family naming, step-scale editing, ramp rendering, and family actions.
+- Shows the shared-structure warning when the theme has multiple variants.
+-->
+
 <script lang="ts">
 	import ColorRamp from './ColorRamp.svelte';
-	import { generateFamily } from './palette';
+	import { generateFamily } from '../palette';
 	import StepScale from './StepScale.svelte';
-	import type { ColorFamilyStructure, StepIndexStyle, ThemeVariant } from './model';
+	import type { ColorFamilyStructure, StepIndexStyle, ThemeVariant } from '../model';
 
 	let {
 		family,

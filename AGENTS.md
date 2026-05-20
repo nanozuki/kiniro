@@ -6,8 +6,17 @@ Read @README.md to get an overview of this project.
 
 - `docs/terminology.md`: Shared domain terms for themes, variants, palettes,
   color families, color ramps, swatches, source colors, and generated values.
-- `docs/prototype.md`: Current prototype design, including page layouts,
-  component responsibilities, component hierarchy, and component-owned behavior.
+- `docs/architecture.md`: Cross-cutting application rules such as state split,
+  undo/persistence boundaries, naming/validation, shared structure, and gamut
+  preview.
+
+## Source Layout
+
+- Put route-owned page components directly under `src/routes` when they are
+  used by `+layout.svelte` or `+page.svelte`.
+- Put other Svelte components under `src/lib/ui`.
+- Put TypeScript modules that use Svelte runes under `src/lib/state`.
+- Put other TypeScript modules under `src/lib`.
 
 ## Techniques
 

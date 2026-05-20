@@ -1,5 +1,12 @@
+<!--
+@component
+- The workspace switcher for the current variant.
+- Always shows Palette, CSS Variables, and Contrast Checker.
+- Disables derived workspaces until the theme has at least one color ramp.
+-->
+
 <script lang="ts">
-	import type { ColorFamilyStructure, Theme, WorkspaceTab } from './model';
+	import type { ColorFamilyStructure, Theme, WorkspaceTab } from '$lib/model';
 
 	let {
 		theme,

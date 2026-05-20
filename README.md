@@ -19,6 +19,16 @@ Kiniro should make that relationship visible and editable:
   not enough.
 - Export CSS variables that match the palette shown in the UI.
 
+## Source Layout
+
+Keep the source tree small and predictable:
+
+- `src/routes`: route files and route-owned page components used directly by
+  `+layout.svelte` or `+page.svelte`
+- `src/lib/ui`: other Svelte components
+- `src/lib/state`: TypeScript modules that use Svelte runes for app state
+- `src/lib`: other TypeScript modules
+
 ## Development
 
 Install dependencies:

@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { createDefaultStepScaleStructure, createDefaultStepScaleValues } from './model';
+import { createDefaultStepScaleStructure, createDefaultStepScaleValues } from '../model';
 import StepScale from './StepScale.svelte';
 
 describe('StepScale', () => {

@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
-import { createSourceColor } from './color';
-import { createDefaultTheme } from './model';
+import { createSourceColor } from '../color';
+import { createDefaultTheme } from '../model';
 import { createAppManager } from './state';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
@@ -27,6 +27,26 @@ describe('AppManager selection and UI state', () => {
 
 		expect(manager.ui.gamutPreview).toBe('p3');
 		expect(manager.data).toEqual({ themes: [] });
+	});
+
+	it('repairs selection after imported themes replace app data', () => {
+		const manager = createAppManager({
+			data: { themes: [createDefaultTheme({ id: 'old-theme', variantId: 'old-variant' })] }
+		});
+		const imported = createDefaultTheme({ id: 'new-theme', variantId: 'new-variant' });
+
+		manager.data.themes = [imported];
+		manager.ui.selection.themeId = imported.id;
+		manager.ui.selection.variantId = imported.variants[0].id;
+		manager.ui.workspaceTab = 'cssVariables';
+		manager.repairUiState();
+
+		expect(manager.ui.selection).toEqual({
+			themeId: 'new-theme',
+			variantId: 'new-variant'
+		});
+		expect(manager.selectedTheme?.id).toBe('new-theme');
+		expect(manager.selectedVariant?.id).toBe('new-variant');
 	});
 });
 

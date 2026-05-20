@@ -1,8 +1,15 @@
+<!--
+@component
+- Presents one source color and its generated swatches.
+- Stays a pure view over derived ramp data.
+- Parents own dialogs, reordering, and authored-data mutations.
+-->
+
 <script lang="ts">
 	import ColorSwatch from './ColorSwatch.svelte';
-	import { formatChroma, formatHue, getPreviewColor } from './color';
-	import type { GamutPreview, OklchChannel } from './model';
-	import type { GeneratedColorRamp } from './palette';
+	import { formatChroma, formatHue, getPreviewColor } from '../color';
+	import type { GamutPreview, OklchChannel } from '../model';
+	import type { GeneratedColorRamp } from '../palette';
 
 	let {
 		ramp,

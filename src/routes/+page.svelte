@@ -1,11 +1,18 @@
+<!--
+@component
+- The app shell for Kiniro.
+- Switches between the empty landing state and the editor workspace.
+- Wires AppManager mutations to persistence while keeping generated palette data ephemeral.
+-->
+
 <script lang="ts">
 	import { browser } from '$app/environment';
-	import CSSVariables from '$lib/CSSVariables.svelte';
-	import ContrastChecker from '$lib/ContrastChecker.svelte';
-	import ImportExportDialogs from '$lib/ImportExportDialogs.svelte';
-	import Palette from '$lib/Palette.svelte';
-	import ThemeManager from '$lib/ThemeManager.svelte';
-	import WorkspaceTabs from '$lib/WorkspaceTabs.svelte';
+	import CSSVariables from './CSSVariables.svelte';
+	import ContrastChecker from './ContrastChecker.svelte';
+	import ImportExportDialogs from './ImportExportDialogs.svelte';
+	import Palette from './Palette.svelte';
+	import ThemeManager from './ThemeManager.svelte';
+	import WorkspaceTabs from './WorkspaceTabs.svelte';
 	import { createSourceColor } from '$lib/color';
 	import {
 		applyThemeImport,
@@ -13,7 +20,7 @@
 		type ThemeExportFile
 	} from '$lib/importExport';
 	import { generateVariantPalette } from '$lib/palette';
-	import { createAppManager } from '$lib/state';
+	import { createAppManager } from '$lib/state/state';
 	import { createDefaultPersistedState, loadState, saveState } from '$lib/storage';
 
 	const loaded = browser
@@ -67,8 +74,15 @@
 		mutate(() => {
 			const result = applyThemeImport(app.data.themes, file.themes, choices);
 			app.data.themes = result.themes;
-			app.ui.selection.themeId = result.selectedThemeId;
-			app.ui.selection.variantId = app.selectedTheme?.variants[0]?.id ?? null;
+
+			const importedTheme =
+				result.themes.find((theme) => theme.id === result.selectedThemeId) ??
+				result.themes[0] ??
+				null;
+
+			app.ui.selection.themeId = importedTheme?.id ?? null;
+			app.ui.selection.variantId = importedTheme?.variants[0]?.id ?? null;
+			app.ui.workspaceTab = 'palette';
 			app.repairUiState();
 		});
 	}

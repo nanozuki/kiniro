@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { createDefaultTheme } from './model';
+import { createDefaultTheme } from '$lib/model';
 import Palette from './Palette.svelte';
 
 describe('Palette', () => {

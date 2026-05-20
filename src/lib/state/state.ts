@@ -5,7 +5,7 @@ import {
 	mapLightnessOverridesForIndexStyle,
 	reverseStepScaleValues,
 	reverseSwatchOverrides
-} from './lightness';
+} from '../lightness';
 import {
 	createDefaultRampValues,
 	createDefaultStepScaleStructure,
@@ -26,7 +26,7 @@ import {
 	type Theme,
 	type ThemeVariant,
 	type WorkspaceTab
-} from './model';
+} from '../model';
 import {
 	defaultFamilyName,
 	defaultRampName,
@@ -37,8 +37,8 @@ import {
 	rampNames,
 	themeNames,
 	variantNames
-} from './naming';
-import { normalizeCssPrefix } from './cssVariables';
+} from '../naming';
+import { normalizeCssPrefix } from '../cssVariables';
 
 export type SelectionState = {
 	themeId: Id | null;

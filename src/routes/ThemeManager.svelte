@@ -1,5 +1,12 @@
+<!--
+@component
+- Flattens theme and variant navigation into one panel.
+- Renders tabs plus inline rename drafts for the current selection.
+- Parents own normalization, deletion policy, and selection repair.
+-->
+
 <script lang="ts">
-	import type { Theme, ThemeVariant } from './model';
+	import type { Theme, ThemeVariant } from '$lib/model';
 	let {
 		themes,
 		selectedThemeId,

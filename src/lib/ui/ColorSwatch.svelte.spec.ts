@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ColorSwatch from './ColorSwatch.svelte';
-import type { GeneratedSwatch } from './palette';
+import type { GeneratedSwatch } from '../palette';
 
 function swatch(overrides = {}): GeneratedSwatch {
 	return {

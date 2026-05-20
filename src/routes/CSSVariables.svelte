@@ -1,6 +1,13 @@
+<!--
+@component
+- Read-only CSS export workspace for the selected variant.
+- The editable prefix belongs to the theme.
+- Copy feedback stays local because copying does not mutate authored data.
+-->
+
 <script lang="ts">
-	import { exportCssVariables } from './cssVariables';
-	import type { Theme, ThemeVariant } from './model';
+	import { exportCssVariables } from '$lib/cssVariables';
+	import type { Theme, ThemeVariant } from '$lib/model';
 
 	let {
 		theme,

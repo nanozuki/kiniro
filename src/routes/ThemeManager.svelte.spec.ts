@@ -1,7 +1,7 @@
 import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { createDefaultTheme, createThemeVariant } from './model';
+import { createDefaultTheme, createThemeVariant } from '$lib/model';
 import ThemeManager from './ThemeManager.svelte';
 
 function themes() {

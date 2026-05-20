@@ -1,13 +1,20 @@
+<!--
+@component
+- Temporary contrast-checking workspace built from generated swatches.
+- Selections are intentionally ephemeral.
+- Contrast is evaluated after gamut clamping so the result matches the visible preview.
+-->
+
 <script lang="ts">
 	import {
 		getContrastResult,
 		getContrastTargets,
 		getDefaultContrastTargets,
 		type ContrastTarget
-	} from './contrast';
-	import { getPreviewColor } from './color';
-	import type { GamutPreview } from './model';
-	import type { GeneratedVariantPalette } from './palette';
+	} from '$lib/contrast';
+	import { getPreviewColor } from '$lib/color';
+	import type { GamutPreview } from '$lib/model';
+	import type { GeneratedVariantPalette } from '$lib/palette';
 
 	let { palette, gamutPreview = 'srgb' } = $props<{
 		palette: GeneratedVariantPalette;

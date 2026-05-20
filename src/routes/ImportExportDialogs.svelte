@@ -1,11 +1,18 @@
+<!--
+@component
+- Owns the export and import modal flows.
+- Export is read-only.
+- Import validates the file before exposing per-theme selection and conflict handling.
+-->
+
 <script lang="ts">
 	import {
 		exportThemes,
 		validateThemeImport,
 		type ImportConflictChoice,
 		type ThemeExportFile
-	} from './importExport';
-	import type { Theme } from './model';
+	} from '$lib/importExport';
+	import type { Theme } from '$lib/model';
 
 	let {
 		themes,
