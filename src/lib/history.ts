@@ -90,5 +90,5 @@ function isSameData(left: AppState, right: AppState): boolean {
 }
 
 function clone<T>(value: T): T {
-	return structuredClone(value);
+	return JSON.parse(JSON.stringify(value)) as T;
 }

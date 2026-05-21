@@ -67,8 +67,11 @@ export type AppManagerOptions = {
 // contains only authored palette data; UI state contains navigation and preview
 // choices, and every data operation repairs selection enough to keep the screen valid.
 export class AppManager {
-	data: AppState;
-	ui: UiState;
+	data = $state<AppState>(createEmptyAppState());
+	ui = $state<UiState>({
+		selection: { themeId: null, variantId: null },
+		workspaceTab: 'palette'
+	});
 	private idFactory: IdFactory;
 
 	constructor(options: AppManagerOptions = {}) {
@@ -79,7 +82,7 @@ export class AppManager {
 			workspaceTab: 'palette',
 			...uiOptions
 		};
-		this.idFactory = options.idFactory ?? createSequentialIdFactory();
+		this.idFactory = options.idFactory ?? createSequentialIdFactory(this.data);
 		this.repairUiState();
 	}
 
@@ -420,11 +423,22 @@ function themeHasRamps(theme: Theme): boolean {
 	return theme.structure.families.some((family) => family.ramps.length > 0);
 }
 
-function createSequentialIdFactory(): IdFactory {
-	let nextId = 1;
+function createSequentialIdFactory(data: AppState): IdFactory {
+	let nextId = maxSequentialId(data) + 1;
 	return () => `id-${nextId++}`;
 }
 
+function maxSequentialId(value: unknown): number {
+	if (typeof value === 'string') {
+		const match = /^id-(\d+)$/.exec(value);
+		return match ? Number(match[1]) : 0;
+	}
+	if (Array.isArray(value)) return Math.max(0, ...value.map(maxSequentialId));
+	if (value && typeof value === 'object')
+		return Math.max(0, ...Object.values(value).map(maxSequentialId));
+	return 0;
+}
+
 function clone<T>(value: T): T {
-	return structuredClone(value);
+	return JSON.parse(JSON.stringify(value)) as T;
 }

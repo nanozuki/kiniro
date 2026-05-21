@@ -1,7 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { createSourceColor } from '../color';
 import { createDefaultTheme } from '../model';
-import { createAppManager } from './state';
+import { createAppManager } from './state.svelte';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
 const ids = (...values: string[]) => {
@@ -69,6 +69,23 @@ describe('AppManager theme and variant operations', () => {
 		expect(manager.ui.selection.themeId).toBe('theme-1');
 		manager.deleteTheme('theme-1');
 		expect(manager.ui.selection).toEqual({ themeId: null, variantId: null });
+	});
+
+	it('continues generated IDs from restored data to avoid duplicate selected tabs', () => {
+		const manager = createAppManager({
+			data: {
+				themes: [
+					createDefaultTheme({ id: 'id-1', variantId: 'id-2', familyId: 'id-3' }),
+					createDefaultTheme({ id: 'id-4', variantId: 'id-5', familyId: 'id-6' })
+				]
+			}
+		});
+
+		const theme = manager.addTheme();
+
+		expect(theme.id).toBe('id-7');
+		expect(manager.data.themes.map((item) => item.id)).toEqual(['id-1', 'id-4', 'id-7']);
+		expect(manager.ui.selection.themeId).toBe('id-7');
 	});
 
 	it('copies variant values and keeps shared structure', () => {
