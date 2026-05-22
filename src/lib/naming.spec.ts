@@ -100,7 +100,7 @@ describe('unique fallback names', () => {
 				{ id: 'ramp-2', name: 'Ramp 2' }
 			]
 		});
-		const themes: Theme[] = [theme, createDefaultTheme({ id: 'theme-2', name: 'Theme 2' })];
+		const themes: Theme[] = [theme, createDefaultTheme({ name: 'Theme 2' })];
 
 		expect(defaultThemeName(themes)).toBe('Theme 3');
 		expect(defaultVariantName(theme.variants)).toBe('default 3');

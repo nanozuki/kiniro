@@ -7,8 +7,9 @@ import {
 	reverseSwatchOverrides
 } from '../lightness';
 import {
+	createColorFamily,
+	createColorRamp,
 	createDefaultRampValues,
-	createDefaultStepScaleStructure,
 	createDefaultStepScaleValues,
 	createDefaultTheme,
 	createEmptyAppState,
@@ -55,12 +56,9 @@ export type AppManagerState = {
 	ui: UiState;
 };
 
-export type IdFactory = () => Id;
-
 export type AppManagerOptions = {
 	data?: AppState;
 	ui?: Partial<UiState>;
-	idFactory?: IdFactory;
 };
 
 // AppManager is the mutation boundary for app data and UI state. App data
@@ -72,8 +70,6 @@ export class AppManager {
 		selection: { themeId: null, variantId: null },
 		workspaceTab: 'palette'
 	});
-	private idFactory: IdFactory;
-
 	constructor(options: AppManagerOptions = {}) {
 		this.data = clone(options.data ?? createEmptyAppState());
 		const { selection, ...uiOptions } = options.ui ?? {};
@@ -82,7 +78,6 @@ export class AppManager {
 			workspaceTab: 'palette',
 			...uiOptions
 		};
-		this.idFactory = options.idFactory ?? createSequentialIdFactory(this.data);
 		this.repairUiState();
 	}
 
@@ -124,10 +119,7 @@ export class AppManager {
 
 	addTheme(name = defaultThemeName(this.data.themes)): Theme {
 		const theme = createDefaultTheme({
-			id: this.idFactory(),
-			name: ensureUniqueName(name, themeNames(this.data.themes), { fallbackBase: 'Theme' }),
-			variantId: this.idFactory(),
-			familyId: this.idFactory()
+			name: ensureUniqueName(name, themeNames(this.data.themes), { fallbackBase: 'Theme' })
 		});
 		this.data.themes.push(theme);
 		this.ui.selection = { themeId: theme.id, variantId: theme.variants[0].id };
@@ -167,7 +159,6 @@ export class AppManager {
 		const source = this.selectedVariant;
 		if (!theme || !source) return null;
 		const variant = createThemeVariant(theme.structure, {
-			id: this.idFactory(),
 			name: ensureUniqueName(name ?? defaultVariantName(theme.variants), variantNames(theme), {
 				fallbackBase: 'Variant'
 			}),
@@ -203,16 +194,13 @@ export class AppManager {
 	addFamily(name?: string): ColorFamilyStructure | null {
 		const theme = this.selectedTheme;
 		if (!theme) return null;
-		const family: ColorFamilyStructure = {
-			id: this.idFactory(),
+		const family = createColorFamily({
 			name: ensureUniqueName(
 				name ?? defaultFamilyName(theme.structure.families),
 				familyNames(theme),
 				{ fallbackBase: 'Family' }
-			),
-			stepScale: createDefaultStepScaleStructure(),
-			ramps: []
-		};
+			)
+		});
 		theme.structure.families.push(family);
 		for (const variant of theme.variants)
 			variant.values.families[family.id] = createDefaultFamilyValues();
@@ -305,12 +293,11 @@ export class AppManager {
 		const theme = this.selectedTheme;
 		const family = theme?.structure.families.find((item) => item.id === familyId);
 		if (!theme || !family) return null;
-		const ramp: ColorRampStructure = {
-			id: this.idFactory(),
+		const ramp = createColorRamp({
 			name: ensureUniqueName(name ?? defaultRampName(rampNames(theme)), rampNames(theme), {
 				fallbackBase: 'Ramp'
 			})
-		};
+		});
 		family.ramps.push(ramp);
 		for (const variant of theme.variants)
 			variant.values.families[family.id].ramps[ramp.id] = createDefaultRampValues(sourceColor);
@@ -381,7 +368,6 @@ export class AppManager {
 			null;
 		if (!variant) {
 			variant = createThemeVariant(theme.structure, {
-				id: this.idFactory(),
 				name: defaultVariantName(theme.variants)
 			});
 			theme.variants.push(variant);
@@ -421,22 +407,6 @@ function createDefaultFamilyValues(): ColorFamilyValues {
 
 function themeHasRamps(theme: Theme): boolean {
 	return theme.structure.families.some((family) => family.ramps.length > 0);
-}
-
-function createSequentialIdFactory(data: AppState): IdFactory {
-	let nextId = maxSequentialId(data) + 1;
-	return () => `id-${nextId++}`;
-}
-
-function maxSequentialId(value: unknown): number {
-	if (typeof value === 'string') {
-		const match = /^id-(\d+)$/.exec(value);
-		return match ? Number(match[1]) : 0;
-	}
-	if (Array.isArray(value)) return Math.max(0, ...value.map(maxSequentialId));
-	if (value && typeof value === 'object')
-		return Math.max(0, ...Object.values(value).map(maxSequentialId));
-	return 0;
 }
 
 function clone<T>(value: T): T {

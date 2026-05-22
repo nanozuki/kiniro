@@ -5,7 +5,7 @@ import { createSnapshotHistory } from './history';
 describe('SnapshotHistory', () => {
 	it('creates undo entries only for changed app data and clears redo on commit', () => {
 		const history = createSnapshotHistory();
-		const data = { themes: [createDefaultTheme({ id: 'theme' })] };
+		const data = { themes: [createDefaultTheme()] };
 
 		expect(history.commit('Add theme', { themes: [] })).toBe(false);
 		expect(history.commit('Add theme', data)).toBe(true);
@@ -17,8 +17,8 @@ describe('SnapshotHistory', () => {
 	});
 
 	it('undoes and redoes app data snapshots with labels', () => {
-		const first = { themes: [createDefaultTheme({ id: 'one', name: 'One' })] };
-		const second = { themes: [createDefaultTheme({ id: 'two', name: 'Two' })] };
+		const first = { themes: [createDefaultTheme({ name: 'One' })] };
+		const second = { themes: [createDefaultTheme({ name: 'Two' })] };
 		const history = createSnapshotHistory({ initialData: first });
 		history.commit('Replace theme', second);
 
@@ -41,7 +41,7 @@ describe('SnapshotHistory', () => {
 	it('caps persisted history snapshots without capping in-memory history', () => {
 		const history = createSnapshotHistory();
 		for (let index = 0; index < 105; index++) {
-			history.commit(`Change ${index}`, { themes: [createDefaultTheme({ id: `theme-${index}` })] });
+			history.commit(`Change ${index}`, { themes: [createDefaultTheme()] });
 		}
 
 		expect(history.history.past).toHaveLength(105);

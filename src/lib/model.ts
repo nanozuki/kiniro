@@ -1,3 +1,5 @@
+import { nanoid } from 'nanoid';
+
 export type Id = string;
 
 export type WorkspaceTab = 'palette' | 'cssVariables' | 'contrastChecker';
@@ -85,11 +87,8 @@ export type AppState = {
 };
 
 export type DefaultThemeOptions = {
-	id?: Id;
 	name?: string;
-	variantId?: Id;
 	variantName?: string;
-	familyId?: Id;
 	familyName?: string;
 };
 
@@ -108,26 +107,36 @@ export function createEmptyAppState(): AppState {
 // Creates the starter theme described by the prototype: one variant, one empty
 // family with a 9-step scale, and no generated palette data.
 export function createDefaultTheme(options: DefaultThemeOptions = {}): Theme {
-	const family: ColorFamilyStructure = {
-		id: options.familyId ?? 'family-1',
-		name: options.familyName ?? 'Family 1',
-		stepScale: createDefaultStepScaleStructure(),
-		ramps: []
-	};
+	const family = createColorFamily({ name: options.familyName });
 	const structure: ThemeStructure = { families: [family] };
 
 	return {
-		id: options.id ?? 'theme-1',
+		id: generateId(),
 		name: options.name ?? 'Theme 1',
 		cssPrefix: 'color',
 		targetGamut: 'srgb',
 		structure,
 		variants: [
 			createThemeVariant(structure, {
-				id: options.variantId ?? 'variant-1',
 				name: options.variantName ?? 'default'
 			})
 		]
+	};
+}
+
+export function createColorFamily(options: { name?: string } = {}): ColorFamilyStructure {
+	return {
+		id: generateId(),
+		name: options.name ?? 'Family 1',
+		stepScale: createDefaultStepScaleStructure(),
+		ramps: []
+	};
+}
+
+export function createColorRamp(options: { name?: string } = {}): ColorRampStructure {
+	return {
+		id: generateId(),
+		name: options.name ?? 'Ramp'
 	};
 }
 
@@ -160,10 +169,10 @@ export function createDefaultRampValues(
 
 export function createThemeVariant(
 	structure: ThemeStructure,
-	options: { id?: Id; name?: string; values?: Partial<VariantValues> } = {}
+	options: { name?: string; values?: Partial<VariantValues> } = {}
 ): ThemeVariant {
 	return {
-		id: options.id ?? 'variant-1',
+		id: generateId(),
 		name: options.name ?? 'default',
 		values: createVariantValues(structure, options.values)
 	};
@@ -213,4 +222,8 @@ export function syncThemeVariantValues(theme: Theme): Theme {
 
 function clone<T>(value: T): T {
 	return JSON.parse(JSON.stringify(value)) as T;
+}
+
+function generateId(): Id {
+	return nanoid();
 }

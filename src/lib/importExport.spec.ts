@@ -4,11 +4,11 @@ import { createDefaultTheme } from './model';
 
 describe('theme import/export', () => {
 	it('exports versioned theme data only', () => {
-		const theme = createDefaultTheme({ id: 'theme', name: 'Rose Pine' });
+		const theme = createDefaultTheme({ name: 'Rose Pine' });
 		const json = exportThemes([theme]);
 		const parsed = JSON.parse(json);
 
-		expect(parsed).toMatchObject({ version: 1, themes: [{ id: 'theme', name: 'Rose Pine' }] });
+		expect(parsed).toMatchObject({ version: 1, themes: [{ id: theme.id, name: 'Rose Pine' }] });
 		expect(parsed.history).toBeUndefined();
 		expect(parsed.ui).toBeUndefined();
 	});
@@ -26,47 +26,46 @@ describe('theme import/export', () => {
 	});
 
 	it('returns valid export payloads', () => {
-		const theme = createDefaultTheme({ id: 'theme' });
+		const theme = createDefaultTheme();
 		const result = validateThemeImport(exportThemes([theme]));
 
 		expect(result.ok).toBe(true);
-		if (result.ok) expect(result.file.themes[0].id).toBe('theme');
+		if (result.ok) expect(result.file.themes[0].id).toBe(theme.id);
 	});
 
 	it('overwrites conflicting themes in place by default', () => {
-		const existing = [
-			createDefaultTheme({ id: 'old', name: 'Same' }),
-			createDefaultTheme({ id: 'other', name: 'Other' })
-		];
-		const imported = [createDefaultTheme({ id: 'new', name: 'Same' })];
+		const existing = [createDefaultTheme({ name: 'Same' }), createDefaultTheme({ name: 'Other' })];
+		const imported = [createDefaultTheme({ name: 'Same' })];
 
 		const result = applyThemeImport(existing, imported, [
-			{ themeId: 'new', conflict: 'overwrite' }
+			{ themeId: imported[0].id, conflict: 'overwrite' }
 		]);
 
-		expect(result.themes.map((theme) => theme.id)).toEqual(['new', 'other']);
-		expect(result.selectedThemeId).toBe('new');
+		expect(result.themes.map((theme) => theme.id)).toEqual([imported[0].id, existing[1].id]);
+		expect(result.selectedThemeId).toBe(imported[0].id);
 	});
 
 	it('renames conflicting imports and appends them', () => {
-		const existing = [createDefaultTheme({ id: 'old', name: 'Same' })];
-		const imported = [createDefaultTheme({ id: 'new', name: 'Same' })];
+		const existing = [createDefaultTheme({ name: 'Same' })];
+		const imported = [createDefaultTheme({ name: 'Same' })];
 
-		const result = applyThemeImport(existing, imported, [{ themeId: 'new', conflict: 'rename' }]);
+		const result = applyThemeImport(existing, imported, [
+			{ themeId: imported[0].id, conflict: 'rename' }
+		]);
 
 		expect(result.themes.map((theme) => theme.name)).toEqual(['Same', 'Same 2']);
-		expect(result.themes.map((theme) => theme.id)).toEqual(['old', 'new']);
+		expect(result.themes.map((theme) => theme.id)).toEqual([existing[0].id, imported[0].id]);
 	});
 
 	it('imports themes from proxy-backed values', () => {
-		const existing = [createDefaultTheme({ id: 'old', name: 'Existing' })];
-		const importedTheme = new Proxy(createDefaultTheme({ id: 'new', name: 'Imported' }), {});
+		const existing = [createDefaultTheme({ name: 'Existing' })];
+		const importedTheme = new Proxy(createDefaultTheme({ name: 'Imported' }), {});
 		const imported = new Proxy([importedTheme], {});
-		const choices = new Proxy([{ themeId: 'new' }], {});
+		const choices = new Proxy([{ themeId: importedTheme.id }], {});
 
 		const result = applyThemeImport(existing, imported, choices);
 
-		expect(result.themes.map((theme) => theme.id)).toEqual(['old', 'new']);
-		expect(result.selectedThemeId).toBe('new');
+		expect(result.themes.map((theme) => theme.id)).toEqual([existing[0].id, importedTheme.id]);
+		expect(result.selectedThemeId).toBe(importedTheme.id);
 	});
 });
