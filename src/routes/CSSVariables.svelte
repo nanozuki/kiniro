@@ -9,6 +9,7 @@
 	import { exportCssVariables, normalizeCssPrefix } from '$lib/cssVariables';
 	import type { Theme, ThemeVariant } from '$lib/model';
 	import InlineInput from '$lib/ui/InlineInput.svelte';
+	import type { InlineInputSubmitResult } from '$lib/ui/InlineInput.svelte';
 
 	type CSSVariablesProps = {
 		theme: Theme;
@@ -41,6 +42,19 @@
 			message = 'Could not copy CSS.';
 		}
 	}
+
+	function resolvePrefix(draft: string): InlineInputSubmitResult {
+		const prefix = normalizeCssPrefix(draft);
+		if (prefix === draft) return { value: prefix };
+
+		return {
+			value: prefix,
+			error:
+				prefix === 'color'
+					? 'Variable prefix must contain a letter or number; using color.'
+					: `Variable prefix was normalized to "${prefix}" for CSS variable names.`
+		};
+	}
 </script>
 
 <section aria-label="CSS Variables" class="css-variables">
@@ -56,10 +70,10 @@
 					onprefix(draft);
 				}}
 				onsubmit={(draft) => {
-					const prefix = normalizeCssPrefix(draft);
-					onprefix(prefix);
-					prefixDraft = prefix;
-					return prefix;
+					const result = resolvePrefix(draft);
+					onprefix(result.value);
+					prefixDraft = result.value;
+					return result;
 				}}
 			/>
 		</label>

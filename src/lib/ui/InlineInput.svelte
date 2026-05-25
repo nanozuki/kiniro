@@ -7,13 +7,19 @@
 
 <script lang="ts">
 	import type { AriaAttributes } from 'svelte/elements';
+	import { addToast } from './Toaster.svelte';
+
+	export type InlineInputSubmitResult = {
+		value: string;
+		error?: string;
+	};
 
 	type InlineInputProps = AriaAttributes & {
 		value: string;
 		disabled?: boolean;
 		inputmode?: 'text' | 'numeric' | 'decimal';
 		oninput?: (draft: string) => void;
-		onsubmit?: (draft: string, previous: string) => string;
+		onsubmit?: (draft: string, previous: string) => InlineInputSubmitResult;
 	};
 
 	let {
@@ -21,7 +27,7 @@
 		disabled = false,
 		inputmode = 'text',
 		oninput = (_draft: string) => {},
-		onsubmit = (draft: string) => draft,
+		onsubmit = (draft: string) => ({ value: draft }),
 		...aria
 	}: InlineInputProps = $props();
 
@@ -51,11 +57,20 @@
 
 	function submitDraft() {
 		if (submitted) return;
-		const resolved = onsubmit(draft, previous);
-		draft = resolved;
-		previous = resolved;
+		const result = onsubmit(draft, previous);
+		draft = result.value;
+		previous = result.value;
 		submitted = true;
 		editing = false;
+		if (result.error) {
+			addToast({
+				type: 'assertive',
+				data: {
+					title: 'Input adjusted',
+					description: result.error
+				}
+			});
+		}
 	}
 
 	function handleKeydown(event: KeyboardEvent) {

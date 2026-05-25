@@ -7,6 +7,7 @@
 
 <script lang="ts">
 	import InlineInput from './InlineInput.svelte';
+	import type { InlineInputSubmitResult } from './InlineInput.svelte';
 	import { formatLightness, normalizeChannelValue } from '../color';
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
@@ -44,13 +45,44 @@
 		return Number.isFinite(value) ? value : null;
 	}
 
-	function resolveStepCount(draft: string, previous: string): string {
-		const value = finiteNumber(draft) ?? Number(previous);
-		return String(Math.min(9, Math.max(5, Math.trunc(value))));
+	function resolveStepCount(draft: string, previous: string): InlineInputSubmitResult {
+		const parsed = finiteNumber(draft);
+		const value = parsed ?? Number(previous);
+		const resolved = String(Math.min(9, Math.max(5, Math.trunc(value))));
+
+		if (parsed == null) {
+			return {
+				value: resolved,
+				error: 'Step count must be a number from 5 to 9; restored the previous value.'
+			};
+		}
+		if (String(parsed) !== resolved) {
+			return {
+				value: resolved,
+				error: `Step count must be a whole number from 5 to 9; adjusted to ${resolved}.`
+			};
+		}
+		return { value: resolved };
 	}
 
-	function resolveLightness(draft: string, previous: string): string {
-		return String(normalizeChannelValue('lightness', finiteNumber(draft) ?? Number(previous)));
+	function resolveLightness(draft: string, previous: string): InlineInputSubmitResult {
+		const parsed = finiteNumber(draft);
+		const value = parsed ?? Number(previous);
+		const resolved = String(normalizeChannelValue('lightness', value));
+
+		if (parsed == null) {
+			return {
+				value: resolved,
+				error: 'Lightness must be a number from 0 to 1; restored the previous value.'
+			};
+		}
+		if (parsed < 0 || parsed > 1) {
+			return {
+				value: resolved,
+				error: `Lightness must be between 0 and 1; adjusted to ${resolved}.`
+			};
+		}
+		return { value: resolved };
 	}
 </script>
 
@@ -80,9 +112,9 @@
 						if (value != null) onstepcount(value);
 					}}
 					onsubmit={(draft, previous) => {
-						const value = resolveStepCount(draft, previous);
-						onstepcount(Number(value));
-						return value;
+						const result = resolveStepCount(draft, previous);
+						onstepcount(Number(result.value));
+						return result;
 					}}
 				/></label
 			>
@@ -131,9 +163,9 @@
 						if (value != null) onrange(value, values.lightnessEnd);
 					}}
 					onsubmit={(draft, previous) => {
-						const value = resolveLightness(draft, previous);
-						onrange(Number(value), values.lightnessEnd);
-						return value;
+						const result = resolveLightness(draft, previous);
+						onrange(Number(result.value), values.lightnessEnd);
+						return result;
 					}}
 				/></label
 			>
@@ -147,9 +179,9 @@
 						if (value != null) onrange(values.lightnessStart, value);
 					}}
 					onsubmit={(draft, previous) => {
-						const value = resolveLightness(draft, previous);
-						onrange(values.lightnessStart, Number(value));
-						return value;
+						const result = resolveLightness(draft, previous);
+						onrange(values.lightnessStart, Number(result.value));
+						return result;
 					}}
 				/></label
 			>
@@ -170,9 +202,9 @@
 									if (value != null) onoverride(step.index, value);
 								}}
 								onsubmit={(draft, previous) => {
-									const value = resolveLightness(draft, previous);
-									onoverride(step.index, Number(value));
-									return value;
+									const result = resolveLightness(draft, previous);
+									onoverride(step.index, Number(result.value));
+									return result;
 								}}
 							/></label
 						>

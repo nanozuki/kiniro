@@ -22,6 +22,7 @@
 	import { generateVariantPalette } from '$lib/palette';
 	import { createAppManager } from '$lib/state/state.svelte';
 	import { createDefaultPersistedState, loadState, saveState } from '$lib/storage';
+	import { addToast } from '$lib/ui/Toaster.svelte';
 
 	const loaded = browser
 		? loadState(localStorage)
@@ -37,7 +38,6 @@
 		}
 	});
 
-	let toast = $state(loaded.reset ? 'Stored data was reset because it was invalid.' : '');
 	let themes = $derived([...app.data.themes]);
 	let selectedTheme = $derived(app.selectedTheme);
 	let selectedVariant = $derived(app.selectedVariant);
@@ -47,6 +47,18 @@
 	let palette = $derived(
 		selectedTheme && selectedVariant ? generateVariantPalette(selectedTheme, selectedVariant) : null
 	);
+
+	$effect(() => {
+		if (loaded.reset) {
+			addToast({
+				type: 'assertive',
+				data: {
+					title: 'Stored data reset',
+					description: 'Stored data was reset because it was invalid.'
+				}
+			});
+		}
+	});
 
 	function mutate(change: () => void) {
 		change();
@@ -94,7 +106,13 @@
 				history: { past: [], future: [] }
 			});
 		} catch {
-			toast = 'Autosave failed. Kiniro will retry later.';
+			addToast({
+				type: 'assertive',
+				data: {
+					title: 'Autosave failed',
+					description: 'Kiniro will retry later.'
+				}
+			});
 		}
 	}
 </script>
@@ -172,8 +190,6 @@
 			{/if}
 		</section>
 	{/if}
-
-	{#if toast}<aside aria-label="Toasts">{toast}</aside>{/if}
 </main>
 
 <style>

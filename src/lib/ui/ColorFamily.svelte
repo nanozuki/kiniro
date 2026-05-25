@@ -71,7 +71,7 @@
 					onsubmit={(draft) => {
 						onrename(family.id, draft);
 						editingName = false;
-						return draft;
+						return { value: draft };
 					}}
 				/>
 			{:else}

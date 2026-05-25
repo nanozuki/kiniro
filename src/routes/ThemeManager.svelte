@@ -98,7 +98,7 @@
 					onsubmit={(draft) => {
 						onrenametheme(selectedTheme.id, draft);
 						editingTheme = false;
-						return draft;
+						return { value: draft };
 					}}
 				/>
 			{:else}
@@ -134,7 +134,7 @@
 						onsubmit={(draft) => {
 							onrenamevariant(selectedVariant.id, draft);
 							editingVariant = false;
-							return draft;
+							return { value: draft };
 						}}
 					/>
 				{:else}

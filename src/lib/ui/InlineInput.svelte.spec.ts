@@ -2,6 +2,7 @@ import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import InlineInput from './InlineInput.svelte';
+import Toaster from './Toaster.svelte';
 
 describe('InlineInput', () => {
 	it('emits live draft changes and submits resolved values with Enter', async () => {
@@ -14,7 +15,7 @@ describe('InlineInput', () => {
 			onsubmit: (draft, previous) => {
 				const resolved = draft.trim() || previous;
 				onsubmit(resolved);
-				return resolved;
+				return { value: resolved };
 			}
 		});
 
@@ -34,7 +35,7 @@ describe('InlineInput', () => {
 			onsubmit: (draft, previous) => {
 				const resolved = draft.trim() || previous;
 				onsubmit(resolved);
-				return resolved;
+				return { value: resolved };
 			}
 		});
 
@@ -53,7 +54,7 @@ describe('InlineInput', () => {
 			onsubmit: (draft, previous) => {
 				const resolved = draft.trim() || previous;
 				onsubmit(resolved);
-				return resolved;
+				return { value: resolved };
 			}
 		});
 
@@ -65,7 +66,7 @@ describe('InlineInput', () => {
 	});
 
 	it('ignores Enter while composing text', async () => {
-		const onsubmit = vi.fn();
+		const onsubmit = vi.fn(() => ({ value: 'Theme' }));
 		render(InlineInput, { value: 'Theme', 'aria-label': 'Name', onsubmit });
 
 		const input = page.getByLabelText('Name');
@@ -79,5 +80,25 @@ describe('InlineInput', () => {
 		);
 
 		expect(onsubmit).not.toHaveBeenCalled();
+	});
+
+	it('shows a toast when submit returns an error message', async () => {
+		render(Toaster);
+		render(InlineInput, {
+			value: '0.5',
+			'aria-label': 'Lightness',
+			onsubmit: () => ({
+				value: '1',
+				error: 'Lightness must be between 0 and 1; adjusted to 1.'
+			})
+		});
+
+		const input = page.getByLabelText('Lightness');
+		await input.fill('2');
+		await userEvent.keyboard('{Enter}');
+
+		await expect
+			.element(page.getByText('Lightness must be between 0 and 1; adjusted to 1.'))
+			.toBeInTheDocument();
 	});
 });
