@@ -1,0 +1,66 @@
+---
+title: Toggle
+description: A trigger that can be toggled on and off.
+---
+import ApiTable from "@components/api-table.astro";
+import Preview from "@previews/toggle.svelte";
+import Features from "@components/features.astro";
+import ThemedCode from "@components/themed-code.astro";
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+{/*
+Things I want:
+- Preview with props DONE
+- Show builder syntax
+- Show component syntax
+- Features
+*/}
+
+<Preview client:load />
+
+## Features
+
+<Features>
+- 💪 It works
+</Features>
+
+## Usage
+
+For accessibility reasons, toggle buttons also require the `aria-label` attribute to be set to describe to screen readers what is being enabled/disabled.
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { Toggle } from "melt/builders";
+
+	const toggle = new Toggle();
+</script>
+
+<button {...toggle.trigger} aria-label="toggle favourite">
+	{toggle.value ? "✅" : "❌"}
+</button>
+```
+	</TabItem>
+
+	<TabItem label="Component">
+```svelte
+<script lang="ts">
+	import { Toggle } from "melt/components";
+</script>
+
+<Toggle>
+	{#snippet children(toggle)}
+		<button {...toggle.trigger}>
+			{toggle.value ? "✅" : "❌"}
+		</button>
+	{/snippet}
+</Toggle>
+```
+	</TabItem>
+</Tabs>
+
+
+## API Reference
+
+<ApiTable entry="Toggle" />

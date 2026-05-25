@@ -9,6 +9,8 @@ Read @README.md to get an overview of this project.
 - `docs/architecture.md`: Cross-cutting application rules such as state split,
   undo/persistence boundaries, naming/validation, shared structure, and gamut
   preview.
+- `docs/third-party/README.md`: Index of local snapshots for external docs.
+- `docs/third-party/melt-ui`: Local snapshot of Melt UI next-gen docs.
 
 ## Source Layout
 

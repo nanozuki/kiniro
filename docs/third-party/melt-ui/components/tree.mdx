@@ -1,0 +1,64 @@
+---
+title: Tree
+description: A hierarchical list of items
+---
+import ApiTable from "@components/api-table.astro";
+import Preview from "@previews/tree.svelte";
+import Features from "@components/features.astro";
+import ThemedCode from "@components/themed-code.astro";
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+{/*
+Things I want:
+- Preview with props DONE
+- Show builder syntax
+- Show component syntax
+- Features
+*/}
+
+<Preview client:load />
+
+
+## Features
+
+<Features>
+	- 🎹 Keyboard navigation
+	- 🍃 Multi-selection mode
+	- 🧠 Smart focus management
+	- 🌳 Optional expand on click
+	- 💬 Highlight items by typing them out (typeahead)
+</Features>
+
+## Usage
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { Tree } from "melt/builders";
+
+	const items = [/* ... */]
+	const tree = new Tree({ items });
+</script>
+
+{#snippet treeItems(items: typeof tree['children'], depth: number = 0)}
+	{#each items as item (item.id)}
+		<div {...item.attrs}>
+			<!-- Content here -->
+			{#if item.children?.length}
+				{@render treeItems(item.children, depth + 1)}
+			{/if}
+		</div>
+	{/each}
+{/snippet}
+
+<div {...tree.root}>
+	{@render treeItems(tree.children, 0)}
+</div>
+```
+	</TabItem>
+</Tabs>
+
+## API Reference
+
+<ApiTable entry="Tree" />
