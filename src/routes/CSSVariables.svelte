@@ -9,17 +9,19 @@
 	import { exportCssVariables } from '$lib/cssVariables';
 	import type { Theme, ThemeVariant } from '$lib/model';
 
+	type CSSVariablesProps = {
+		theme: Theme;
+		variant: ThemeVariant;
+		onprefix?: (prefix: string) => void;
+		copyText?: (text: string) => Promise<void>;
+	};
+
 	let {
 		theme,
 		variant,
 		onprefix = (_prefix: string) => {},
 		copyText = async (text: string) => navigator.clipboard.writeText(text)
-	} = $props<{
-		theme: Theme;
-		variant: ThemeVariant;
-		onprefix?: (prefix: string) => void;
-		copyText?: (text: string) => Promise<void>;
-	}>();
+	}: CSSVariablesProps = $props();
 
 	let prefixDraft = $state('');
 	let message = $state('');

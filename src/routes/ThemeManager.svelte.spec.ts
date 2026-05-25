@@ -31,10 +31,10 @@ describe('ThemeManager', () => {
 		});
 
 		await expect
-			.element(page.getByRole('button', { name: 'Rose Pine' }))
-			.toHaveAttribute('aria-current', 'true');
-		await page.getByRole('button', { name: 'Gruvbox' }).click();
-		await page.getByRole('button', { name: 'Moon' }).click();
+			.element(page.getByRole('tab', { name: 'Rose Pine' }))
+			.toHaveAttribute('aria-selected', 'true');
+		await page.getByRole('tab', { name: 'Gruvbox' }).click();
+		await page.getByRole('tab', { name: 'Moon' }).click();
 		expect(onselecttheme).toHaveBeenCalledWith(renderedThemes[1].id);
 		expect(onselectvariant).toHaveBeenCalledWith(renderedThemes[0].variants[1].id);
 	});

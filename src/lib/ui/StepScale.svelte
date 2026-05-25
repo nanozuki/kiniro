@@ -10,6 +10,18 @@
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
 
+	type StepScaleProps = {
+		structure: StepScaleStructure;
+		values: StepScaleValues;
+		onstepcount?: (count: number) => void;
+		onindexstyle?: (style: StepIndexStyle) => void;
+		onhalfsteps?: (start: boolean, end: boolean) => void;
+		onrange?: (start: number, end: number) => void;
+		onoverride?: (index: string, lightness: number) => void;
+		onreset?: (index: string) => void;
+		onreverse?: () => void;
+	};
+
 	let {
 		structure,
 		values,
@@ -20,17 +32,7 @@
 		onoverride = (_index: string, _lightness: number) => {},
 		onreset = (_index: string) => {},
 		onreverse = () => {}
-	} = $props<{
-		structure: StepScaleStructure;
-		values: StepScaleValues;
-		onstepcount?: (count: number) => void;
-		onindexstyle?: (style: StepIndexStyle) => void;
-		onhalfsteps?: (start: boolean, end: boolean) => void;
-		onrange?: (start: number, end: number) => void;
-		onoverride?: (index: string, lightness: number) => void;
-		onreset?: (index: string) => void;
-		onreverse?: () => void;
-	}>();
+	}: StepScaleProps = $props();
 
 	let editing = $state(false);
 	let steps = $derived(buildSteps(structure, values));

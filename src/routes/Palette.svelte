@@ -9,6 +9,17 @@
 	import ColorFamily from '$lib/ui/ColorFamily.svelte';
 	import type { ColorFamilyStructure, Gamut, ThemeVariant } from '$lib/model';
 
+	type PaletteProps = {
+		families: ColorFamilyStructure[];
+		variant: ThemeVariant;
+		targetGamut: Gamut;
+		variantCount?: number;
+		onaddfamily?: () => void;
+		onrenamefamily?: (id: string, name: string) => void;
+		ondeletefamily?: (id: string) => void;
+		onaddramp?: (familyId: string) => void;
+	};
+
 	let {
 		families,
 		variant,
@@ -18,16 +29,7 @@
 		onrenamefamily = (_id: string, _name: string) => {},
 		ondeletefamily = (_id: string) => {},
 		onaddramp = (_familyId: string) => {}
-	} = $props<{
-		families: ColorFamilyStructure[];
-		variant: ThemeVariant;
-		targetGamut: Gamut;
-		variantCount?: number;
-		onaddfamily?: () => void;
-		onrenamefamily?: (id: string, name: string) => void;
-		ondeletefamily?: (id: string) => void;
-		onaddramp?: (familyId: string) => void;
-	}>();
+	}: PaletteProps = $props();
 </script>
 
 <section aria-label="Palette" class="palette">

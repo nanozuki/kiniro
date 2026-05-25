@@ -25,6 +25,10 @@ Read @README.md to get an overview of this project.
 - Use `nix flake` and `direnv` for development environment.
 - Use SvelteKit and Svelte 5. Use runes for reactivity.
 - Put route-level UI in `src/routes` and reusable logic in `src/lib`.
+- In Svelte components, name the props type after the component, such as
+  `TabsProps`, instead of using a generic `Props` alias.
+- When a component accepts ARIA attributes, extend Svelte's `AriaAttributes`
+  rather than hand-writing individual ARIA prop types.
 - Use `color.js` for color calculations.
 - Use the next version of `melt-ui` to build components.
 - Update related documentation when changing domain concepts, layout behavior,

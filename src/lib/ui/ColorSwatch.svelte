@@ -16,19 +16,21 @@
 	import type { Gamut, OklchChannel } from '../model';
 	import type { GeneratedSwatch } from '../palette';
 
+	type ColorSwatchProps = {
+		swatch: GeneratedSwatch;
+		gamut: Gamut;
+		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
+		onreset?: (stepIndex: string, channel: OklchChannel) => void;
+		onresetall?: (stepIndex: string) => void;
+	};
+
 	let {
 		swatch,
 		gamut,
 		onoverride = (_stepIndex: string, _channel: OklchChannel, _value: number) => {},
 		onreset = (_stepIndex: string, _channel: OklchChannel) => {},
 		onresetall = (_stepIndex: string) => {}
-	} = $props<{
-		swatch: GeneratedSwatch;
-		gamut: Gamut;
-		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
-		onreset?: (stepIndex: string, channel: OklchChannel) => void;
-		onresetall?: (stepIndex: string) => void;
-	}>();
+	}: ColorSwatchProps = $props();
 
 	let editing = $state(false);
 	let preview = $derived(getPreviewColor(swatch.oklch, gamut));

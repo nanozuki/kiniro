@@ -7,6 +7,23 @@
 
 <script lang="ts">
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
+	import Tabs from '$lib/ui/Tabs.svelte';
+
+	type ThemeManagerProps = {
+		themes: Theme[];
+		selectedThemeId: string | null;
+		selectedVariantId: string | null;
+		onselecttheme?: (id: string) => void;
+		onselectvariant?: (id: string) => void;
+		onaddtheme?: () => void;
+		onaddvariant?: () => void;
+		onrenametheme?: (id: string, name: string) => void;
+		onrenamevariant?: (id: string, name: string) => void;
+		ondeletetheme?: (id: string) => void;
+		ondeletevariant?: (id: string) => void;
+		onthemegamut?: (id: string, gamut: Gamut) => void;
+	};
+
 	let {
 		themes,
 		selectedThemeId,
@@ -20,20 +37,7 @@
 		ondeletetheme = (_id: string) => {},
 		ondeletevariant = (_id: string) => {},
 		onthemegamut = (_id: string, _gamut: Gamut) => {}
-	} = $props<{
-		themes: Theme[];
-		selectedThemeId: string | null;
-		selectedVariantId: string | null;
-		onselecttheme?: (id: string) => void;
-		onselectvariant?: (id: string) => void;
-		onaddtheme?: () => void;
-		onaddvariant?: () => void;
-		onrenametheme?: (id: string, name: string) => void;
-		onrenamevariant?: (id: string, name: string) => void;
-		ondeletetheme?: (id: string) => void;
-		ondeletevariant?: (id: string) => void;
-		onthemegamut?: (id: string, gamut: Gamut) => void;
-	}>();
+	}: ThemeManagerProps = $props();
 
 	let editingTheme = $state(false);
 	let editingVariant = $state(false);
@@ -44,28 +48,40 @@
 		selectedTheme?.variants.find((variant: ThemeVariant) => variant.id === selectedVariantId) ??
 			null
 	);
+	let themeTabs = $derived(themes.map((theme: Theme) => ({ id: theme.id, label: theme.name })));
+	let variantTabs = $derived(
+		selectedTheme?.variants.map((variant: ThemeVariant) => ({
+			id: variant.id,
+			label: variant.name
+		})) ?? []
+	);
 </script>
 
 <section aria-label="Theme manager" class="theme-manager">
 	<nav aria-label="Themes">
 		<span>Themes:</span>
-		{#each themes as theme}
-			<button aria-current={theme.id === selectedThemeId} onclick={() => onselecttheme(theme.id)}
-				>{theme.name}</button
-			>
-		{/each}
+		{#if selectedThemeId}
+			<Tabs
+				items={themeTabs}
+				value={selectedThemeId}
+				aria-label="Themes"
+				onchange={onselecttheme}
+			/>
+		{/if}
 		<button aria-label="Add theme" onclick={onaddtheme}>+</button>
 	</nav>
 
 	{#if selectedTheme}
 		<nav aria-label="Variants">
 			<span>Variants:</span>
-			{#each selectedTheme.variants as variant}
-				<button
-					aria-current={variant.id === selectedVariantId}
-					onclick={() => onselectvariant(variant.id)}>{variant.name}</button
-				>
-			{/each}
+			{#if selectedVariantId}
+				<Tabs
+					items={variantTabs}
+					value={selectedVariantId}
+					aria-label="Variants"
+					onchange={onselectvariant}
+				/>
+			{/if}
 			<button aria-label="Add variant" onclick={onaddvariant}>+</button>
 		</nav>
 
@@ -132,6 +148,7 @@
 <style>
 	.theme-manager,
 	nav,
+	nav :global([role='tablist']),
 	.titles {
 		display: flex;
 		gap: 0.5rem;
@@ -142,7 +159,7 @@
 		flex-direction: column;
 		align-items: stretch;
 	}
-	[aria-current='true'] {
+	nav :global([role='tab'][aria-selected='true']) {
 		font-weight: 700;
 	}
 </style>

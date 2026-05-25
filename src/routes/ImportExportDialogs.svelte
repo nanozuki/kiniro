@@ -14,17 +14,19 @@
 	} from '$lib/importExport';
 	import type { Theme } from '$lib/model';
 
+	type ImportChoice = { themeId: string; conflict?: ImportConflictChoice };
+
+	type ImportExportDialogsProps = {
+		themes: Theme[];
+		onexport?: (filename: string, json: string) => void;
+		onimport?: (file: ThemeExportFile, choices: ImportChoice[]) => void;
+	};
+
 	let {
 		themes,
 		onexport = (_filename: string, _json: string) => {},
 		onimport = (_file: ThemeExportFile, _choices: ImportChoice[]) => {}
-	} = $props<{
-		themes: Theme[];
-		onexport?: (filename: string, json: string) => void;
-		onimport?: (file: ThemeExportFile, choices: ImportChoice[]) => void;
-	}>();
-
-	type ImportChoice = { themeId: string; conflict?: ImportConflictChoice };
+	}: ImportExportDialogsProps = $props();
 
 	let exportOpen = $state(false);
 	let importOpen = $state(false);
