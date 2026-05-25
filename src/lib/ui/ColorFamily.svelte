@@ -7,6 +7,7 @@
 
 <script lang="ts">
 	import ColorRamp from './ColorRamp.svelte';
+	import InlineInput from './InlineInput.svelte';
 	import { generateFamily } from '../palette';
 	import StepScale from './StepScale.svelte';
 	import type { ColorFamilyStructure, Gamut, StepIndexStyle, ThemeVariant } from '../model';
@@ -60,13 +61,17 @@
 	<header class="family-header">
 		<div>
 			{#if editingName}
-				<input
+				<InlineInput
 					aria-label="Family name"
-					bind:value={nameDraft}
-					oninput={() => onrename(family.id, nameDraft)}
-					onblur={() => {
-						onrename(family.id, nameDraft);
+					value={nameDraft}
+					oninput={(draft) => {
+						nameDraft = draft;
+						onrename(family.id, draft);
+					}}
+					onsubmit={(draft) => {
+						onrename(family.id, draft);
 						editingName = false;
+						return draft;
 					}}
 				/>
 			{:else}

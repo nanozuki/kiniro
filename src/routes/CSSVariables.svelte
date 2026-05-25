@@ -6,8 +6,9 @@
 -->
 
 <script lang="ts">
-	import { exportCssVariables } from '$lib/cssVariables';
+	import { exportCssVariables, normalizeCssPrefix } from '$lib/cssVariables';
 	import type { Theme, ThemeVariant } from '$lib/model';
+	import InlineInput from '$lib/ui/InlineInput.svelte';
 
 	type CSSVariablesProps = {
 		theme: Theme;
@@ -32,11 +33,6 @@
 		prefixDraft = theme.cssPrefix;
 	});
 
-	function commitPrefix() {
-		onprefix(prefixDraft);
-		prefixDraft = output.prefix;
-	}
-
 	async function copyCss() {
 		try {
 			await copyText(output.css);
@@ -52,10 +48,19 @@
 		<h2>CSS Variables</h2>
 		<label>
 			<span>Variable prefix</span>
-			<input
+			<InlineInput
+				aria-label="Variable prefix"
 				value={prefixDraft}
-				oninput={(event) => (prefixDraft = event.currentTarget.value)}
-				onblur={commitPrefix}
+				oninput={(draft) => {
+					prefixDraft = draft;
+					onprefix(draft);
+				}}
+				onsubmit={(draft) => {
+					const prefix = normalizeCssPrefix(draft);
+					onprefix(prefix);
+					prefixDraft = prefix;
+					return prefix;
+				}}
 			/>
 		</label>
 	</header>

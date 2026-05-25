@@ -6,7 +6,8 @@
 -->
 
 <script lang="ts">
-	import { formatLightness } from '../color';
+	import InlineInput from './InlineInput.svelte';
+	import { formatLightness, normalizeChannelValue } from '../color';
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
 
@@ -37,8 +38,19 @@
 	let editing = $state(false);
 	let steps = $derived(buildSteps(structure, values));
 
-	function numberValue(event: Event) {
-		return Number((event.currentTarget as HTMLInputElement).value);
+	function finiteNumber(draft: string): number | null {
+		if (draft.trim().length === 0) return null;
+		const value = Number(draft);
+		return Number.isFinite(value) ? value : null;
+	}
+
+	function resolveStepCount(draft: string, previous: string): string {
+		const value = finiteNumber(draft) ?? Number(previous);
+		return String(Math.min(9, Math.max(5, Math.trunc(value))));
+	}
+
+	function resolveLightness(draft: string, previous: string): string {
+		return String(normalizeChannelValue('lightness', finiteNumber(draft) ?? Number(previous)));
 	}
 </script>
 
@@ -59,13 +71,19 @@
 	{#if editing}
 		<div class="editor">
 			<label
-				>Step count <input
+				>Step count <InlineInput
 					aria-label="Step count"
-					type="number"
-					min="5"
-					max="9"
-					value={structure.stepCount}
-					oninput={(event) => onstepcount(numberValue(event))}
+					inputmode="numeric"
+					value={String(structure.stepCount)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onstepcount(value);
+					}}
+					onsubmit={(draft, previous) => {
+						const value = resolveStepCount(draft, previous);
+						onstepcount(Number(value));
+						return value;
+					}}
 				/></label
 			>
 			<label
@@ -104,25 +122,35 @@
 				>
 			{/if}
 			<label
-				>Start lightness <input
+				>Start lightness <InlineInput
 					aria-label="Start lightness"
-					type="number"
-					min="0"
-					max="1"
-					step="0.01"
-					value={values.lightnessStart}
-					oninput={(event) => onrange(numberValue(event), values.lightnessEnd)}
+					inputmode="decimal"
+					value={String(values.lightnessStart)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onrange(value, values.lightnessEnd);
+					}}
+					onsubmit={(draft, previous) => {
+						const value = resolveLightness(draft, previous);
+						onrange(Number(value), values.lightnessEnd);
+						return value;
+					}}
 				/></label
 			>
 			<label
-				>End lightness <input
+				>End lightness <InlineInput
 					aria-label="End lightness"
-					type="number"
-					min="0"
-					max="1"
-					step="0.01"
-					value={values.lightnessEnd}
-					oninput={(event) => onrange(values.lightnessStart, numberValue(event))}
+					inputmode="decimal"
+					value={String(values.lightnessEnd)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onrange(values.lightnessStart, value);
+					}}
+					onsubmit={(draft, previous) => {
+						const value = resolveLightness(draft, previous);
+						onrange(values.lightnessStart, Number(value));
+						return value;
+					}}
 				/></label
 			>
 			<button type="button" onclick={onreverse}>Reverse lightness</button>
@@ -132,15 +160,20 @@
 					<div>
 						<label
 							>{step.index} lightness
-							<input
+							<InlineInput
 								aria-label={`${step.index} lightness`}
-								type="number"
-								min="0"
-								max="1"
-								step="0.01"
-								value={step.lightness}
+								inputmode="decimal"
+								value={String(step.lightness)}
 								disabled={!steps.slice(1, -1).includes(step)}
-								oninput={(event) => onoverride(step.index, numberValue(event))}
+								oninput={(draft) => {
+									const value = finiteNumber(draft);
+									if (value != null) onoverride(step.index, value);
+								}}
+								onsubmit={(draft, previous) => {
+									const value = resolveLightness(draft, previous);
+									onoverride(step.index, Number(value));
+									return value;
+								}}
 							/></label
 						>
 						<button

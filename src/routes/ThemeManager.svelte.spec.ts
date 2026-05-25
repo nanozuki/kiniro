@@ -1,4 +1,4 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
@@ -87,5 +87,32 @@ describe('ThemeManager', () => {
 		expect(onrenamevariant).toHaveBeenCalledWith(selectedVariant.id, 'Dawn');
 		expect(ondeletetheme).toHaveBeenCalledWith(selectedTheme.id);
 		expect(ondeletevariant).toHaveBeenCalledWith(selectedVariant.id);
+	});
+
+	it('submits inline renames with Enter and Escape', async () => {
+		const onrenametheme = vi.fn();
+		const onrenamevariant = vi.fn();
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
+		render(ThemeManager, {
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme,
+			onrenamevariant
+		});
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Rosé');
+		await userEvent.keyboard('{Enter}');
+		await expect.element(page.getByLabelText('Theme name')).not.toBeInTheDocument();
+		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Rosé');
+
+		await page.getByRole('button', { name: 'Rename variant' }).click();
+		await page.getByLabelText('Variant name').fill('Dawn');
+		await userEvent.keyboard('{Escape}');
+		await expect.element(page.getByLabelText('Variant name')).not.toBeInTheDocument();
+		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Dawn');
 	});
 });

@@ -7,6 +7,7 @@
 
 <script lang="ts">
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
+	import InlineInput from '$lib/ui/InlineInput.svelte';
 	import Tabs from '$lib/ui/Tabs.svelte';
 
 	type ThemeManagerProps = {
@@ -87,13 +88,17 @@
 
 		<div class="titles">
 			{#if editingTheme}
-				<input
+				<InlineInput
 					aria-label="Theme name"
-					bind:value={themeDraft}
-					oninput={() => onrenametheme(selectedTheme.id, themeDraft)}
-					onblur={() => {
-						onrenametheme(selectedTheme.id, themeDraft);
+					value={themeDraft}
+					oninput={(draft) => {
+						themeDraft = draft;
+						onrenametheme(selectedTheme.id, draft);
+					}}
+					onsubmit={(draft) => {
+						onrenametheme(selectedTheme.id, draft);
 						editingTheme = false;
+						return draft;
 					}}
 				/>
 			{:else}
@@ -119,13 +124,17 @@
 
 			{#if selectedVariant}
 				{#if editingVariant}
-					<input
+					<InlineInput
 						aria-label="Variant name"
-						bind:value={variantDraft}
-						oninput={() => onrenamevariant(selectedVariant.id, variantDraft)}
-						onblur={() => {
-							onrenamevariant(selectedVariant.id, variantDraft);
+						value={variantDraft}
+						oninput={(draft) => {
+							variantDraft = draft;
+							onrenamevariant(selectedVariant.id, draft);
+						}}
+						onsubmit={(draft) => {
+							onrenamevariant(selectedVariant.id, draft);
 							editingVariant = false;
+							return draft;
 						}}
 					/>
 				{:else}

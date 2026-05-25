@@ -6,6 +6,7 @@
 -->
 
 <script lang="ts">
+	import InlineInput from './InlineInput.svelte';
 	import {
 		formatChroma,
 		formatHue,
@@ -48,9 +49,19 @@
 		return formatHue(value);
 	}
 
-	function setChannel(channel: OklchChannel, event: Event) {
-		const value = Number((event.currentTarget as HTMLInputElement).value);
-		onoverride(swatch.stepIndex, channel, normalizeChannelValue(channel, value));
+	function finiteNumber(draft: string): number | null {
+		if (draft.trim().length === 0) return null;
+		const value = Number(draft);
+		return Number.isFinite(value) ? value : null;
+	}
+
+	function resolveChannel(channel: OklchChannel, draft: string, previous: string): string {
+		return String(normalizeChannelValue(channel, finiteNumber(draft) ?? Number(previous)));
+	}
+
+	function setChannel(channel: OklchChannel, draft: string) {
+		const value = finiteNumber(draft);
+		if (value != null) onoverride(swatch.stepIndex, channel, normalizeChannelValue(channel, value));
 	}
 </script>
 
@@ -87,11 +98,16 @@
 			{#each channels as channel}
 				<label>
 					<span>{channel.label} ({formatted(channel.key, swatch.oklch[channel.key])})</span>
-					<input
-						type="number"
-						step={channel.step}
-						value={swatch.oklch[channel.key]}
-						oninput={(event) => setChannel(channel.key, event)}
+					<InlineInput
+						aria-label={channel.label}
+						inputmode="decimal"
+						value={String(swatch.oklch[channel.key])}
+						oninput={(draft) => setChannel(channel.key, draft)}
+						onsubmit={(draft, previous) => {
+							const value = resolveChannel(channel.key, draft, previous);
+							onoverride(swatch.stepIndex, channel.key, Number(value));
+							return value;
+						}}
 					/>
 				</label>
 				<button
