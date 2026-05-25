@@ -21,7 +21,7 @@
 		onchange?: (id: string) => void;
 	};
 
-	let { items, value, onchange = (_id: string) => {}, ...tabListProps }: TabsProps = $props();
+	let { items, value, onchange = (_id: string) => {}, ...aria }: TabsProps = $props();
 
 	const tabs = new MeltTabs<string>({
 		value: () => value,
@@ -31,17 +31,11 @@
 	});
 </script>
 
-<div {...tabs.triggerList} {...tabListProps}>
+<div {...tabs.triggerList} {...aria}>
 	{#each items as item}
 		{@const trigger = tabs.getTrigger(item.id)}
-		<button
-			type="button"
-			{...trigger}
-			disabled={item.disabled}
-			title={item.title}
-			onclick={() => {
-				if (!item.disabled) trigger.onclick();
-			}}>{item.label}</button
+		<button type="button" {...trigger} disabled={item.disabled} title={item.title}
+			>{item.label}</button
 		>
 	{/each}
 </div>

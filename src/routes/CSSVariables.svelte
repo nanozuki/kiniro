@@ -26,12 +26,16 @@
 	}: CSSVariablesProps = $props();
 
 	let prefixDraft = $state('');
+	let lastThemeId = $state('');
 	let message = $state('');
 	let output = $derived(exportCssVariables(theme, variant));
 
-	// Keep the prefix draft in sync when the active theme changes externally.
+	// Sync the prefix draft only when switching to a different theme.
 	$effect.pre(() => {
-		prefixDraft = theme.cssPrefix;
+		if (theme.id !== lastThemeId) {
+			prefixDraft = theme.cssPrefix;
+			lastThemeId = theme.id;
+		}
 	});
 
 	async function copyCss() {
@@ -65,10 +69,6 @@
 			<InlineInput
 				aria-label="Variable prefix"
 				value={prefixDraft}
-				oninput={(draft) => {
-					prefixDraft = draft;
-					onprefix(draft);
-				}}
 				onsubmit={(draft) => {
 					const result = resolvePrefix(draft);
 					onprefix(result.value);

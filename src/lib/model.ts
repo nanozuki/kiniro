@@ -1,4 +1,5 @@
 import { nanoid } from 'nanoid';
+import { clone } from './clone';
 
 export type Id = string;
 
@@ -218,10 +219,6 @@ export function syncThemeVariantValues(theme: Theme): Theme {
 			values: createVariantValues(theme.structure, variant.values)
 		}))
 	};
-}
-
-function clone<T>(value: T): T {
-	return JSON.parse(JSON.stringify(value)) as T;
 }
 
 function generateId(): Id {

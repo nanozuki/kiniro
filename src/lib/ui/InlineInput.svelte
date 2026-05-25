@@ -45,7 +45,6 @@
 
 	function startEditing() {
 		editing = true;
-		previous = value;
 		submitted = false;
 	}
 

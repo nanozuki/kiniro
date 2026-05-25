@@ -98,6 +98,8 @@
 					onsubmit={(draft) => {
 						onrenametheme(selectedTheme.id, draft);
 						editingTheme = false;
+						// Repair (e.g. empty → default) happens in the state layer; the
+						// input is unmounted immediately so the stale draft is never shown.
 						return { value: draft };
 					}}
 				/>
@@ -134,6 +136,7 @@
 						onsubmit={(draft) => {
 							onrenamevariant(selectedVariant.id, draft);
 							editingVariant = false;
+							// Same as theme rename: repair is in the state layer; unmount is immediate.
 							return { value: draft };
 						}}
 					/>

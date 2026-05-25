@@ -1,3 +1,4 @@
+import { clone } from './clone';
 import type { AppState, Id, WorkspaceTab } from './model';
 import type { HistoryState } from './history';
 
@@ -107,6 +108,3 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 	return typeof value === 'object' && value !== null;
 }
 
-function clone<T>(value: T): T {
-	return JSON.parse(JSON.stringify(value)) as T;
-}

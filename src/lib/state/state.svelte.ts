@@ -1,3 +1,4 @@
+import { clone } from '../clone';
 import {
 	cleanLightnessOverrides,
 	createIndexStyleStructure,
@@ -409,6 +410,3 @@ function themeHasRamps(theme: Theme): boolean {
 	return theme.structure.families.some((family) => family.ramps.length > 0);
 }
 
-function clone<T>(value: T): T {
-	return JSON.parse(JSON.stringify(value)) as T;
-}
