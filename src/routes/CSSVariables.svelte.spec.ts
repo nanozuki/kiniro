@@ -29,13 +29,13 @@ describe('CSSVariables', () => {
 			.toHaveTextContent('color: oklch(var(--color-default-accent-100) / 1);');
 	});
 
-	it('commits prefix changes on blur and lets the manager apply fallback normalization', async () => {
+	it('normalizes the prefix on submit and calls onprefix with the resolved value', async () => {
 		const onprefix = vi.fn();
 		render(CSSVariables, { ...fixture(), onprefix });
 
 		await page.getByLabelText('Variable prefix').fill('');
 		await page.getByRole('button', { name: 'Copy CSS' }).click();
-		expect(onprefix).toHaveBeenCalledWith('');
+		expect(onprefix).toHaveBeenCalledWith('color');
 		await expect
 			.element(page.getByLabelText('Generated CSS'))
 			.toHaveTextContent('--color-default-accent-100');

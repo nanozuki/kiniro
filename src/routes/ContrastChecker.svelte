@@ -16,10 +16,12 @@
 	import type { Gamut } from '$lib/model';
 	import type { GeneratedVariantPalette } from '$lib/palette';
 
-	let { palette, gamut } = $props<{
+	type ContrastCheckerProps = {
 		palette: GeneratedVariantPalette;
 		gamut: Gamut;
-	}>();
+	};
+
+	let { palette, gamut }: ContrastCheckerProps = $props();
 
 	let targets = $derived(getContrastTargets(palette));
 	let defaults = $derived(getDefaultContrastTargets(palette));

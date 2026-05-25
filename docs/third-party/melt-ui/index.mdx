@@ -1,0 +1,36 @@
+---
+title: Melt UI
+description: Welcome to the next generation of Melt UI.
+template: splash
+hero:
+  tagline: Welcome to the next generation of Melt UI.
+  image:
+    file: ../../assets/houston.webp
+  actions:
+    - text: Get Started
+      link: /guides/installation
+      icon: right-arrow
+      variant: primary
+    - text: View on GitHub
+      link: https://github.com/melt-ui/melt-ui
+      icon: external
+---
+
+import { Card, CardGrid } from "@astrojs/starlight/components";
+
+## Features
+
+<CardGrid stagger>
+	<Card title="Headless Components" icon="puzzle">
+		Fully customizable components with zero styling opinions. You have complete control over the look and feel.
+	</Card>
+	<Card title="Type Safety" icon="document">
+		Built with TypeScript for excellent type safety and developer experience.
+	</Card>
+	<Card title="Accessibility" icon="accessibility">
+		Components follow WAI-ARIA guidelines and include keyboard navigation out of the box.
+	</Card>
+	<Card title="Svelte 5 Ready" icon="rocket">
+		Built for Svelte 5 with full support for runes and the latest features.
+	</Card>
+</CardGrid>

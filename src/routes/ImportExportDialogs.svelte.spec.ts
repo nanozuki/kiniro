@@ -6,7 +6,7 @@ import { exportThemes } from '$lib/importExport';
 import { createDefaultTheme } from '$lib/model';
 
 function themes() {
-	return [createDefaultTheme({ id: 'theme-1', name: 'Theme 1' })];
+	return [createDefaultTheme({ name: 'Theme 1' })];
 }
 
 async function uploadJson(name: string, json: string) {
@@ -44,15 +44,15 @@ describe('ImportExportDialogs', () => {
 	it('supports conflict choices and successful import callback', async () => {
 		const onimport = vi.fn();
 		render(ImportExportDialogs, { themes: themes(), onimport });
-		const imported = createDefaultTheme({ id: 'theme-2', name: 'Theme 1' });
+		const imported = createDefaultTheme({ name: 'Theme 1' });
 
 		await page.getByRole('button', { name: 'Import themes' }).click();
 		await uploadJson('themes.json', exportThemes([imported]));
 		await page.getByLabelText('Conflict choice for Theme 1').selectOptions('overwrite');
 		await page.getByRole('button', { name: 'Confirm import' }).click();
 		expect(onimport).toHaveBeenCalledWith(
-			expect.objectContaining({ themes: [expect.objectContaining({ id: 'theme-2' })] }),
-			[{ themeId: 'theme-2', conflict: 'overwrite' }]
+			expect.objectContaining({ themes: [expect.objectContaining({ id: imported.id })] }),
+			[{ themeId: imported.id, conflict: 'overwrite' }]
 		);
 	});
 });

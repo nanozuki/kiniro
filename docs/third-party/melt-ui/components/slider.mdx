@@ -1,0 +1,124 @@
+---
+title: Slider
+description: A draggable input to control numeric values.
+---
+import ApiTable from "@components/api-table.astro";
+import Preview from "@previews/slider.svelte";
+import Features from "@components/features.astro";
+import ThemedCode from "@components/themed-code.astro";
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+{/*
+Things I want:
+- Preview with props DONE
+- Show builder syntax
+- Show component syntax
+- Features
+*/}
+
+<Preview client:load />
+
+## Features
+
+<Features>
+- 🎹 Keyboard navigation
+- 🧠 Smart focus management
+- 🔄 Horizontal and vertical orientation
+- ~💬 Tooltip value display~
+- ~🌐 RTL support~ (incoming!)
+</Features>
+
+## Usage
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { Slider, type SliderProps } from "melt/builders";
+
+	const slider = new Slider();
+</script>
+
+<div {...slider.root}>
+	<div {...slider.thumb}></div>
+</div>
+```
+	</TabItem>
+
+	<TabItem label="Component">
+
+```svelte
+<script lang="ts">
+	import { Slider } from "melt/components";
+</script>
+
+<Slider>
+	{#snippet children(slider)}
+		<div {...slider.root}>
+			<div {...slider.thumb}></div>
+		</div>
+	{/snippet}
+</Slider>
+	```
+	</TabItem>
+</Tabs>
+
+### Positioning
+
+By default, Melt does not provide styles. This means that you'll be responsible for positioning the
+thumb and range of your slider.
+
+To facilitate this, Melt provides some CSS properties, `--percentage` and `--percentage-inv`.
+
+```svelte
+<Slider value={30} {...controls}>
+	{#snippet children(slider)}
+		<div class="slider" {...slider.root}>
+			<div class="track">
+				<div class="range"></div>
+				<div {...slider.thumb}></div>
+			</div>
+		</div>
+	{/snippet}
+</Slider>
+
+<style>
+	.slider {
+		width: 300px;
+		height: 40px;
+		margin: 0 auto;
+		padding-block: 16px; /* padding to increase touch area */
+	}
+
+	.slider .track {
+		background: grey;
+		height: 100%;
+		position: relative;
+	}
+
+	.slider .range {
+		position: absolute;
+		background: green;
+		inset: 0;
+		right: var(--percentage-inv);
+	}
+
+	.slider [data-melt-slider-thumb] {
+		position: absolute;
+		background: white;
+		left: var(--percentage);
+		top: 50%;
+		transform: translate(-50%, -50%);
+		width: 20px;
+		height: 20px;
+	}
+</style>
+```
+
+### Transitions
+
+TODO: Write about `data-dragging`
+
+## API Reference
+
+<ApiTable entry="Slider" />

@@ -61,9 +61,11 @@ Sanitization rules:
 A name is invalid when the trimmed display name is empty or its sanitized form
 is empty.
 
-Outside dialogs, inputs update live but create at most one undoable commit on
-blur. Invalid values fall back to the module's default naming rule. Duplicate
-names, including sanitized-name collisions, are repaired by appending a number.
+Outside dialogs, inline inputs update live but create at most one undoable commit
+when editing finishes. Enter, Escape, and blur all submit the current draft;
+Escape does not cancel because undo/redo handles reversion. Invalid values fall
+back to the module's default rule. Duplicate names, including sanitized-name
+collisions, are repaired by appending a number.
 
 Inside dialogs, validation is live and confirmation stays disabled until every
 value is valid.

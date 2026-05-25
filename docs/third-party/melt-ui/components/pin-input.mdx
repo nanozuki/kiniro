@@ -1,0 +1,71 @@
+---
+title: PIN Input
+description: A sequence of one-character inputs, normally used for entering PINs or OTPs.
+---
+import ApiTable from "@components/api-table.astro";
+import Preview from "@previews/pin-input.svelte";
+import Features from "@components/features.astro";
+import ThemedCode from "@components/themed-code.astro";
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+{/*
+Things I want:
+- Preview with props DONE
+- Show builder syntax
+- Show component syntax
+- Features
+*/}
+
+<Preview client:load />
+
+## Features
+
+<Features>
+- 🎹 Keyboard navigation
+- 🔒 Multiple entry validation types
+- 📋 Paste support
+- 📱 Uses the appropriate keyboard in mobile
+- TODO password manager support
+</Features>
+
+## Usage
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { PinInput } from "melt/builders";
+
+	const pinInput = new PinInput();
+</script>
+
+<div {...pinInput.root}>
+	{#each pinInput.inputs as input}
+		<input {...input} />
+	{/each}
+</div>
+```
+	</TabItem>
+
+	<TabItem label="Component">
+```svelte
+<script lang="ts">
+	import { PinInput } from "melt/components";
+</script>
+
+<PinInput>
+	{#snippet children(pinInput)}
+		<div {...pinInput.root}>
+			{#each pinInput.inputs as input}
+				<input {...input} />
+			{/each}
+		</div>
+	{/snippet}
+</PinInput>
+```
+	</TabItem>
+</Tabs>
+
+## API Reference
+
+<ApiTable entry="PinInput" />

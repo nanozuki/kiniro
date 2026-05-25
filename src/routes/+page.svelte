@@ -20,13 +20,14 @@
 		type ThemeExportFile
 	} from '$lib/importExport';
 	import { generateVariantPalette } from '$lib/palette';
-	import { createAppManager } from '$lib/state/state';
+	import { createAppManager } from '$lib/state/state.svelte';
 	import { createDefaultPersistedState, loadState, saveState } from '$lib/storage';
+	import { addToast } from '$lib/ui/Toaster.svelte';
 
 	const loaded = browser
 		? loadState(localStorage)
 		: { ok: true, state: createDefaultPersistedState(), reset: false, error: null };
-	const manager = createAppManager({
+	const app = createAppManager({
 		data: loaded.state.data,
 		ui: {
 			selection: {
@@ -37,24 +38,30 @@
 		}
 	});
 
-	let app = manager;
-	let revision = $state(0);
-	let toast = $state(loaded.reset ? 'Stored data was reset because it was invalid.' : '');
-	let selectedTheme = $derived.by(() => {
-		const _revision = revision;
-		return app.selectedTheme;
-	});
-	let selectedVariant = $derived.by(() => {
-		const _revision = revision;
-		return app.selectedVariant;
-	});
+	let themes = $derived([...app.data.themes]);
+	let selectedTheme = $derived(app.selectedTheme);
+	let selectedVariant = $derived(app.selectedVariant);
+	let selectedThemeId = $derived(app.ui.selection.themeId);
+	let selectedVariantId = $derived(app.ui.selection.variantId);
+	let workspaceTab = $derived(app.ui.workspaceTab);
 	let palette = $derived(
 		selectedTheme && selectedVariant ? generateVariantPalette(selectedTheme, selectedVariant) : null
 	);
 
+	$effect(() => {
+		if (loaded.reset) {
+			addToast({
+				type: 'assertive',
+				data: {
+					title: 'Stored data reset',
+					description: 'Stored data was reset because it was invalid.'
+				}
+			});
+		}
+	});
+
 	function mutate(change: () => void) {
 		change();
-		revision += 1;
 		syncStorage();
 	}
 	function addFirstTheme() {
@@ -99,14 +106,20 @@
 				history: { past: [], future: [] }
 			});
 		} catch {
-			toast = 'Autosave failed. Kiniro will retry later.';
+			addToast({
+				type: 'assertive',
+				data: {
+					title: 'Autosave failed',
+					description: 'Kiniro will retry later.'
+				}
+			});
 		}
 	}
 </script>
 
 <svelte:head><title>Kiniro</title></svelte:head>
 
-<main class="app-shell" data-revision={revision}>
+<main class="app-shell">
 	<section aria-label="TitleBar" class="panel title-bar">
 		<div>
 			<h1>Kiniro</h1>
@@ -116,7 +129,7 @@
 			{#if selectedTheme}
 				<button disabled>Undo</button><button disabled>Redo</button>
 			{/if}
-			<ImportExportDialogs themes={app.data.themes} onexport={download} onimport={importThemes} />
+			<ImportExportDialogs {themes} onexport={download} onimport={importThemes} />
 			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
 		</div>
 	</section>
@@ -124,9 +137,9 @@
 	{#if selectedTheme && selectedVariant}
 		<section class="panel">
 			<ThemeManager
-				themes={app.data.themes}
-				selectedThemeId={app.ui.selection.themeId}
-				selectedVariantId={app.ui.selection.variantId}
+				{themes}
+				{selectedThemeId}
+				{selectedVariantId}
 				onselecttheme={(id) => mutate(() => app.selectTheme(id))}
 				onselectvariant={(id) => mutate(() => app.selectVariant(id))}
 				onaddtheme={() => mutate(() => void app.addTheme())}
@@ -142,13 +155,13 @@
 		<section class="panel">
 			<WorkspaceTabs
 				theme={selectedTheme}
-				activeTab={app.ui.workspaceTab}
+				activeTab={workspaceTab}
 				onselect={(tab) => mutate(() => app.setWorkspaceTab(tab))}
 			/>
 		</section>
 
 		<section aria-label="Workspace" class="panel">
-			{#if app.ui.workspaceTab === 'palette'}
+			{#if workspaceTab === 'palette'}
 				<Palette
 					families={selectedTheme.structure.families}
 					variant={selectedVariant}
@@ -166,7 +179,7 @@
 								)
 						)}
 				/>
-			{:else if app.ui.workspaceTab === 'cssVariables'}
+			{:else if workspaceTab === 'cssVariables'}
 				<CSSVariables
 					theme={selectedTheme}
 					variant={selectedVariant}
@@ -177,8 +190,6 @@
 			{/if}
 		</section>
 	{/if}
-
-	{#if toast}<aside aria-label="Toasts">{toast}</aside>{/if}
 </main>
 
 <style>

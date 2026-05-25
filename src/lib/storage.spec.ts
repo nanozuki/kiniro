@@ -22,10 +22,11 @@ describe('storage', () => {
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
 		state.data.themes = [createDefaultTheme()];
-		state.data.themes[0].targetGamut = 'p3';
+		const theme = state.data.themes[0];
+		theme.targetGamut = 'p3';
 		state.ui = {
-			selectedThemeId: 'theme-1',
-			selectedVariantId: 'variant-1',
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
 			workspaceTab: 'cssVariables'
 		};
 		state.history.past = Array.from({ length: 105 }, (_, index) => ({

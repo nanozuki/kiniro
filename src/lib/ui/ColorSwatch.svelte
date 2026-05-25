@@ -6,6 +6,8 @@
 -->
 
 <script lang="ts">
+	import InlineInput from './InlineInput.svelte';
+	import type { InlineInputSubmitResult } from './InlineInput.svelte';
 	import {
 		formatChroma,
 		formatHue,
@@ -16,19 +18,21 @@
 	import type { Gamut, OklchChannel } from '../model';
 	import type { GeneratedSwatch } from '../palette';
 
+	type ColorSwatchProps = {
+		swatch: GeneratedSwatch;
+		gamut: Gamut;
+		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
+		onreset?: (stepIndex: string, channel: OklchChannel) => void;
+		onresetall?: (stepIndex: string) => void;
+	};
+
 	let {
 		swatch,
 		gamut,
 		onoverride = (_stepIndex: string, _channel: OklchChannel, _value: number) => {},
 		onreset = (_stepIndex: string, _channel: OklchChannel) => {},
 		onresetall = (_stepIndex: string) => {}
-	} = $props<{
-		swatch: GeneratedSwatch;
-		gamut: Gamut;
-		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
-		onreset?: (stepIndex: string, channel: OklchChannel) => void;
-		onresetall?: (stepIndex: string) => void;
-	}>();
+	}: ColorSwatchProps = $props();
 
 	let editing = $state(false);
 	let preview = $derived(getPreviewColor(swatch.oklch, gamut));
@@ -46,9 +50,53 @@
 		return formatHue(value);
 	}
 
-	function setChannel(channel: OklchChannel, event: Event) {
-		const value = Number((event.currentTarget as HTMLInputElement).value);
-		onoverride(swatch.stepIndex, channel, normalizeChannelValue(channel, value));
+	function finiteNumber(draft: string): number | null {
+		if (draft.trim().length === 0) return null;
+		const value = Number(draft);
+		return Number.isFinite(value) ? value : null;
+	}
+
+	function resolveChannel(
+		channel: OklchChannel,
+		draft: string,
+		previous: string
+	): InlineInputSubmitResult {
+		const parsed = finiteNumber(draft);
+		const value = parsed ?? Number(previous);
+		const resolved = String(normalizeChannelValue(channel, value));
+		const limits = {
+			lightness: '0 to 1',
+			chroma: '0 to 0.37',
+			hue: '0 to 360'
+		} satisfies Record<OklchChannel, string>;
+		const ranges = {
+			lightness: { min: 0, max: 1 },
+			chroma: { min: 0, max: 0.37 },
+			hue: { min: 0, max: 360 }
+		} satisfies Record<OklchChannel, { min: number; max: number }>;
+
+		if (parsed == null) {
+			return {
+				value: resolved,
+				error: `${formattedChannelName(channel)} must be a number from ${limits[channel]}; restored the previous value.`
+			};
+		}
+		if (parsed < ranges[channel].min || parsed > ranges[channel].max) {
+			return {
+				value: resolved,
+				error: `${formattedChannelName(channel)} must be between ${limits[channel]}; adjusted to ${resolved}.`
+			};
+		}
+		return { value: resolved };
+	}
+
+	function setChannel(channel: OklchChannel, draft: string) {
+		const value = finiteNumber(draft);
+		if (value != null) onoverride(swatch.stepIndex, channel, normalizeChannelValue(channel, value));
+	}
+
+	function formattedChannelName(channel: OklchChannel): string {
+		return channel[0].toUpperCase() + channel.slice(1);
 	}
 </script>
 
@@ -85,11 +133,16 @@
 			{#each channels as channel}
 				<label>
 					<span>{channel.label} ({formatted(channel.key, swatch.oklch[channel.key])})</span>
-					<input
-						type="number"
-						step={channel.step}
-						value={swatch.oklch[channel.key]}
-						oninput={(event) => setChannel(channel.key, event)}
+					<InlineInput
+						aria-label={channel.label}
+						inputmode="decimal"
+						value={String(swatch.oklch[channel.key])}
+						oninput={(draft) => setChannel(channel.key, draft)}
+						onsubmit={(draft, previous) => {
+							const result = resolveChannel(channel.key, draft, previous);
+							onoverride(swatch.stepIndex, channel.key, Number(result.value));
+							return result;
+						}}
 					/>
 				</label>
 				<button

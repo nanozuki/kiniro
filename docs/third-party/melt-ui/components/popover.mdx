@@ -1,0 +1,161 @@
+---
+title: Popover
+description: Floating content anchored to a trigger.
+---
+import ApiTable from "@components/api-table.astro";
+import Preview from "@previews/popover.svelte";
+import PreviewMultipleTriggers from "@previews/popover-multiple-triggers.svelte";
+import Features from "@components/features.astro";
+import ThemedCode from "@components/themed-code.astro";
+import { Tabs, TabItem } from '@astrojs/starlight/components';
+
+{/*
+Things I want:
+- Preview with props DONE
+- Show builder syntax
+- Show component syntax
+- Features
+*/}
+
+<Preview client:load />
+
+## Features
+
+<Features>
+- 🌳 Uses native `popover` attribute, no need for portalling
+- 🧠 Smart focus management, auto-closes when tabbed out
+- 🎈 Fully customize Floating UI's options
+- 🪺 Nested popovers
+- 🎨 Animation support
+</Features>
+
+## Usage
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { Popover } from "melt/builders";
+
+	const popover = new Popover();
+</script>
+
+<button {...popover.trigger}>
+	Click me to open the Popover
+</button>
+<div {...popover.content}>
+	<div {...popover.arrow}></div>
+	Content
+</div>
+```
+	</TabItem>
+
+	<TabItem label="Component">
+```svelte
+<script lang="ts">
+	import { Popover } from "melt/components";
+</script>
+
+<Popover>
+	{#snippet children(popover)}
+		<button {...popover.trigger}>
+			Click me to open the Popover
+		</button>
+		<div {...popover.content}>Content</div>
+	{/snippet}
+</Popover>
+```
+	</TabItem>
+</Tabs>
+
+### Multiple Triggers (Singleton Pattern)
+
+A single popover can be controlled by multiple triggers, creating a singleton pattern where one popover instance serves different contextual content. The popover will position itself relative to whichever trigger was last clicked, and you can dynamically change the content based on the active trigger.
+
+{/* Spacer */}
+<div class="py-2" aria-hidden="true" />
+
+<PreviewMultipleTriggers client:load />
+
+<Tabs>
+	<TabItem label="Builder">
+```svelte
+<script lang="ts">
+	import { Popover } from "melt/builders";
+	import { mergeAttrs } from "$lib/utils/attribute";
+
+	const popover = new Popover();
+	let activeTrigger = $state<string | null>(null);
+
+	const triggerData = {
+		user: { label: "User Profile", content: "User settings and preferences" },
+		notifications: { label: "Notifications", content: "3 unread notifications" },
+		help: { label: "Help", content: "FAQ and support options" }
+	};
+</script>
+
+{#each Object.entries(triggerData) as [key, data]}
+	<button {...mergeAttrs(popover.trigger, {
+		onclick: () => activeTrigger = key
+	})}>
+		{data.label}
+	</button>
+{/each}
+
+<div {...popover.content}>
+	{#if activeTrigger && triggerData[activeTrigger]}
+		<h3>{triggerData[activeTrigger].label}</h3>
+		<p>{triggerData[activeTrigger].content}</p>
+	{:else}
+		<p>Click a trigger to see contextual content</p>
+	{/if}
+</div>
+```
+	</TabItem>
+
+	<TabItem label="Component">
+```svelte
+<script lang="ts">
+	import { Popover } from "melt/components";
+	import { mergeAttrs } from "$lib/utils/attribute";
+
+	let activeTrigger = $state<string | null>(null);
+	const triggerData = {
+		user: { label: "User Profile", content: "User settings and preferences" },
+		notifications: { label: "Notifications", content: "3 unread notifications" },
+		help: { label: "Help", content: "FAQ and support options" }
+	};
+</script>
+
+<Popover>
+	{#snippet children(popover)}
+		{#each Object.entries(triggerData) as [key, data]}
+			<button {...mergeAttrs(popover.trigger, {
+				onclick: () => activeTrigger = key
+			})}>
+				{data.label}
+			</button>
+		{/each}
+
+		<div {...popover.content}>
+			{#if activeTrigger && triggerData[activeTrigger]}
+				<h3>{triggerData[activeTrigger].label}</h3>
+				<p>{triggerData[activeTrigger].content}</p>
+			{:else}
+				<p>Click a trigger to see contextual content</p>
+			{/if}
+		</div>
+	{/snippet}
+</Popover>
+```
+	</TabItem>
+</Tabs>
+
+### Customizing floating elements
+
+Floating elements use [Floating UI](https://floating-ui.com/) under the hood. To this end, we expose a `floatingConfig` option, which can be used to control the underlying [computePosition](https://floating-ui.com/docs/computePosition) function, its middlewares, and the resulting styling that is applied.
+
+
+## API Reference
+
+<ApiTable entry="Popover" />

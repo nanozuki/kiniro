@@ -1,3 +1,4 @@
+import { clone } from './clone';
 import type { AppState } from './model';
 
 export type HistoryEntry = {
@@ -89,6 +90,3 @@ function isSameData(left: AppState, right: AppState): boolean {
 	return JSON.stringify(left) === JSON.stringify(right);
 }
 
-function clone<T>(value: T): T {
-	return structuredClone(value);
-}

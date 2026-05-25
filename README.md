@@ -67,3 +67,15 @@ behavior.
 
 Comments should explain motivation or usage when it is not obvious. Avoid
 comments that repeat the code.
+
+## Inspiration
+
+- UI/UX
+  - [Leonardocolor](https://leonardocolor.io/theme.html)
+  - [BetterLCH](https://www.betterlch.com/)
+  - [harmonizer](https://harmonizer.evilmartians.com/)
+  - [Huetone](https://huetone.ardov.me/)
+  - [OKLCH Color Picker & Converter](https://oklch.com/)
+- Chroma adjustment
+  - [OkLCH relative chroma](https://dokozero.design/en/projects/oklch-relative-chroma/)
+  - [dittoTones](https://github.com/meodai/dittoTones)

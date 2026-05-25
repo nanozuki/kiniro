@@ -1,21 +1,18 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
+import Toaster from '$lib/ui/Toaster.svelte';
 import ThemeManager from './ThemeManager.svelte';
 
 function themes() {
 	const first = createDefaultTheme({
-		id: 'theme-1',
 		name: 'Rose Pine',
-		variantId: 'main',
 		variantName: 'Main'
 	});
-	first.variants.push(createThemeVariant(first.structure, { id: 'moon', name: 'Moon' }));
+	first.variants.push(createThemeVariant(first.structure, { name: 'Moon' }));
 	const second = createDefaultTheme({
-		id: 'theme-2',
 		name: 'Gruvbox',
-		variantId: 'dark',
 		variantName: 'Dark'
 	});
 	return [first, second];
@@ -25,30 +22,32 @@ describe('ThemeManager', () => {
 	it('renders theme and variant navigation and selection callbacks', async () => {
 		const onselecttheme = vi.fn();
 		const onselectvariant = vi.fn();
+		const renderedThemes = themes();
 		render(ThemeManager, {
-			themes: themes(),
-			selectedThemeId: 'theme-1',
-			selectedVariantId: 'main',
+			themes: renderedThemes,
+			selectedThemeId: renderedThemes[0].id,
+			selectedVariantId: renderedThemes[0].variants[0].id,
 			onselecttheme,
 			onselectvariant
 		});
 
 		await expect
-			.element(page.getByRole('button', { name: 'Rose Pine' }))
-			.toHaveAttribute('aria-current', 'true');
-		await page.getByRole('button', { name: 'Gruvbox' }).click();
-		await page.getByRole('button', { name: 'Moon' }).click();
-		expect(onselecttheme).toHaveBeenCalledWith('theme-2');
-		expect(onselectvariant).toHaveBeenCalledWith('moon');
+			.element(page.getByRole('tab', { name: 'Rose Pine' }))
+			.toHaveAttribute('aria-selected', 'true');
+		await page.getByRole('tab', { name: 'Gruvbox' }).click();
+		await page.getByRole('tab', { name: 'Moon' }).click();
+		expect(onselecttheme).toHaveBeenCalledWith(renderedThemes[1].id);
+		expect(onselectvariant).toHaveBeenCalledWith(renderedThemes[0].variants[1].id);
 	});
 
 	it('delegates create actions', async () => {
 		const onaddtheme = vi.fn();
 		const onaddvariant = vi.fn();
+		const renderedThemes = themes();
 		render(ThemeManager, {
-			themes: themes(),
-			selectedThemeId: 'theme-1',
-			selectedVariantId: 'main',
+			themes: renderedThemes,
+			selectedThemeId: renderedThemes[0].id,
+			selectedVariantId: renderedThemes[0].variants[0].id,
 			onaddtheme,
 			onaddvariant
 		});
@@ -64,10 +63,13 @@ describe('ThemeManager', () => {
 		const onrenamevariant = vi.fn();
 		const ondeletetheme = vi.fn();
 		const ondeletevariant = vi.fn();
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
 		render(ThemeManager, {
-			themes: themes(),
-			selectedThemeId: 'theme-1',
-			selectedVariantId: 'main',
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
 			onrenametheme,
 			onrenamevariant,
 			ondeletetheme,
@@ -82,9 +84,70 @@ describe('ThemeManager', () => {
 		await page.getByRole('button', { name: 'Delete theme' }).click();
 		await page.getByRole('button', { name: 'Delete variant' }).click();
 
-		expect(onrenametheme).toHaveBeenCalledWith('theme-1', 'Rosé');
-		expect(onrenamevariant).toHaveBeenCalledWith('main', 'Dawn');
-		expect(ondeletetheme).toHaveBeenCalledWith('theme-1');
-		expect(ondeletevariant).toHaveBeenCalledWith('main');
+		expect(onrenametheme).toHaveBeenCalledWith(selectedTheme.id, 'Rosé');
+		expect(onrenamevariant).toHaveBeenCalledWith(selectedVariant.id, 'Dawn');
+		expect(ondeletetheme).toHaveBeenCalledWith(selectedTheme.id);
+		expect(ondeletevariant).toHaveBeenCalledWith(selectedVariant.id);
+	});
+
+	it('submits inline renames with Enter and Escape', async () => {
+		const onrenametheme = vi.fn();
+		const onrenamevariant = vi.fn();
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
+		render(ThemeManager, {
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme,
+			onrenamevariant
+		});
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Rosé');
+		await userEvent.keyboard('{Enter}');
+		await expect.element(page.getByLabelText('Theme name')).not.toBeInTheDocument();
+		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Rosé');
+
+		await page.getByRole('button', { name: 'Rename variant' }).click();
+		await page.getByLabelText('Variant name').fill('Dawn');
+		await userEvent.keyboard('{Escape}');
+		await expect.element(page.getByLabelText('Variant name')).not.toBeInTheDocument();
+		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Dawn');
+	});
+
+	it('shows repair toasts for duplicate theme and variant names', async () => {
+		const onrenametheme = vi.fn();
+		const onrenamevariant = vi.fn();
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
+		render(Toaster);
+		render(ThemeManager, {
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme,
+			onrenamevariant
+		});
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Gruvbox');
+		await userEvent.keyboard('{Enter}');
+
+		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Gruvbox 2');
+		await expect
+			.element(page.getByText('Theme name already exists; using "Gruvbox 2".'))
+			.toBeInTheDocument();
+
+		await page.getByRole('button', { name: 'Rename variant' }).click();
+		await page.getByLabelText('Variant name').fill('Moon');
+		await userEvent.keyboard('{Enter}');
+
+		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Moon 2');
+		await expect
+			.element(page.getByText('Variant name already exists; using "Moon 2".'))
+			.toBeInTheDocument();
 	});
 });

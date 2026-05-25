@@ -7,9 +7,30 @@
 
 <script lang="ts">
 	import ColorRamp from './ColorRamp.svelte';
+	import InlineInput from './InlineInput.svelte';
 	import { generateFamily } from '../palette';
 	import StepScale from './StepScale.svelte';
 	import type { ColorFamilyStructure, Gamut, StepIndexStyle, ThemeVariant } from '../model';
+
+	type ColorFamilyProps = {
+		family: ColorFamilyStructure;
+		variant: ThemeVariant;
+		variantCount?: number;
+		onrename?: (id: string, name: string) => void;
+		ondelete?: (id: string) => void;
+		onaddramp?: (familyId: string) => void;
+		onstepcount?: (familyId: string, count: number) => void;
+		onindexstyle?: (familyId: string, style: StepIndexStyle) => void;
+		onhalfsteps?: (familyId: string, start: boolean, end: boolean) => void;
+		onrange?: (familyId: string, start: number, end: number) => void;
+		onoverride?: (familyId: string, index: string, lightness: number) => void;
+		onreset?: (familyId: string, index: string) => void;
+		onreverse?: (familyId: string) => void;
+		oneditramp?: (familyId: string, rampId: string) => void;
+		ondeleteramp?: (familyId: string, rampId: string) => void;
+		onmoveramp?: (familyId: string, rampId: string, direction: 'up' | 'down') => void;
+		gamut: Gamut;
+	};
 
 	let {
 		family,
@@ -29,25 +50,7 @@
 		ondeleteramp = (_familyId: string, _rampId: string) => {},
 		onmoveramp = (_familyId: string, _rampId: string, _direction: 'up' | 'down') => {},
 		gamut
-	} = $props<{
-		family: ColorFamilyStructure;
-		variant: ThemeVariant;
-		variantCount?: number;
-		onrename?: (id: string, name: string) => void;
-		ondelete?: (id: string) => void;
-		onaddramp?: (familyId: string) => void;
-		onstepcount?: (familyId: string, count: number) => void;
-		onindexstyle?: (familyId: string, style: StepIndexStyle) => void;
-		onhalfsteps?: (familyId: string, start: boolean, end: boolean) => void;
-		onrange?: (familyId: string, start: number, end: number) => void;
-		onoverride?: (familyId: string, index: string, lightness: number) => void;
-		onreset?: (familyId: string, index: string) => void;
-		onreverse?: (familyId: string) => void;
-		oneditramp?: (familyId: string, rampId: string) => void;
-		ondeleteramp?: (familyId: string, rampId: string) => void;
-		onmoveramp?: (familyId: string, rampId: string, direction: 'up' | 'down') => void;
-		gamut: Gamut;
-	}>();
+	}: ColorFamilyProps = $props();
 
 	let editingName = $state(false);
 	let nameDraft = $state('');
@@ -58,13 +61,17 @@
 	<header class="family-header">
 		<div>
 			{#if editingName}
-				<input
+				<InlineInput
 					aria-label="Family name"
-					bind:value={nameDraft}
-					oninput={() => onrename(family.id, nameDraft)}
-					onblur={() => {
-						onrename(family.id, nameDraft);
+					value={nameDraft}
+					oninput={(draft) => {
+						nameDraft = draft;
+						onrename(family.id, draft);
+					}}
+					onsubmit={(draft) => {
+						onrename(family.id, draft);
 						editingName = false;
+						return { value: draft };
 					}}
 				/>
 			{:else}

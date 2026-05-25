@@ -5,9 +5,10 @@ import { createDefaultRampValues, createDefaultTheme } from './model';
 describe('exportCssVariables', () => {
 	it('exports current variant swatches as OKLCH channel triples', () => {
 		const theme = createDefaultTheme({ variantName: 'Main' });
+		const familyId = theme.structure.families[0].id;
 		theme.structure.families[0].ramps.push({ id: 'base', name: 'Base Color' });
 		const variant = theme.variants[0];
-		variant.values.families['family-1'].ramps.base = createDefaultRampValues({
+		variant.values.families[familyId].ramps.base = createDefaultRampValues({
 			format: 'oklch',
 			serialized: 'oklch(0.7 0.02555 291.139)',
 			oklch: { lightness: 0.7, chroma: 0.02555, hue: 291.139 }
@@ -22,9 +23,10 @@ describe('exportCssVariables', () => {
 
 	it('uses theme prefix and sanitized variant and ramp names', () => {
 		const theme = createDefaultTheme({ variantName: 'Dawn Light' });
+		const familyId = theme.structure.families[0].id;
 		theme.cssPrefix = 'Brand_Color!';
 		theme.structure.families[0].ramps.push({ id: 'rose', name: 'Rose_Pine!!' });
-		theme.variants[0].values.families['family-1'].ramps.rose = createDefaultRampValues();
+		theme.variants[0].values.families[familyId].ramps.rose = createDefaultRampValues();
 
 		const css = exportCssVariables(theme, theme.variants[0]);
 
@@ -34,6 +36,7 @@ describe('exportCssVariables', () => {
 
 	it('preserves family, ramp, and step order', () => {
 		const theme = createDefaultTheme();
+		const familyId = theme.structure.families[0].id;
 		theme.structure.families.push({
 			id: 'family-2',
 			name: 'Accent',
@@ -45,8 +48,8 @@ describe('exportCssVariables', () => {
 			{ id: 'text', name: 'text' }
 		);
 		const variant = theme.variants[0];
-		variant.values.families['family-1'].ramps.base = createDefaultRampValues();
-		variant.values.families['family-1'].ramps.text = createDefaultRampValues();
+		variant.values.families[familyId].ramps.base = createDefaultRampValues();
+		variant.values.families[familyId].ramps.text = createDefaultRampValues();
 		variant.values.families['family-2'] = {
 			stepScale: { lightnessStart: 1, lightnessEnd: 0, lightnessOverrides: {}, reversed: false },
 			ramps: { accent: createDefaultRampValues() }

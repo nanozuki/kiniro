@@ -6,34 +6,37 @@
 -->
 
 <script lang="ts">
-	import { exportCssVariables } from '$lib/cssVariables';
+	import { exportCssVariables, normalizeCssPrefix } from '$lib/cssVariables';
 	import type { Theme, ThemeVariant } from '$lib/model';
+	import InlineInput from '$lib/ui/InlineInput.svelte';
+	import type { InlineInputSubmitResult } from '$lib/ui/InlineInput.svelte';
+
+	type CSSVariablesProps = {
+		theme: Theme;
+		variant: ThemeVariant;
+		onprefix?: (prefix: string) => void;
+		copyText?: (text: string) => Promise<void>;
+	};
 
 	let {
 		theme,
 		variant,
 		onprefix = (_prefix: string) => {},
 		copyText = async (text: string) => navigator.clipboard.writeText(text)
-	} = $props<{
-		theme: Theme;
-		variant: ThemeVariant;
-		onprefix?: (prefix: string) => void;
-		copyText?: (text: string) => Promise<void>;
-	}>();
+	}: CSSVariablesProps = $props();
 
 	let prefixDraft = $state('');
+	let lastThemeId = $state('');
 	let message = $state('');
 	let output = $derived(exportCssVariables(theme, variant));
 
-	// Keep the prefix draft in sync when the active theme changes externally.
+	// Sync the prefix draft only when switching to a different theme.
 	$effect.pre(() => {
-		prefixDraft = theme.cssPrefix;
+		if (theme.id !== lastThemeId) {
+			prefixDraft = theme.cssPrefix;
+			lastThemeId = theme.id;
+		}
 	});
-
-	function commitPrefix() {
-		onprefix(prefixDraft);
-		prefixDraft = output.prefix;
-	}
 
 	async function copyCss() {
 		try {
@@ -43,6 +46,19 @@
 			message = 'Could not copy CSS.';
 		}
 	}
+
+	function resolvePrefix(draft: string): InlineInputSubmitResult {
+		const prefix = normalizeCssPrefix(draft);
+		if (prefix === draft) return { value: prefix };
+
+		return {
+			value: prefix,
+			error:
+				prefix === 'color'
+					? 'Variable prefix must contain a letter or number; using color.'
+					: `Variable prefix was normalized to "${prefix}" for CSS variable names.`
+		};
+	}
 </script>
 
 <section aria-label="CSS Variables" class="css-variables">
@@ -50,10 +66,15 @@
 		<h2>CSS Variables</h2>
 		<label>
 			<span>Variable prefix</span>
-			<input
+			<InlineInput
+				aria-label="Variable prefix"
 				value={prefixDraft}
-				oninput={(event) => (prefixDraft = event.currentTarget.value)}
-				onblur={commitPrefix}
+				onsubmit={(draft) => {
+					const result = resolvePrefix(draft);
+					onprefix(result.value);
+					prefixDraft = result.value;
+					return result;
+				}}
 			/>
 		</label>
 	</header>

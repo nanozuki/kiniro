@@ -10,11 +10,11 @@ describe('WorkspaceTabs', () => {
 		render(WorkspaceTabs, { theme: createDefaultTheme(), activeTab: 'palette', onselect });
 
 		await expect
-			.element(page.getByRole('button', { name: 'Palette' }))
-			.toHaveAttribute('aria-current', 'true');
-		await expect.element(page.getByRole('button', { name: 'CSS Variables' })).toBeDisabled();
-		await expect.element(page.getByRole('button', { name: 'Contrast Checker' })).toBeDisabled();
-		await page.getByRole('button', { name: 'CSS Variables' }).click({ force: true });
+			.element(page.getByRole('tab', { name: 'Palette' }))
+			.toHaveAttribute('aria-selected', 'true');
+		await expect.element(page.getByRole('tab', { name: 'CSS Variables' })).toBeDisabled();
+		await expect.element(page.getByRole('tab', { name: 'Contrast Checker' })).toBeDisabled();
+		await page.getByRole('tab', { name: 'CSS Variables' }).click({ force: true });
 		expect(onselect).not.toHaveBeenCalledWith('cssVariables');
 	});
 
@@ -24,11 +24,11 @@ describe('WorkspaceTabs', () => {
 		const onselect = vi.fn();
 		render(WorkspaceTabs, { theme, activeTab: 'cssVariables', onselect });
 
-		await expect.element(page.getByRole('button', { name: 'CSS Variables' })).toBeEnabled();
+		await expect.element(page.getByRole('tab', { name: 'CSS Variables' })).toBeEnabled();
 		await expect
-			.element(page.getByRole('button', { name: 'CSS Variables' }))
-			.toHaveAttribute('aria-current', 'true');
-		await page.getByRole('button', { name: 'Contrast Checker' }).click();
+			.element(page.getByRole('tab', { name: 'CSS Variables' }))
+			.toHaveAttribute('aria-selected', 'true');
+		await page.getByRole('tab', { name: 'Contrast Checker' }).click();
 		expect(onselect).toHaveBeenCalledWith('contrastChecker');
 	});
 });

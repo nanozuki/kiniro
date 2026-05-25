@@ -6,9 +6,23 @@
 -->
 
 <script lang="ts">
-	import { formatLightness } from '../color';
+	import InlineInput from './InlineInput.svelte';
+	import type { InlineInputSubmitResult } from './InlineInput.svelte';
+	import { formatLightness, normalizeChannelValue } from '../color';
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
+
+	type StepScaleProps = {
+		structure: StepScaleStructure;
+		values: StepScaleValues;
+		onstepcount?: (count: number) => void;
+		onindexstyle?: (style: StepIndexStyle) => void;
+		onhalfsteps?: (start: boolean, end: boolean) => void;
+		onrange?: (start: number, end: number) => void;
+		onoverride?: (index: string, lightness: number) => void;
+		onreset?: (index: string) => void;
+		onreverse?: () => void;
+	};
 
 	let {
 		structure,
@@ -20,23 +34,55 @@
 		onoverride = (_index: string, _lightness: number) => {},
 		onreset = (_index: string) => {},
 		onreverse = () => {}
-	} = $props<{
-		structure: StepScaleStructure;
-		values: StepScaleValues;
-		onstepcount?: (count: number) => void;
-		onindexstyle?: (style: StepIndexStyle) => void;
-		onhalfsteps?: (start: boolean, end: boolean) => void;
-		onrange?: (start: number, end: number) => void;
-		onoverride?: (index: string, lightness: number) => void;
-		onreset?: (index: string) => void;
-		onreverse?: () => void;
-	}>();
+	}: StepScaleProps = $props();
 
 	let editing = $state(false);
 	let steps = $derived(buildSteps(structure, values));
 
-	function numberValue(event: Event) {
-		return Number((event.currentTarget as HTMLInputElement).value);
+	function finiteNumber(draft: string): number | null {
+		if (draft.trim().length === 0) return null;
+		const value = Number(draft);
+		return Number.isFinite(value) ? value : null;
+	}
+
+	function resolveStepCount(draft: string, previous: string): InlineInputSubmitResult {
+		const parsed = finiteNumber(draft);
+		const value = parsed ?? Number(previous);
+		const resolved = String(Math.min(9, Math.max(5, Math.trunc(value))));
+
+		if (parsed == null) {
+			return {
+				value: resolved,
+				error: 'Step count must be a number from 5 to 9; restored the previous value.'
+			};
+		}
+		if (String(parsed) !== resolved) {
+			return {
+				value: resolved,
+				error: `Step count must be a whole number from 5 to 9; adjusted to ${resolved}.`
+			};
+		}
+		return { value: resolved };
+	}
+
+	function resolveLightness(draft: string, previous: string): InlineInputSubmitResult {
+		const parsed = finiteNumber(draft);
+		const value = parsed ?? Number(previous);
+		const resolved = String(normalizeChannelValue('lightness', value));
+
+		if (parsed == null) {
+			return {
+				value: resolved,
+				error: 'Lightness must be a number from 0 to 1; restored the previous value.'
+			};
+		}
+		if (parsed < 0 || parsed > 1) {
+			return {
+				value: resolved,
+				error: `Lightness must be between 0 and 1; adjusted to ${resolved}.`
+			};
+		}
+		return { value: resolved };
 	}
 </script>
 
@@ -57,13 +103,19 @@
 	{#if editing}
 		<div class="editor">
 			<label
-				>Step count <input
+				>Step count <InlineInput
 					aria-label="Step count"
-					type="number"
-					min="5"
-					max="9"
-					value={structure.stepCount}
-					oninput={(event) => onstepcount(numberValue(event))}
+					inputmode="numeric"
+					value={String(structure.stepCount)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onstepcount(value);
+					}}
+					onsubmit={(draft, previous) => {
+						const result = resolveStepCount(draft, previous);
+						onstepcount(Number(result.value));
+						return result;
+					}}
 				/></label
 			>
 			<label
@@ -102,25 +154,35 @@
 				>
 			{/if}
 			<label
-				>Start lightness <input
+				>Start lightness <InlineInput
 					aria-label="Start lightness"
-					type="number"
-					min="0"
-					max="1"
-					step="0.01"
-					value={values.lightnessStart}
-					oninput={(event) => onrange(numberValue(event), values.lightnessEnd)}
+					inputmode="decimal"
+					value={String(values.lightnessStart)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onrange(value, values.lightnessEnd);
+					}}
+					onsubmit={(draft, previous) => {
+						const result = resolveLightness(draft, previous);
+						onrange(Number(result.value), values.lightnessEnd);
+						return result;
+					}}
 				/></label
 			>
 			<label
-				>End lightness <input
+				>End lightness <InlineInput
 					aria-label="End lightness"
-					type="number"
-					min="0"
-					max="1"
-					step="0.01"
-					value={values.lightnessEnd}
-					oninput={(event) => onrange(values.lightnessStart, numberValue(event))}
+					inputmode="decimal"
+					value={String(values.lightnessEnd)}
+					oninput={(draft) => {
+						const value = finiteNumber(draft);
+						if (value != null) onrange(values.lightnessStart, value);
+					}}
+					onsubmit={(draft, previous) => {
+						const result = resolveLightness(draft, previous);
+						onrange(values.lightnessStart, Number(result.value));
+						return result;
+					}}
 				/></label
 			>
 			<button type="button" onclick={onreverse}>Reverse lightness</button>
@@ -130,15 +192,20 @@
 					<div>
 						<label
 							>{step.index} lightness
-							<input
+							<InlineInput
 								aria-label={`${step.index} lightness`}
-								type="number"
-								min="0"
-								max="1"
-								step="0.01"
-								value={step.lightness}
+								inputmode="decimal"
+								value={String(step.lightness)}
 								disabled={!steps.slice(1, -1).includes(step)}
-								oninput={(event) => onoverride(step.index, numberValue(event))}
+								oninput={(draft) => {
+									const value = finiteNumber(draft);
+									if (value != null) onoverride(step.index, value);
+								}}
+								onsubmit={(draft, previous) => {
+									const result = resolveLightness(draft, previous);
+									onoverride(step.index, Number(result.value));
+									return result;
+								}}
 							/></label
 						>
 						<button

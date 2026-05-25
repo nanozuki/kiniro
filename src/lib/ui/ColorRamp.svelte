@@ -11,6 +11,18 @@
 	import type { Gamut, OklchChannel } from '../model';
 	import type { GeneratedColorRamp } from '../palette';
 
+	type ColorRampProps = {
+		ramp: GeneratedColorRamp;
+		sourceValue: string;
+		gamut: Gamut;
+		onedit?: (id: string) => void;
+		ondelete?: (id: string) => void;
+		onmove?: (id: string, direction: 'up' | 'down') => void;
+		onoverride?: (rampId: string, stepIndex: string, channel: OklchChannel, value: number) => void;
+		onreset?: (rampId: string, stepIndex: string, channel: OklchChannel) => void;
+		onresetall?: (rampId: string, stepIndex: string) => void;
+	};
+
 	let {
 		ramp,
 		sourceValue,
@@ -26,17 +38,7 @@
 		) => {},
 		onreset = (_rampId: string, _stepIndex: string, _channel: OklchChannel) => {},
 		onresetall = (_rampId: string, _stepIndex: string) => {}
-	} = $props<{
-		ramp: GeneratedColorRamp;
-		sourceValue: string;
-		gamut: Gamut;
-		onedit?: (id: string) => void;
-		ondelete?: (id: string) => void;
-		onmove?: (id: string, direction: 'up' | 'down') => void;
-		onoverride?: (rampId: string, stepIndex: string, channel: OklchChannel, value: number) => void;
-		onreset?: (rampId: string, stepIndex: string, channel: OklchChannel) => void;
-		onresetall?: (rampId: string, stepIndex: string) => void;
-	}>();
+	}: ColorRampProps = $props();
 
 	let sourcePreview = $derived(getPreviewColor(ramp.sourceColor, gamut));
 </script>

@@ -30,18 +30,20 @@ describe('ContrastChecker', () => {
 	});
 
 	it('updates target selections and swaps colors', async () => {
-		render(ContrastChecker, { palette: palette(), gamut: 'srgb' });
+		const generated = palette();
+		const familyId = generated.families[0].id;
+		render(ContrastChecker, { palette: generated, gamut: 'srgb' });
 
-		await page.getByLabelText('Foreground color').selectOptions('family-1:ramp-2:100');
-		await page.getByLabelText('Background color').selectOptions('family-1:ramp-1:900');
+		await page.getByLabelText('Foreground color').selectOptions(`${familyId}:ramp-2:100`);
+		await page.getByLabelText('Background color').selectOptions(`${familyId}:ramp-1:900`);
 		await expect.element(page.getByText('Accent 100 on Neutral 900')).toBeInTheDocument();
 		await page.getByRole('button', { name: 'Swap colors' }).click();
 		await expect
 			.element(page.getByLabelText('Foreground color'))
-			.toHaveValue('family-1:ramp-1:900');
+			.toHaveValue(`${familyId}:ramp-1:900`);
 		await expect
 			.element(page.getByLabelText('Background color'))
-			.toHaveValue('family-1:ramp-2:100');
+			.toHaveValue(`${familyId}:ramp-2:100`);
 	});
 
 	it('renders pass and fail results', async () => {
