@@ -45,6 +45,7 @@
 	"dependencies": {
 		"colorjs.io": "0.6.1",
 		"melt": "0.44.0",
+		"modern-normalize": "^3.0.1",
 		"nanoid": "^5.1.11",
 		"zod": "4.4.3"
 	}

@@ -2,6 +2,7 @@ import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
+import Toaster from '$lib/ui/Toaster.svelte';
 import ThemeManager from './ThemeManager.svelte';
 
 function themes() {
@@ -114,5 +115,39 @@ describe('ThemeManager', () => {
 		await userEvent.keyboard('{Escape}');
 		await expect.element(page.getByLabelText('Variant name')).not.toBeInTheDocument();
 		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Dawn');
+	});
+
+	it('shows repair toasts for duplicate theme and variant names', async () => {
+		const onrenametheme = vi.fn();
+		const onrenamevariant = vi.fn();
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
+		render(Toaster);
+		render(ThemeManager, {
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme,
+			onrenamevariant
+		});
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Gruvbox');
+		await userEvent.keyboard('{Enter}');
+
+		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Gruvbox 2');
+		await expect
+			.element(page.getByText('Theme name already exists; using "Gruvbox 2".'))
+			.toBeInTheDocument();
+
+		await page.getByRole('button', { name: 'Rename variant' }).click();
+		await page.getByLabelText('Variant name').fill('Moon');
+		await userEvent.keyboard('{Enter}');
+
+		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Moon 2');
+		await expect
+			.element(page.getByText('Variant name already exists; using "Moon 2".'))
+			.toBeInTheDocument();
 	});
 });

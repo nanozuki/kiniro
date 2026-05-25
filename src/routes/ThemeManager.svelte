@@ -7,7 +7,15 @@
 
 <script lang="ts">
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
+	import {
+		ensureUniqueName,
+		themeNames,
+		validateName,
+		variantNames,
+		type NamedItem
+	} from '$lib/naming';
 	import InlineInput from '$lib/ui/InlineInput.svelte';
+	import type { InlineInputSubmitResult } from '$lib/ui/InlineInput.svelte';
 	import Tabs from '$lib/ui/Tabs.svelte';
 
 	type ThemeManagerProps = {
@@ -56,6 +64,32 @@
 			label: variant.name
 		})) ?? []
 	);
+
+	function resolveName(
+		draft: string,
+		existingNames: readonly NamedItem[],
+		exclude: NamedItem,
+		fallbackBase: string,
+		label: 'Theme' | 'Variant'
+	): InlineInputSubmitResult {
+		const options = { exclude, fallbackBase };
+		const validation = validateName(draft, existingNames, options);
+		const value = ensureUniqueName(draft, existingNames, options);
+		if (validation.valid && value === draft) return { value };
+
+		const error =
+			validation.error === 'empty-display-name'
+				? `${label} name cannot be empty; using "${value}".`
+				: validation.error === 'empty-css-name'
+					? `${label} name must contain a letter or number; using "${value}".`
+					: validation.error === 'duplicate-name'
+						? `${label} name already exists; using "${value}".`
+						: validation.error === 'duplicate-css-name'
+							? `${label} name would create the same CSS name as another ${label.toLowerCase()}; using "${value}".`
+							: `${label} name was adjusted to "${value}".`;
+
+		return { value, error };
+	}
 </script>
 
 <section aria-label="Theme manager" class="theme-manager">
@@ -96,11 +130,10 @@
 						onrenametheme(selectedTheme.id, draft);
 					}}
 					onsubmit={(draft) => {
-						onrenametheme(selectedTheme.id, draft);
+						const result = resolveName(draft, themeNames(themes), selectedTheme, 'Theme', 'Theme');
+						onrenametheme(selectedTheme.id, result.value);
 						editingTheme = false;
-						// Repair (e.g. empty → default) happens in the state layer; the
-						// input is unmounted immediately so the stale draft is never shown.
-						return { value: draft };
+						return result;
 					}}
 				/>
 			{:else}
@@ -134,10 +167,16 @@
 							onrenamevariant(selectedVariant.id, draft);
 						}}
 						onsubmit={(draft) => {
-							onrenamevariant(selectedVariant.id, draft);
+							const result = resolveName(
+								draft,
+								variantNames(selectedTheme),
+								selectedVariant,
+								'Variant',
+								'Variant'
+							);
+							onrenamevariant(selectedVariant.id, result.value);
 							editingVariant = false;
-							// Same as theme rename: repair is in the state layer; unmount is immediate.
-							return { value: draft };
+							return result;
 						}}
 					/>
 				{:else}

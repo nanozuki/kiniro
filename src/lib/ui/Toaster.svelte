@@ -42,6 +42,10 @@
 		display: grid;
 		gap: 0.5rem;
 		inline-size: min(24rem, calc(100vw - 2rem));
+		border: 0;
+		padding: 0;
+		background: transparent;
+		overflow: visible;
 		pointer-events: none;
 	}
 	.toast {
