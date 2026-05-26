@@ -89,4 +89,3 @@ export function createSnapshotHistory(options: HistoryOptions = {}): SnapshotHis
 function isSameData(left: AppState, right: AppState): boolean {
 	return JSON.stringify(left) === JSON.stringify(right);
 }
-

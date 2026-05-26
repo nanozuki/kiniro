@@ -11,6 +11,7 @@ Read @README.md to get an overview of this project.
   preview.
 - `docs/third-party/README.md`: Index of local snapshots for external docs.
 - `docs/third-party/melt-ui`: Local snapshot of Melt UI next-gen docs.
+- `docs/third-party/runed`: Local snapshot of Runed docs.
 
 ## Source Layout
 
@@ -65,6 +66,11 @@ Write tests for reusable modules and non-trivial behavior.
 Test cases should be meaningful and focused on user-visible behavior. They
 should cover domain rules, edge cases, and potential failure points. Avoid tests
 that only mirror implementation details or verify trivial behavior.
+
+## Commits
+
+Use Conventional Commits 1.0.0 for all commit messages:
+<https://www.conventionalcommits.org/en/v1.0.0/>.
 
 ## Verification
 
