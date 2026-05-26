@@ -128,6 +128,105 @@ describe('theme import/export', () => {
 		expect(result.ok).toBe(true);
 	});
 
+	it('rebuilds family and ramp values against regenerated ids', () => {
+		const theme = createDefaultTheme({ name: 'Round Trip' });
+		const warm = createColorRamp({ name: 'Warm' });
+		const cool = createColorRamp({ name: 'Cool' });
+		const accents = createDefaultTheme({ familyName: 'Accents' }).structure.families[0];
+		accents.ramps = [cool];
+		theme.structure.families[0].name = 'Neutrals';
+		theme.structure.families[0].ramps = [warm];
+		theme.structure.families.push(accents);
+		const variant = theme.variants[0];
+		variant.name = 'light';
+		variant.values.families = {
+			[theme.structure.families[0].id]: {
+				stepScale: {
+					lightnessStart: 0.98,
+					lightnessEnd: 0.12,
+					lightnessOverrides: { 500: 0.54 },
+					reversed: false
+				},
+				ramps: {
+					[warm.id]: {
+						sourceColor: {
+							format: 'oklch',
+							oklch: { lightness: 0.72, chroma: 0.09, hue: 45 },
+							serialized: 'oklch(0.72 0.09 45)'
+						},
+						swatchOverrides: { 500: { chroma: 0.04 } }
+					}
+				}
+			},
+			[accents.id]: {
+				stepScale: {
+					lightnessStart: 0.88,
+					lightnessEnd: 0.22,
+					lightnessOverrides: { 700: 0.3 },
+					reversed: true
+				},
+				ramps: {
+					[cool.id]: {
+						sourceColor: {
+							format: 'oklch',
+							oklch: { lightness: 0.66, chroma: 0.14, hue: 280 },
+							serialized: 'oklch(0.66 0.14 280)'
+						},
+						swatchOverrides: { 700: { hue: 300 } }
+					}
+				}
+			}
+		};
+		const validated = validateThemeImport(exportThemes([theme]));
+		if (!validated.ok) throw new Error('expected valid import');
+
+		const result = applyThemeImport([], validated.file.themes, [{ importKey: '0' }]);
+		const importedTheme = result.themes[0];
+		const [importedNeutrals, importedAccents] = importedTheme.structure.families;
+		const importedLight = importedTheme.variants[0];
+		const importedNeutralsValues = importedLight.values.families[importedNeutrals.id];
+		const importedAccentsValues = importedLight.values.families[importedAccents.id];
+		const importedWarm = importedNeutrals.ramps[0];
+		const importedCool = importedAccents.ramps[0];
+
+		expect(importedTheme.id).not.toBe(theme.id);
+		expect(importedTheme.structure.families.map((family) => family.id)).not.toEqual(
+			theme.structure.families.map((family) => family.id)
+		);
+		expect(importedTheme.structure.families.map((family) => family.name)).toEqual([
+			'Neutrals',
+			'Accents'
+		]);
+		expect(importedNeutralsValues.stepScale).toEqual({
+			lightnessStart: 0.98,
+			lightnessEnd: 0.12,
+			lightnessOverrides: { 500: 0.54 },
+			reversed: false
+		});
+		expect(importedNeutralsValues.ramps[importedWarm.id]).toEqual({
+			sourceColor: {
+				format: 'oklch',
+				oklch: { lightness: 0.72, chroma: 0.09, hue: 45 },
+				serialized: 'oklch(0.72 0.09 45)'
+			},
+			swatchOverrides: { 500: { chroma: 0.04 } }
+		});
+		expect(importedAccentsValues.stepScale).toEqual({
+			lightnessStart: 0.88,
+			lightnessEnd: 0.22,
+			lightnessOverrides: { 700: 0.3 },
+			reversed: true
+		});
+		expect(importedAccentsValues.ramps[importedCool.id]).toEqual({
+			sourceColor: {
+				format: 'oklch',
+				oklch: { lightness: 0.66, chroma: 0.14, hue: 280 },
+				serialized: 'oklch(0.66 0.14 280)'
+			},
+			swatchOverrides: { 700: { hue: 300 } }
+		});
+	});
+
 	it('overwrites conflicting themes in place by default', () => {
 		const existing = [createDefaultTheme({ name: 'Same' }), createDefaultTheme({ name: 'Other' })];
 		const imported = exportThemes([createDefaultTheme({ name: 'Same' })]);

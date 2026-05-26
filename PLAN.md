@@ -61,7 +61,7 @@ Manual QA:
 
 ## Phase 2: ID-Free Import And Export
 
-Status: partly complete through Phase 1 boundary work.
+Status: complete.
 
 Goal: make exported files user-facing and independent of internal DOM/model IDs.
 
@@ -80,15 +80,15 @@ Tests:
 
 - [x] exported JSON contains no `id` keys at any depth.
 - [x] importing an exported file creates valid internal themes with generated IDs.
-- [ ] imported family/ramp values still line up with their regenerated structure.
+- [x] imported family/ramp values still line up with their regenerated structure.
 - [x] conflicting imports rename or overwrite by theme name.
 - [x] overwrite either preserves or regenerates IDs consistently, depending on the
       chosen implementation.
 
 Manual QA:
 
-- Export a non-trivial theme, inspect the JSON for readability, then import it
-  back and confirm the palette still renders correctly.
+- [x] Export a non-trivial theme, inspect the JSON for readability, then import it
+      back and confirm the palette still renders correctly.
 
 ## Phase 3: AppManager Persistence And Undo/Redo
 

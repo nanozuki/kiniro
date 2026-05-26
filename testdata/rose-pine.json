@@ -2,13 +2,12 @@
 	"version": 1,
 	"themes": [
 		{
-			"id": "theme-rose-pine",
 			"name": "Rose Pine",
 			"cssPrefix": "rose-pine",
+			"targetGamut": "srgb",
 			"structure": {
 				"families": [
 					{
-						"id": "family-rose-pine",
 						"name": "Rose Pine",
 						"stepScale": {
 							"stepCount": 9,
@@ -18,63 +17,48 @@
 						},
 						"ramps": [
 							{
-								"id": "ramp-base",
 								"name": "Base"
 							},
 							{
-								"id": "ramp-surface",
 								"name": "Surface"
 							},
 							{
-								"id": "ramp-overlay",
 								"name": "Overlay"
 							},
 							{
-								"id": "ramp-muted",
 								"name": "Muted"
 							},
 							{
-								"id": "ramp-subtle",
 								"name": "Subtle"
 							},
 							{
-								"id": "ramp-text",
 								"name": "Text"
 							},
 							{
-								"id": "ramp-love",
 								"name": "Love"
 							},
 							{
-								"id": "ramp-gold",
 								"name": "Gold"
 							},
 							{
-								"id": "ramp-rose",
 								"name": "Rose"
 							},
 							{
-								"id": "ramp-pine",
 								"name": "Pine"
 							},
 							{
-								"id": "ramp-foam",
 								"name": "Foam"
 							},
 							{
-								"id": "ramp-iris",
 								"name": "Iris"
 							},
 							{
-								"id": "ramp-highlight-low",
 								"name": "Highlight Low"
 							},
 							{
-								"id": "ramp-highlight-med",
 								"name": "Highlight Med"
 							},
 							{
-								"id": "ramp-highlight-high",
 								"name": "Highlight High"
 							}
 						]
@@ -83,19 +67,18 @@
 			},
 			"variants": [
 				{
-					"id": "variant-main",
 					"name": "Main",
 					"values": {
-						"families": {
-							"family-rose-pine": {
+						"families": [
+							{
 								"stepScale": {
 									"lightnessStart": 0.95,
 									"lightnessEnd": 0.05,
 									"lightnessOverrides": {},
 									"reversed": false
 								},
-								"ramps": {
-									"ramp-base": {
+								"ramps": [
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -107,7 +90,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-surface": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -119,7 +102,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-overlay": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -131,7 +114,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-muted": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -143,7 +126,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-subtle": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -155,7 +138,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-text": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -167,7 +150,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-love": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -179,7 +162,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-gold": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -191,7 +174,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-rose": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -203,7 +186,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-pine": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -215,7 +198,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-foam": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -227,7 +210,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-iris": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -239,7 +222,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-low": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -251,7 +234,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-med": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -263,7 +246,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-high": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -275,25 +258,24 @@
 										},
 										"swatchOverrides": {}
 									}
-								}
+								]
 							}
-						}
+						]
 					}
 				},
 				{
-					"id": "variant-moon",
 					"name": "Moon",
 					"values": {
-						"families": {
-							"family-rose-pine": {
+						"families": [
+							{
 								"stepScale": {
 									"lightnessStart": 0.95,
 									"lightnessEnd": 0.05,
 									"lightnessOverrides": {},
 									"reversed": false
 								},
-								"ramps": {
-									"ramp-base": {
+								"ramps": [
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -305,7 +287,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-surface": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -317,7 +299,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-overlay": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -329,7 +311,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-muted": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -341,7 +323,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-subtle": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -353,7 +335,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-text": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -365,7 +347,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-love": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -377,7 +359,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-gold": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -389,7 +371,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-rose": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -401,7 +383,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-pine": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -413,7 +395,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-foam": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -425,7 +407,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-iris": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -437,7 +419,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-low": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -449,7 +431,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-med": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -461,7 +443,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-high": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -473,25 +455,24 @@
 										},
 										"swatchOverrides": {}
 									}
-								}
+								]
 							}
-						}
+						]
 					}
 				},
 				{
-					"id": "variant-dawn",
 					"name": "Dawn",
 					"values": {
-						"families": {
-							"family-rose-pine": {
+						"families": [
+							{
 								"stepScale": {
 									"lightnessStart": 0.95,
 									"lightnessEnd": 0.05,
 									"lightnessOverrides": {},
 									"reversed": false
 								},
-								"ramps": {
-									"ramp-base": {
+								"ramps": [
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -503,7 +484,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-surface": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -515,7 +496,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-overlay": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -527,7 +508,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-muted": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -539,7 +520,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-subtle": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -551,7 +532,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-text": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -563,7 +544,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-love": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -575,7 +556,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-gold": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -587,7 +568,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-rose": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -599,7 +580,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-pine": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -611,7 +592,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-foam": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -623,7 +604,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-iris": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -635,7 +616,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-low": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -647,7 +628,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-med": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -659,7 +640,7 @@
 										},
 										"swatchOverrides": {}
 									},
-									"ramp-highlight-high": {
+									{
 										"sourceColor": {
 											"format": "hex",
 											"oklch": {
@@ -671,9 +652,9 @@
 										},
 										"swatchOverrides": {}
 									}
-								}
+								]
 							}
-						}
+						]
 					}
 				}
 			]
