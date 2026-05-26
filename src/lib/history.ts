@@ -1,9 +1,16 @@
 import { clone } from './clone';
-import type { AppState } from './model';
+import type { AppState, WorkspaceTab } from './model';
+
+export type HistoryUiState = {
+	selectedThemeId: string | null;
+	selectedVariantId: string | null;
+	workspaceTab: WorkspaceTab;
+};
 
 export type HistoryEntry = {
 	label: string;
 	data: AppState;
+	ui: HistoryUiState;
 };
 
 export type HistoryState = {
@@ -13,26 +20,33 @@ export type HistoryState = {
 
 export type HistorySnapshot = {
 	data: AppState;
+	ui: HistoryUiState;
 	history: HistoryState;
 	lastAction: string | null;
 };
 
 export type HistoryOptions = {
 	initialData?: AppState;
-	onRestore?: (data: AppState) => void;
+	initialUi?: HistoryUiState;
 };
 
-// SnapshotHistory tracks semantic App data commits only. UI state is repaired by
-// the owner through onRestore and is never stored in undo/redo entries.
+// SnapshotHistory tracks undoable app snapshots, including durable UI choices
+// that should be restored alongside authored data.
 export class SnapshotHistory {
 	data: AppState;
+	ui: HistoryUiState;
 	history: HistoryState = { past: [], future: [] };
 	lastAction: string | null = null;
-	private onRestore?: (data: AppState) => void;
 
 	constructor(options: HistoryOptions = {}) {
 		this.data = clone(options.initialData ?? { themes: [] });
-		this.onRestore = options.onRestore;
+		this.ui = clone(
+			options.initialUi ?? {
+				selectedThemeId: null,
+				selectedVariantId: null,
+				workspaceTab: 'palette'
+			}
+		);
 	}
 
 	get canUndo(): boolean {
@@ -43,39 +57,41 @@ export class SnapshotHistory {
 		return this.history.future.length > 0;
 	}
 
-	commit(label: string, nextData: AppState): boolean {
-		if (isSameData(this.data, nextData)) return false;
-		this.history.past.push({ label, data: clone(this.data) });
+	commit(label: string, next: { data: AppState; ui: HistoryUiState }): boolean {
+		if (isSameSnapshot({ data: this.data, ui: this.ui }, next)) return false;
+		this.history.past.push({ label, data: clone(this.data), ui: clone(this.ui) });
 		this.history.future = [];
-		this.data = clone(nextData);
+		this.data = clone(next.data);
+		this.ui = clone(next.ui);
 		this.lastAction = label;
 		return true;
 	}
 
-	undo(): AppState | null {
+	undo(): HistorySnapshot | null {
 		const entry = this.history.past.pop();
 		if (!entry) return null;
-		this.history.future.push({ label: this.lastAction ?? entry.label, data: clone(this.data) });
+		this.history.future.push({ label: entry.label, data: clone(this.data), ui: clone(this.ui) });
 		this.data = clone(entry.data);
+		this.ui = clone(entry.ui);
 		this.lastAction = `Undid ${entry.label}`;
-		this.onRestore?.(this.data);
-		return clone(this.data);
+		return this.snapshot();
 	}
 
-	redo(): AppState | null {
+	redo(): HistorySnapshot | null {
 		const entry = this.history.future.pop();
 		if (!entry) return null;
-		this.history.past.push({ label: entry.label, data: clone(this.data) });
+		this.history.past.push({ label: entry.label, data: clone(this.data), ui: clone(this.ui) });
 		this.data = clone(entry.data);
+		this.ui = clone(entry.ui);
 		this.lastAction = `Redid ${entry.label}`;
-		this.onRestore?.(this.data);
-		return clone(this.data);
+		return this.snapshot();
 	}
 
 	snapshot(limit?: number): HistorySnapshot {
 		const cap = (entries: HistoryEntry[]) => (limit == null ? entries : entries.slice(-limit));
 		return {
 			data: clone(this.data),
+			ui: clone(this.ui),
 			history: { past: clone(cap(this.history.past)), future: clone(cap(this.history.future)) },
 			lastAction: this.lastAction
 		};
@@ -86,6 +102,9 @@ export function createSnapshotHistory(options: HistoryOptions = {}): SnapshotHis
 	return new SnapshotHistory(options);
 }
 
-function isSameData(left: AppState, right: AppState): boolean {
+function isSameSnapshot(
+	left: { data: AppState; ui: HistoryUiState },
+	right: { data: AppState; ui: HistoryUiState }
+): boolean {
 	return JSON.stringify(left) === JSON.stringify(right);
 }

@@ -92,6 +92,8 @@ Manual QA:
 
 ## Phase 3: AppManager Persistence And Undo/Redo
 
+Status: complete.
+
 Goal: make AppManager the only component-visible owner of persistence and
 undo/redo.
 
@@ -121,9 +123,9 @@ Tests:
 
 Manual QA:
 
-- Use the UI to rename a theme and a variant, then verify Undo and Redo buttons
-  behave correctly.
-- Reload after a commit and confirm state and history survive.
+- [x] Use the UI to rename a theme and a variant, then verify Undo and Redo buttons
+      behave correctly.
+- [x] Reload after a commit and confirm state and history survive.
 
 ## Phase 4: Inline Edit Sessions
 
@@ -210,3 +212,15 @@ Manual QA:
 
 - Full browser pass through create, rename, add family/ramp, edit scale, export,
   import, undo, redo, reload, and copy CSS workflows.
+
+## Follow-up
+
+### Complex onsubmit flow in ThemeManager
+
+- Theme and variant inline rename submit currently waits for a Svelte flush before
+  invoking the outer rename callback.
+- This was added as a tactical fix for a repeated-submit UI bug during the Phase 3
+  persistence/undo refactor.
+- Refactor inline edit flow so submit stays synchronous for local rename commits.
+- Remove any reliance on `tick()` or similar flush-order coordination in rename submit.
+- Keep regression coverage for repeated theme/variant rename submit without reload.

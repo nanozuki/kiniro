@@ -1,11 +1,22 @@
 import { describe, expect, it } from 'vitest';
 import { createSourceColor } from '../color';
+import { exportThemes, validateThemeImport } from '../importExport';
+import { createDefaultPersistedState, STORAGE_KEY, type StorageLike } from '../storage';
 import { createDefaultTheme } from '../model';
 import { createAppManager } from './state.svelte';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
 
-describe('AppManager selection and UI state', () => {
+function memoryStorage(initial: Record<string, string> = {}): StorageLike {
+	const data = { ...initial };
+	return {
+		getItem: (key) => data[key] ?? null,
+		setItem: (key, value) => (data[key] = value),
+		removeItem: (key) => delete data[key]
+	};
+}
+
+describe('AppManager selection and persistence', () => {
 	it('repairs invalid selection to a valid screen', () => {
 		const theme = createDefaultTheme();
 		const variant = theme.variants[0];
@@ -18,36 +29,100 @@ describe('AppManager selection and UI state', () => {
 		expect(manager.ui.workspaceTab).toBe('palette');
 	});
 
-	it('stores theme target gamut in app data', () => {
+	it('rejects invalid loaded state before components read it', () => {
+		const state = createDefaultPersistedState();
 		const theme = createDefaultTheme();
-		const manager = createAppManager({
-			data: { themes: [theme] }
-		});
-		manager.setThemeTargetGamut(theme.id, 'p3');
+		theme.variants = [];
+		state.data.themes = [theme];
+		state.ui = {
+			selectedThemeId: 'missing',
+			selectedVariantId: 'missing',
+			workspaceTab: 'cssVariables'
+		};
+		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(state) });
 
-		expect(manager.selectedTheme?.targetGamut).toBe('p3');
+		const manager = createAppManager({ storage });
+		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
+
+		expect(manager.selectedTheme?.id).toBe(theme.id);
+		expect(manager.selectedVariant).not.toBeNull();
 		expect(manager.ui.workspaceTab).toBe('palette');
+		expect(saved.ui.selectedThemeId).toBe(theme.id);
+		expect(saved.ui.selectedVariantId).toBe(manager.selectedVariant?.id);
 	});
 
-	it('repairs selection after imported themes replace app data', () => {
-		const manager = createAppManager({
-			data: { themes: [createDefaultTheme()] }
-		});
-		const imported = createDefaultTheme();
-		const importedVariant = imported.variants[0];
+	it('writes localStorage after commit mutations but not during preview mutations', () => {
+		const theme = createDefaultTheme();
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [theme];
+		state.ui = {
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
+			workspaceTab: 'palette'
+		};
+		const manager = createAppManager({ persistedState: state, storage });
 
-		manager.data.themes = [imported];
-		manager.ui.selection.themeId = imported.id;
-		manager.ui.selection.variantId = imported.variants[0].id;
-		manager.ui.workspaceTab = 'cssVariables';
-		manager.repairUiState();
+		manager.previewThemeName(theme.id, 'Preview');
+		expect(storage.getItem(STORAGE_KEY)).toBeNull();
 
-		expect(manager.ui.selection).toEqual({
-			themeId: imported.id,
-			variantId: importedVariant.id
-		});
-		expect(manager.selectedTheme?.id).toBe(imported.id);
-		expect(manager.selectedVariant?.id).toBe(importedVariant.id);
+		manager.renameTheme(theme.id, 'Preview');
+		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
+
+		expect(manager.history.past).toHaveLength(1);
+		expect(saved.data.themes[0].name).toBe('Preview');
+	});
+
+	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {
+		const first = createDefaultTheme({ name: 'One' });
+		const second = createDefaultTheme({ name: 'Two' });
+		const manager = createAppManager({ data: { themes: [first, second] } });
+
+		manager.selectTheme(second.id);
+		manager.addRamp(second.structure.families[0].id, source, 'Ramp');
+		manager.setWorkspaceTab('cssVariables');
+		manager.renameTheme(second.id, 'Renamed');
+		manager.selectTheme(first.id);
+		manager.setWorkspaceTab('palette');
+
+		manager.undo();
+		expect(manager.data.themes[1].name).toBe('Two');
+		expect(manager.ui.selection.themeId).toBe(second.id);
+		expect(manager.ui.selection.variantId).toBe(second.variants[0].id);
+		expect(manager.ui.workspaceTab).toBe('cssVariables');
+
+		manager.redo();
+		expect(manager.data.themes[1].name).toBe('Renamed');
+		expect(manager.ui.selection.themeId).toBe(second.id);
+		expect(manager.ui.selection.variantId).toBe(second.variants[0].id);
+		expect(manager.ui.workspaceTab).toBe('cssVariables');
+	});
+
+	it('clears redo history after a new commit', () => {
+		const theme = createDefaultTheme();
+		const manager = createAppManager({ data: { themes: [theme] } });
+
+		manager.renameTheme(theme.id, 'One');
+		manager.undo();
+		expect(manager.canRedo).toBe(true);
+		manager.setThemeCssPrefix(theme.id, 'brand');
+		expect(manager.canRedo).toBe(false);
+	});
+
+	it('imports themes through AppManager, creates history entries, and persists', () => {
+		const existing = createDefaultTheme({ name: 'Existing' });
+		const imported = createDefaultTheme({ name: 'Imported' });
+		const storage = memoryStorage();
+		const manager = createAppManager({ data: { themes: [existing] }, storage });
+		const validated = validateThemeImport(exportThemes([imported]));
+		if (!validated.ok) throw new Error('expected valid import');
+
+		manager.importThemes(validated.file, [{ importKey: '0' }]);
+		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
+
+		expect(manager.history.past.at(-1)?.label).toBe('Import themes');
+		expect(manager.selectedTheme?.name).toBe('Imported');
+		expect(saved.data.themes.map((theme: { name: string }) => theme.name)).toContain('Imported');
 	});
 });
 
@@ -209,12 +284,16 @@ describe('AppManager ramp and swatch operations', () => {
 		manager.resetSwatchChannel(familyId, rampId, '300', 'hue');
 		expect(
 			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
-		).toEqual({ '300': { chroma: 0.2 } });
+		).toEqual({
+			'300': { chroma: 0.2 }
+		});
 
 		manager.reverseFamilyLightness(familyId);
 		expect(
 			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
-		).toEqual({ '700': { chroma: 0.2 } });
+		).toEqual({
+			'700': { chroma: 0.2 }
+		});
 		manager.resetSwatchColor(familyId, rampId, '700');
 		expect(
 			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides

@@ -6,6 +6,7 @@
 -->
 
 <script lang="ts">
+	import { tick } from 'svelte';
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
 	import {
 		ensureUniqueName,
@@ -27,7 +28,9 @@
 		onaddtheme?: () => void;
 		onaddvariant?: () => void;
 		onrenametheme?: (id: string, name: string) => void;
+		onpreviewtheme?: (id: string, name: string) => void;
 		onrenamevariant?: (id: string, name: string) => void;
+		onpreviewvariant?: (id: string, name: string) => void;
 		ondeletetheme?: (id: string) => void;
 		ondeletevariant?: (id: string) => void;
 		onthemegamut?: (id: string, gamut: Gamut) => void;
@@ -42,7 +45,9 @@
 		onaddtheme = () => {},
 		onaddvariant = () => {},
 		onrenametheme = (_id: string, _name: string) => {},
+		onpreviewtheme = (_id: string, _name: string) => {},
 		onrenamevariant = (_id: string, _name: string) => {},
+		onpreviewvariant = (_id: string, _name: string) => {},
 		ondeletetheme = (_id: string) => {},
 		ondeletevariant = (_id: string) => {},
 		onthemegamut = (_id: string, _gamut: Gamut) => {}
@@ -52,6 +57,10 @@
 	let editingVariant = $state(false);
 	let themeDraft = $state('');
 	let variantDraft = $state('');
+	let themeEditSession = $state(0);
+	let variantEditSession = $state(0);
+	let themeHeading: HTMLHeadingElement | null = $state(null);
+	let variantHeading: HTMLHeadingElement | null = $state(null);
 	let selectedTheme = $derived(themes.find((theme: Theme) => theme.id === selectedThemeId) ?? null);
 	let selectedVariant = $derived(
 		selectedTheme?.variants.find((variant: ThemeVariant) => variant.id === selectedVariantId) ??
@@ -122,25 +131,37 @@
 
 		<div class="titles">
 			{#if editingTheme}
-				<InlineInput
-					aria-label="Theme name"
-					value={themeDraft}
-					oninput={(draft) => {
-						themeDraft = draft;
-						onrenametheme(selectedTheme.id, draft);
-					}}
-					onsubmit={(draft) => {
-						const result = resolveName(draft, themeNames(themes), selectedTheme, 'Theme', 'Theme');
-						onrenametheme(selectedTheme.id, result.value);
-						editingTheme = false;
-						return result;
-					}}
-				/>
+				{#key themeEditSession}
+					<InlineInput
+						aria-label="Theme name"
+						value={themeDraft}
+						oninput={(draft) => {
+							themeDraft = draft;
+							onpreviewtheme(selectedTheme.id, draft);
+						}}
+						onsubmit={(draft) => {
+							const result = resolveName(
+								draft,
+								themeNames(themes),
+								selectedTheme,
+								'Theme',
+								'Theme'
+							);
+							editingTheme = false;
+							void tick().then(() => {
+								themeHeading?.focus();
+								onrenametheme(selectedTheme.id, result.value);
+							});
+							return result;
+						}}
+					/>
+				{/key}
 			{:else}
-				<h2>{selectedTheme.name}</h2>
+				<h2 bind:this={themeHeading} tabindex="-1">{selectedTheme.name}</h2>
 				<button
 					onclick={() => {
 						themeDraft = selectedTheme.name;
+						themeEditSession += 1;
 						editingTheme = true;
 					}}>Rename theme</button
 				>
@@ -159,31 +180,37 @@
 
 			{#if selectedVariant}
 				{#if editingVariant}
-					<InlineInput
-						aria-label="Variant name"
-						value={variantDraft}
-						oninput={(draft) => {
-							variantDraft = draft;
-							onrenamevariant(selectedVariant.id, draft);
-						}}
-						onsubmit={(draft) => {
-							const result = resolveName(
-								draft,
-								variantNames(selectedTheme),
-								selectedVariant,
-								'Variant',
-								'Variant'
-							);
-							onrenamevariant(selectedVariant.id, result.value);
-							editingVariant = false;
-							return result;
-						}}
-					/>
+					{#key variantEditSession}
+						<InlineInput
+							aria-label="Variant name"
+							value={variantDraft}
+							oninput={(draft) => {
+								variantDraft = draft;
+								onpreviewvariant(selectedVariant.id, draft);
+							}}
+							onsubmit={(draft) => {
+								const result = resolveName(
+									draft,
+									variantNames(selectedTheme),
+									selectedVariant,
+									'Variant',
+									'Variant'
+								);
+								editingVariant = false;
+								void tick().then(() => {
+									variantHeading?.focus();
+									onrenamevariant(selectedVariant.id, result.value);
+								});
+								return result;
+							}}
+						/>
+					{/key}
 				{:else}
-					<h3>{selectedVariant.name}</h3>
+					<h3 bind:this={variantHeading} tabindex="-1">{selectedVariant.name}</h3>
 					<button
 						onclick={() => {
 							variantDraft = selectedVariant.name;
+							variantEditSession += 1;
 							editingVariant = true;
 						}}>Rename variant</button
 					>

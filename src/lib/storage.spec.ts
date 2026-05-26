@@ -31,7 +31,12 @@ describe('storage', () => {
 		};
 		state.history.past = Array.from({ length: 105 }, (_, index) => ({
 			label: `Action ${index}`,
-			data: { themes: [] }
+			data: { themes: [] },
+			ui: {
+				selectedThemeId: null,
+				selectedVariantId: null,
+				workspaceTab: 'palette'
+			}
 		}));
 
 		saveState(storage, state);

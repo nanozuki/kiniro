@@ -2,7 +2,7 @@
 @component
 - The app shell for Kiniro.
 - Switches between the empty landing state and the editor workspace.
-- Wires AppManager mutations to persistence while keeping generated palette data ephemeral.
+- Keeps persistence, undo/redo, and import application behind AppManager.
 -->
 
 <script lang="ts">
@@ -14,31 +14,14 @@
 	import ThemeManager from './ThemeManager.svelte';
 	import WorkspaceTabs from './WorkspaceTabs.svelte';
 	import { createSourceColor } from '$lib/color';
-	import {
-		applyThemeImport,
-		type ImportThemeChoice,
-		type ThemeExportFile
-	} from '$lib/importExport';
+	import type { ImportThemeChoice, ThemeExportFile } from '$lib/importExport';
 	import { generateVariantPalette } from '$lib/palette';
 	import { createAppManager } from '$lib/state/state.svelte';
-	import { createDefaultPersistedState, loadState, saveState } from '$lib/storage';
 	import { addToast } from '$lib/ui/Toaster.svelte';
 
-	const loaded = browser
-		? loadState(localStorage)
-		: { ok: true, state: createDefaultPersistedState(), reset: false, error: null };
-	const app = createAppManager({
-		data: loaded.state.data,
-		ui: {
-			selection: {
-				themeId: loaded.state.ui.selectedThemeId,
-				variantId: loaded.state.ui.selectedVariantId
-			},
-			workspaceTab: loaded.state.ui.workspaceTab
-		}
-	});
+	const app = createAppManager({ storage: browser ? localStorage : undefined });
 
-	let themes = $derived([...app.data.themes]);
+	let themes = $derived(app.data.themes);
 	let selectedTheme = $derived(app.selectedTheme);
 	let selectedVariant = $derived(app.selectedVariant);
 	let selectedThemeId = $derived(app.ui.selection.themeId);
@@ -49,7 +32,7 @@
 	);
 
 	$effect(() => {
-		if (loaded.reset) {
+		if (app.storageReset) {
 			addToast({
 				type: 'assertive',
 				data: {
@@ -60,13 +43,10 @@
 		}
 	});
 
-	function mutate(change: () => void) {
-		change();
-		syncStorage();
-	}
 	function addFirstTheme() {
-		mutate(() => void app.addTheme());
+		app.addTheme();
 	}
+
 	function download(filename: string, json: string) {
 		if (!browser) return;
 		const url = URL.createObjectURL(new Blob([json], { type: 'application/json' }));
@@ -76,44 +56,9 @@
 		link.click();
 		URL.revokeObjectURL(url);
 	}
+
 	function importThemes(file: ThemeExportFile, choices: ImportThemeChoice[]) {
-		mutate(() => {
-			const result = applyThemeImport(app.data.themes, file.themes, choices);
-			app.data.themes = result.themes;
-
-			const importedTheme =
-				result.themes.find((theme) => theme.id === result.selectedThemeId) ??
-				result.themes[0] ??
-				null;
-
-			app.ui.selection.themeId = importedTheme?.id ?? null;
-			app.ui.selection.variantId = importedTheme?.variants[0]?.id ?? null;
-			app.ui.workspaceTab = 'palette';
-			app.repairUiState();
-		});
-	}
-	function syncStorage() {
-		if (!browser) return;
-		try {
-			saveState(localStorage, {
-				version: 1,
-				data: app.data,
-				ui: {
-					selectedThemeId: app.ui.selection.themeId,
-					selectedVariantId: app.ui.selection.variantId,
-					workspaceTab: app.ui.workspaceTab
-				},
-				history: { past: [], future: [] }
-			});
-		} catch {
-			addToast({
-				type: 'assertive',
-				data: {
-					title: 'Autosave failed',
-					description: 'Kiniro will retry later.'
-				}
-			});
-		}
+		app.importThemes(file, choices);
 	}
 </script>
 
@@ -127,9 +72,14 @@
 		</div>
 		<div class="actions">
 			{#if selectedTheme}
-				<button disabled>Undo</button><button disabled>Redo</button>
+				<button type="button" disabled={!app.canUndo} onclick={() => app.undo()}>Undo</button>
+				<button type="button" disabled={!app.canRedo} onclick={() => app.redo()}>Redo</button>
 			{/if}
-			<ImportExportDialogs {themes} onexport={download} onimport={importThemes} />
+			<ImportExportDialogs
+				{themes}
+				onexport={(filename, _json) => download(filename, app.exportThemes())}
+				onimport={importThemes}
+			/>
 			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
 		</div>
 	</section>
@@ -140,15 +90,17 @@
 				{themes}
 				{selectedThemeId}
 				{selectedVariantId}
-				onselecttheme={(id) => mutate(() => app.selectTheme(id))}
-				onselectvariant={(id) => mutate(() => app.selectVariant(id))}
-				onaddtheme={() => mutate(() => void app.addTheme())}
-				onaddvariant={() => mutate(() => void app.addVariant())}
-				onrenametheme={(id, name) => mutate(() => app.renameTheme(id, name))}
-				onrenamevariant={(id, name) => mutate(() => app.renameVariant(id, name))}
-				ondeletetheme={(id) => mutate(() => app.deleteTheme(id))}
-				ondeletevariant={(id) => mutate(() => app.deleteVariant(id))}
-				onthemegamut={(id, gamut) => mutate(() => app.setThemeTargetGamut(id, gamut))}
+				onselecttheme={(id) => app.selectTheme(id)}
+				onselectvariant={(id) => app.selectVariant(id)}
+				onaddtheme={() => void app.addTheme()}
+				onaddvariant={() => void app.addVariant()}
+				onrenametheme={(id, name) => app.renameTheme(id, name)}
+				onpreviewtheme={(id, name) => app.previewThemeName(id, name)}
+				onrenamevariant={(id, name) => app.renameVariant(id, name)}
+				onpreviewvariant={(id, name) => app.previewVariantName(id, name)}
+				ondeletetheme={(id) => app.deleteTheme(id)}
+				ondeletevariant={(id) => app.deleteVariant(id)}
+				onthemegamut={(id, gamut) => app.setThemeTargetGamut(id, gamut)}
 			/>
 		</section>
 
@@ -156,7 +108,7 @@
 			<WorkspaceTabs
 				theme={selectedTheme}
 				activeTab={workspaceTab}
-				onselect={(tab) => mutate(() => app.setWorkspaceTab(tab))}
+				onselect={(tab) => app.setWorkspaceTab(tab)}
 			/>
 		</section>
 
@@ -167,23 +119,17 @@
 					variant={selectedVariant}
 					targetGamut={selectedTheme.targetGamut}
 					variantCount={selectedTheme.variants.length}
-					onaddfamily={() => mutate(() => void app.addFamily())}
-					onrenamefamily={(id, name) => mutate(() => app.renameFamily(id, name))}
-					ondeletefamily={(id) => mutate(() => app.deleteFamily(id))}
+					onaddfamily={() => void app.addFamily()}
+					onrenamefamily={(id, name) => app.renameFamily(id, name)}
+					ondeletefamily={(id) => app.deleteFamily(id)}
 					onaddramp={(familyId) =>
-						mutate(
-							() =>
-								void app.addRamp(
-									familyId,
-									createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 0 })
-								)
-						)}
+						void app.addRamp(familyId, createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 0 }))}
 				/>
 			{:else if workspaceTab === 'cssVariables'}
 				<CSSVariables
 					theme={selectedTheme}
 					variant={selectedVariant}
-					onprefix={(prefix) => mutate(() => app.setThemeCssPrefix(selectedTheme.id, prefix))}
+					onprefix={(prefix) => app.setThemeCssPrefix(selectedTheme.id, prefix)}
 				/>
 			{:else if palette}
 				<ContrastChecker {palette} gamut={selectedTheme.targetGamut} />

@@ -105,7 +105,8 @@ export const uiStateSchema = z.strictObject({
 
 export const undoEntrySchema = z.strictObject({
 	label: z.string(),
-	data: appStateSchema
+	data: appStateSchema,
+	ui: uiStateSchema
 });
 
 export const undoStackSchema = z.strictObject({

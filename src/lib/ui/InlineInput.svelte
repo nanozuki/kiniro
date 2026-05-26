@@ -31,6 +31,7 @@
 		...aria
 	}: InlineInputProps = $props();
 
+	let input: HTMLInputElement | null = $state(null);
 	let draft = $state('');
 	let previous = $state('');
 	let editing = $state(false);
@@ -40,6 +41,7 @@
 		if (!editing && value !== draft) {
 			draft = value;
 			previous = value;
+			submitted = false;
 		}
 	});
 
@@ -61,6 +63,7 @@
 		previous = result.value;
 		submitted = true;
 		editing = false;
+		input?.blur();
 		if (result.error) {
 			addToast({
 				type: 'assertive',
@@ -82,6 +85,7 @@
 </script>
 
 <input
+	bind:this={input}
 	type="text"
 	{disabled}
 	{inputmode}

@@ -150,4 +150,62 @@ describe('ThemeManager', () => {
 			.element(page.getByText('Variant name already exists; using "Moon 2".'))
 			.toBeInTheDocument();
 	});
+
+	it('supports repeated theme rename submissions when the parent mutates nested state in place', async () => {
+		const renderedThemes = themes();
+		const selectedTheme = renderedThemes[0];
+		const selectedVariant = selectedTheme.variants[0];
+		const { rerender } = render(ThemeManager, {
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			},
+			onpreviewtheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			}
+		});
+
+		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rose Pine');
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Rosé');
+		await userEvent.keyboard('{Enter}');
+		await rerender({
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			},
+			onpreviewtheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			}
+		});
+		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rosé');
+
+		await page.getByRole('button', { name: 'Rename theme' }).click();
+		await page.getByLabelText('Theme name').fill('Aurora');
+		await userEvent.keyboard('{Enter}');
+		await rerender({
+			themes: renderedThemes,
+			selectedThemeId: selectedTheme.id,
+			selectedVariantId: selectedVariant.id,
+			onrenametheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			},
+			onpreviewtheme: (id, name) => {
+				const theme = renderedThemes.find((item) => item.id === id);
+				if (theme) theme.name = name;
+			}
+		});
+		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Aurora');
+		await expect.element(page.getByRole('tab', { name: 'Aurora' })).toBeInTheDocument();
+	});
 });
