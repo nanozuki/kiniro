@@ -10,22 +10,21 @@
 		exportThemes,
 		validateThemeImport,
 		type ImportConflictChoice,
+		type ImportThemeChoice,
 		type ThemeExportFile
 	} from '$lib/importExport';
 	import type { Theme } from '$lib/model';
 
-	type ImportChoice = { themeId: string; conflict?: ImportConflictChoice };
-
 	type ImportExportDialogsProps = {
 		themes: Theme[];
 		onexport?: (filename: string, json: string) => void;
-		onimport?: (file: ThemeExportFile, choices: ImportChoice[]) => void;
+		onimport?: (file: ThemeExportFile, choices: ImportThemeChoice[]) => void;
 	};
 
 	let {
 		themes,
 		onexport = (_filename: string, _json: string) => {},
-		onimport = (_file: ThemeExportFile, _choices: ImportChoice[]) => {}
+		onimport = (_file: ThemeExportFile, _choices: ImportThemeChoice[]) => {}
 	}: ImportExportDialogsProps = $props();
 
 	let exportOpen = $state(false);
@@ -34,7 +33,7 @@
 	let filename = $state('kiniro-themes.json');
 	let importSummary = $state('');
 	let importFile = $state<ThemeExportFile | null>(null);
-	let importChoices = $state<ImportChoice[]>([]);
+	let importChoices = $state<ImportThemeChoice[]>([]);
 	let exportSelection = $derived(
 		themes.filter((theme: Theme) => selectedThemeIds.includes(theme.id))
 	);
@@ -67,29 +66,30 @@
 		}
 		importFile = result.file;
 		importSummary = `${result.file.themes.length} theme(s) ready to import.`;
-		importChoices = result.file.themes.map((theme) => ({
-			themeId: theme.id,
+		importChoices = result.file.themes.map((theme, index) => ({
+			importKey: String(index),
 			conflict: hasConflict(theme) ? 'rename' : undefined
 		}));
 	}
 
-	function hasConflict(theme: Theme) {
+	function hasConflict(theme: ThemeExportFile['themes'][number]) {
 		return themes.some((existing: Theme) => existing.name === theme.name);
 	}
 
-	function choose(themeId: string, checked: boolean) {
-		if (checked) importChoices = [...importChoices, { themeId, conflict: conflictFor(themeId) }];
-		else importChoices = importChoices.filter((choice) => choice.themeId !== themeId);
+	function choose(importKey: string, checked: boolean) {
+		if (checked)
+			importChoices = [...importChoices, { importKey, conflict: conflictFor(importKey) }];
+		else importChoices = importChoices.filter((choice) => choice.importKey !== importKey);
 	}
 
-	function conflictFor(themeId: string): ImportConflictChoice | undefined {
-		const theme = importFile?.themes.find((item) => item.id === themeId);
+	function conflictFor(importKey: string): ImportConflictChoice | undefined {
+		const theme = importFile?.themes[Number(importKey)];
 		return theme && hasConflict(theme) ? 'rename' : undefined;
 	}
 
-	function setConflict(themeId: string, conflict: ImportConflictChoice) {
+	function setConflict(importKey: string, conflict: ImportConflictChoice) {
 		importChoices = importChoices.map((choice) =>
-			choice.themeId === themeId ? { ...choice, conflict } : choice
+			choice.importKey === importKey ? { ...choice, conflict } : choice
 		);
 	}
 
@@ -143,13 +143,13 @@
 		>
 		{#if importSummary}<p role="status">{importSummary}</p>{/if}
 		{#if importFile}
-			{#each importFile.themes as theme}
+			{#each importFile.themes as theme, index}
 				<div class="choice">
 					<label
 						><input
 							type="checkbox"
-							checked={importChoices.some((choice) => choice.themeId === theme.id)}
-							onchange={(event) => choose(theme.id, event.currentTarget.checked)}
+							checked={importChoices.some((choice) => choice.importKey === String(index))}
+							onchange={(event) => choose(String(index), event.currentTarget.checked)}
 						/>
 						{theme.name}</label
 					>
@@ -158,10 +158,10 @@
 							>Conflict
 							<select
 								aria-label={`Conflict choice for ${theme.name}`}
-								value={importChoices.find((choice) => choice.themeId === theme.id)?.conflict ??
-									'rename'}
+								value={importChoices.find((choice) => choice.importKey === String(index))
+									?.conflict ?? 'rename'}
 								onchange={(event) =>
-									setConflict(theme.id, event.currentTarget.value as ImportConflictChoice)}
+									setConflict(String(index), event.currentTarget.value as ImportConflictChoice)}
 							>
 								<option value="rename">Rename imported theme</option>
 								<option value="overwrite">Overwrite existing theme</option>

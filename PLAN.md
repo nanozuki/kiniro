@@ -33,25 +33,27 @@ modules or classes.
 
 ## Phase 1: Schemas And DTO Boundaries
 
+Status: complete.
+
 Goal: create a reliable runtime boundary for internal persisted state and public
 import/export files.
 
 Work:
 
-- Add zod schemas for the full internal persisted state shape, including app
-  data, durable UI state, and history entries.
-- Add zod schemas for the public export/import DTO shape, with no IDs.
-- Stop reusing internal `Theme` as the export file type.
-- Keep schema modules reusable by storage, import/export, and AppManager tests.
+- [x] Add zod schemas for the full internal persisted state shape, including app
+      data, durable UI state, and history entries.
+- [x] Add zod schemas for the public export/import DTO shape, with no IDs.
+- [x] Stop reusing internal `Theme` as the export file type.
+- [x] Keep schema modules reusable by storage, import/export, and AppManager tests.
 
 Tests:
 
-- localStorage rejects invalid nested theme/variant/family/ramp data.
-- localStorage accepts valid internal persisted state, including IDs and history.
-- import rejects invalid nested public export data.
-- import accepts valid public ID-free export data.
-- Type-level or runtime tests should make it hard to accidentally include `id`
-  in the public export DTO.
+- [x] localStorage rejects invalid nested theme/variant/family/ramp data.
+- [x] localStorage accepts valid internal persisted state, including IDs and history.
+- [x] import rejects invalid nested public export data.
+- [x] import accepts valid public ID-free export data.
+- [x] Type-level or runtime tests should make it hard to accidentally include `id`
+      in the public export DTO.
 
 Manual QA:
 
@@ -59,27 +61,29 @@ Manual QA:
 
 ## Phase 2: ID-Free Import And Export
 
+Status: partly complete through Phase 1 boundary work.
+
 Goal: make exported files user-facing and independent of internal DOM/model IDs.
 
 Work:
 
-- Change `exportThemes` to emit public DTOs with no `id` fields anywhere.
-- Change import validation to parse public DTOs through zod.
-- Convert imported public DTOs into internal themes with freshly generated IDs.
-- Remap family and ramp values from the public array structure into internal
-  ID-keyed records.
-- Update import choices to use an array index or UI-only import key instead of
-  imported theme IDs.
-- Preserve import conflict behavior, with overwrite matched by theme name.
+- [x] Change `exportThemes` to emit public DTOs with no `id` fields anywhere.
+- [x] Change import validation to parse public DTOs through zod.
+- [x] Convert imported public DTOs into internal themes with freshly generated IDs.
+- [x] Remap family and ramp values from the public array structure into internal
+      ID-keyed records.
+- [x] Update import choices to use an array index or UI-only import key instead of
+      imported theme IDs.
+- [x] Preserve import conflict behavior, with overwrite matched by theme name.
 
 Tests:
 
-- exported JSON contains no `id` keys at any depth.
-- importing an exported file creates valid internal themes with generated IDs.
-- imported family/ramp values still line up with their regenerated structure.
-- conflicting imports rename or overwrite by theme name.
-- overwrite either preserves or regenerates IDs consistently, depending on the
-  chosen implementation.
+- [x] exported JSON contains no `id` keys at any depth.
+- [x] importing an exported file creates valid internal themes with generated IDs.
+- [ ] imported family/ramp values still line up with their regenerated structure.
+- [x] conflicting imports rename or overwrite by theme name.
+- [x] overwrite either preserves or regenerates IDs consistently, depending on the
+      chosen implementation.
 
 Manual QA:
 

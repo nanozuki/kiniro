@@ -51,8 +51,8 @@ describe('ImportExportDialogs', () => {
 		await page.getByLabelText('Conflict choice for Theme 1').selectOptions('overwrite');
 		await page.getByRole('button', { name: 'Confirm import' }).click();
 		expect(onimport).toHaveBeenCalledWith(
-			expect.objectContaining({ themes: [expect.objectContaining({ id: imported.id })] }),
-			[{ themeId: imported.id, conflict: 'overwrite' }]
+			expect.objectContaining({ themes: [expect.objectContaining({ name: imported.name })] }),
+			[{ importKey: '0', conflict: 'overwrite' }]
 		);
 	});
 });

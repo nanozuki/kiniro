@@ -45,6 +45,60 @@ describe('storage', () => {
 		expect(loaded.state.history.past[0].label).toBe('Action 5');
 	});
 
+	it('rejects invalid nested theme, variant, family, and ramp data', () => {
+		const state = createDefaultPersistedState();
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		const variant = theme.variants[0];
+		state.data.themes = [theme];
+		const invalidState = {
+			...state,
+			data: {
+				themes: [
+					{
+						...theme,
+						structure: {
+							families: [
+								{
+									...family,
+									ramps: [{ id: 'ramp-id' }]
+								}
+							]
+						},
+						variants: [
+							{
+								...variant,
+								values: {
+									families: {
+										[family.id]: {
+											stepScale: { ...variant.values.families[family.id].stepScale },
+											ramps: {
+												'ramp-id': {
+													sourceColor: {
+														format: 'bad',
+														oklch: { lightness: 0.5, chroma: 0.1, hue: 0 },
+														serialized: 'bad'
+													},
+													swatchOverrides: {}
+												}
+											}
+										}
+									}
+								}
+							}
+						]
+					}
+				]
+			}
+		};
+		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(invalidState) });
+
+		const loaded = loadState(storage);
+
+		expect(loaded.ok).toBe(false);
+		expect(storage.getItem(STORAGE_KEY)).toBeNull();
+	});
+
 	it('ignores invalid stored data safely and reports reset status', () => {
 		const storage = memoryStorage({ [STORAGE_KEY]: '{bad json' });
 
