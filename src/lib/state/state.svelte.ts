@@ -62,9 +62,10 @@ export type AppManagerOptions = {
 	ui?: Partial<UiState>;
 };
 
-// AppManager is the mutation boundary for app data and UI state. App data
-// contains only authored palette data; UI state contains navigation and preview
-// choices, and every data operation repairs selection enough to keep the screen valid.
+// AppManager owns Kiniro's persisted state. Components keep ephemeral interaction
+// state locally, but every change to authored app data, durable UI choices,
+// undo/redo history, or persistence must go through AppManager methods so
+// validation, selection repair, reactivity, and storage stay coordinated.
 export class AppManager {
 	data = $state<AppState>(createEmptyAppState());
 	ui = $state<UiState>({
@@ -409,4 +410,3 @@ function createDefaultFamilyValues(): ColorFamilyValues {
 function themeHasRamps(theme: Theme): boolean {
 	return theme.structure.families.some((family) => family.ramps.length > 0);
 }
-

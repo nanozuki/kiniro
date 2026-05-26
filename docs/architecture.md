@@ -19,27 +19,39 @@ Use a small file-structure rule set:
 
 ## State Split
 
-Kiniro keeps state in two layers:
+Kiniro keeps state in two ownership layers:
 
-- **App data**: user-authored palette data such as themes, variants, shared
-  family/ramp structure, step-scale values, source colors, swatch overrides,
-  theme CSS prefixes, and each Theme's target gamut.
-- **UI state**: navigation and presentation state such as the selected theme,
-  selected variant, and selected workspace tab.
+- **AppManager persisted state**: user-authored palette data plus durable UI
+  choices that should survive reloads. Authored data includes themes, variants,
+  shared family/ramp structure, step-scale values, source colors, swatch
+  overrides, theme CSS prefixes, and each Theme's target gamut. Durable UI
+  choices include the selected theme, selected variant, and selected workspace
+  tab.
+- **Component-local state**: ephemeral interaction state such as dialog open
+  flags, inline edit drafts, copy feedback, hover/focus state, and temporary
+  form choices.
 
-Generated or derived values do not belong in either persisted data or undo
-history. That includes sanitized names, generated lightness values, generated
-swatches, CSS output, clamped preview colors, and contrast results.
+Only data that cannot be rebuilt from other persisted state belongs in
+AppManager persisted state. Generated or derived values do not belong in local
+storage or undo history. That includes sanitized names, generated lightness
+values, generated swatches, CSS output, clamped preview colors, and contrast
+results.
 
 Use stable IDs for any persisted entity that can be selected, reordered,
 restored, or deleted.
+
+Components read app data and derived values from AppManager's reactive state,
+accessors, or helpers. All changes to AppManager persisted state must go through
+AppManager methods, which also coordinate validation, selection repair,
+undo/redo, and persistence.
 
 ## Persistence
 
 Local storage persists:
 
-- App data
+- authored app data
 - durable UI choices that should survive reloads
+- undo/redo history snapshots
 
 If stored data fails validation, Kiniro discards it, rebuilds an empty state,
 and notifies the user that local data was reset.
