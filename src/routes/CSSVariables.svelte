@@ -7,9 +7,9 @@
 
 <script lang="ts">
 	import { exportCssVariables, normalizeCssPrefix } from '$lib/cssVariables';
+	import { createInlineEditSession, type InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
 	import type { Theme, ThemeVariant } from '$lib/model';
 	import InlineInput from '$lib/ui/InlineInput.svelte';
-	import type { InlineInputSubmitResult } from '$lib/ui/InlineInput.svelte';
 
 	type CSSVariablesProps = {
 		theme: Theme;
@@ -47,7 +47,7 @@
 		}
 	}
 
-	function resolvePrefix(draft: string): InlineInputSubmitResult {
+	function resolvePrefix(draft: string): InlineEditSubmitResult {
 		const prefix = normalizeCssPrefix(draft);
 		if (prefix === draft) return { value: prefix };
 
@@ -69,12 +69,14 @@
 			<InlineInput
 				aria-label="Variable prefix"
 				value={prefixDraft}
-				onsubmit={(draft) => {
-					const result = resolvePrefix(draft);
-					onprefix(result.value);
-					prefixDraft = result.value;
-					return result;
-				}}
+				session={createInlineEditSession({
+					submit: (draft) => {
+						const result = resolvePrefix(draft);
+						onprefix(result.value);
+						prefixDraft = result.value;
+						return result;
+					}
+				})}
 			/>
 		</label>
 	</header>

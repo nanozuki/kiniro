@@ -6,17 +6,9 @@
 -->
 
 <script lang="ts">
-	import { tick } from 'svelte';
+	import type { InlineEditSession } from '$lib/ui/InlineInput.svelte';
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
-	import {
-		ensureUniqueName,
-		themeNames,
-		validateName,
-		variantNames,
-		type NamedItem
-	} from '$lib/naming';
 	import InlineInput from '$lib/ui/InlineInput.svelte';
-	import type { InlineInputSubmitResult } from '$lib/ui/InlineInput.svelte';
 	import Tabs from '$lib/ui/Tabs.svelte';
 
 	type ThemeManagerProps = {
@@ -27,10 +19,8 @@
 		onselectvariant?: (id: string) => void;
 		onaddtheme?: () => void;
 		onaddvariant?: () => void;
-		onrenametheme?: (id: string, name: string) => void;
-		onpreviewtheme?: (id: string, name: string) => void;
-		onrenamevariant?: (id: string, name: string) => void;
-		onpreviewvariant?: (id: string, name: string) => void;
+		onedittheme?: (id: string) => InlineEditSession;
+		oneditvariant?: (id: string) => InlineEditSession;
 		ondeletetheme?: (id: string) => void;
 		ondeletevariant?: (id: string) => void;
 		onthemegamut?: (id: string, gamut: Gamut) => void;
@@ -44,10 +34,14 @@
 		onselectvariant = (_id: string) => {},
 		onaddtheme = () => {},
 		onaddvariant = () => {},
-		onrenametheme = (_id: string, _name: string) => {},
-		onpreviewtheme = (_id: string, _name: string) => {},
-		onrenamevariant = (_id: string, _name: string) => {},
-		onpreviewvariant = (_id: string, _name: string) => {},
+		onedittheme = () => ({
+			preview: () => {},
+			submit: (draft) => ({ value: draft })
+		}),
+		oneditvariant = () => ({
+			preview: () => {},
+			submit: (draft) => ({ value: draft })
+		}),
 		ondeletetheme = (_id: string) => {},
 		ondeletevariant = (_id: string) => {},
 		onthemegamut = (_id: string, _gamut: Gamut) => {}
@@ -55,8 +49,6 @@
 
 	let editingTheme = $state(false);
 	let editingVariant = $state(false);
-	let themeDraft = $state('');
-	let variantDraft = $state('');
 	let themeEditSession = $state(0);
 	let variantEditSession = $state(0);
 	let themeHeading: HTMLHeadingElement | null = $state(null);
@@ -74,30 +66,28 @@
 		})) ?? []
 	);
 
-	function resolveName(
-		draft: string,
-		existingNames: readonly NamedItem[],
-		exclude: NamedItem,
-		fallbackBase: string,
-		label: 'Theme' | 'Variant'
-	): InlineInputSubmitResult {
-		const options = { exclude, fallbackBase };
-		const validation = validateName(draft, existingNames, options);
-		const value = ensureUniqueName(draft, existingNames, options);
-		if (validation.valid && value === draft) return { value };
+	function withThemeCompletion(session: InlineEditSession): InlineEditSession {
+		return {
+			preview: session.preview,
+			submit: (draft) => {
+				const result = session.submit(draft);
+				editingTheme = false;
+				queueMicrotask(() => themeHeading?.focus());
+				return result;
+			}
+		};
+	}
 
-		const error =
-			validation.error === 'empty-display-name'
-				? `${label} name cannot be empty; using "${value}".`
-				: validation.error === 'empty-css-name'
-					? `${label} name must contain a letter or number; using "${value}".`
-					: validation.error === 'duplicate-name'
-						? `${label} name already exists; using "${value}".`
-						: validation.error === 'duplicate-css-name'
-							? `${label} name would create the same CSS name as another ${label.toLowerCase()}; using "${value}".`
-							: `${label} name was adjusted to "${value}".`;
-
-		return { value, error };
+	function withVariantCompletion(session: InlineEditSession): InlineEditSession {
+		return {
+			preview: session.preview,
+			submit: (draft) => {
+				const result = session.submit(draft);
+				editingVariant = false;
+				queueMicrotask(() => variantHeading?.focus());
+				return result;
+			}
+		};
 	}
 </script>
 
@@ -134,33 +124,14 @@
 				{#key themeEditSession}
 					<InlineInput
 						aria-label="Theme name"
-						value={themeDraft}
-						oninput={(draft) => {
-							themeDraft = draft;
-							onpreviewtheme(selectedTheme.id, draft);
-						}}
-						onsubmit={(draft) => {
-							const result = resolveName(
-								draft,
-								themeNames(themes),
-								selectedTheme,
-								'Theme',
-								'Theme'
-							);
-							editingTheme = false;
-							void tick().then(() => {
-								themeHeading?.focus();
-								onrenametheme(selectedTheme.id, result.value);
-							});
-							return result;
-						}}
+						value={selectedTheme.name}
+						session={withThemeCompletion(onedittheme(selectedTheme.id))}
 					/>
 				{/key}
 			{:else}
 				<h2 bind:this={themeHeading} tabindex="-1">{selectedTheme.name}</h2>
 				<button
 					onclick={() => {
-						themeDraft = selectedTheme.name;
 						themeEditSession += 1;
 						editingTheme = true;
 					}}>Rename theme</button
@@ -183,33 +154,14 @@
 					{#key variantEditSession}
 						<InlineInput
 							aria-label="Variant name"
-							value={variantDraft}
-							oninput={(draft) => {
-								variantDraft = draft;
-								onpreviewvariant(selectedVariant.id, draft);
-							}}
-							onsubmit={(draft) => {
-								const result = resolveName(
-									draft,
-									variantNames(selectedTheme),
-									selectedVariant,
-									'Variant',
-									'Variant'
-								);
-								editingVariant = false;
-								void tick().then(() => {
-									variantHeading?.focus();
-									onrenamevariant(selectedVariant.id, result.value);
-								});
-								return result;
-							}}
+							value={selectedVariant.name}
+							session={withVariantCompletion(oneditvariant(selectedVariant.id))}
 						/>
 					{/key}
 				{:else}
 					<h3 bind:this={variantHeading} tabindex="-1">{selectedVariant.name}</h3>
 					<button
 						onclick={() => {
-							variantDraft = selectedVariant.name;
 							variantEditSession += 1;
 							editingVariant = true;
 						}}>Rename variant</button

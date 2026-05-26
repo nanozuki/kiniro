@@ -1,6 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { createInlineEditSession, type InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
 import Toaster from '$lib/ui/Toaster.svelte';
 import ThemeManager from './ThemeManager.svelte';
@@ -16,6 +17,23 @@ function themes() {
 		variantName: 'Dark'
 	});
 	return [first, second];
+}
+
+function editSession(
+	callback: (id: string, name: string) => void,
+	resolve: (draft: string, previous: string) => InlineEditSubmitResult = (draft) => ({
+		value: draft
+	})
+) {
+	return (id: string) =>
+		createInlineEditSession({
+			preview: (draft) => callback(id, draft),
+			submit: (draft) => {
+				const result = resolve(draft, '');
+				callback(id, result.value);
+				return result;
+			}
+		});
 }
 
 describe('ThemeManager', () => {
@@ -70,8 +88,8 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme,
-			onrenamevariant,
+			onedittheme: editSession(onrenametheme),
+			oneditvariant: editSession(onrenamevariant),
 			ondeletetheme,
 			ondeletevariant
 		});
@@ -100,8 +118,8 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme,
-			onrenamevariant
+			onedittheme: editSession(onrenametheme),
+			oneditvariant: editSession(onrenamevariant)
 		});
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
@@ -128,8 +146,22 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme,
-			onrenamevariant
+			onedittheme: editSession(onrenametheme, (draft) =>
+				draft === 'Gruvbox'
+					? {
+							value: 'Gruvbox 2',
+							error: 'Theme name already exists; using "Gruvbox 2".'
+						}
+					: { value: draft }
+			),
+			oneditvariant: editSession(onrenamevariant, (draft) =>
+				draft === 'Moon'
+					? {
+							value: 'Moon 2',
+							error: 'Variant name already exists; using "Moon 2".'
+						}
+					: { value: draft }
+			)
 		});
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
@@ -159,14 +191,10 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme: (id, name) => {
+			onedittheme: editSession((id, name) => {
 				const theme = renderedThemes.find((item) => item.id === id);
 				if (theme) theme.name = name;
-			},
-			onpreviewtheme: (id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			}
+			})
 		});
 
 		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rose Pine');
@@ -178,14 +206,10 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme: (id, name) => {
+			onedittheme: editSession((id, name) => {
 				const theme = renderedThemes.find((item) => item.id === id);
 				if (theme) theme.name = name;
-			},
-			onpreviewtheme: (id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			}
+			})
 		});
 		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rosé');
 
@@ -196,14 +220,10 @@ describe('ThemeManager', () => {
 			themes: renderedThemes,
 			selectedThemeId: selectedTheme.id,
 			selectedVariantId: selectedVariant.id,
-			onrenametheme: (id, name) => {
+			onedittheme: editSession((id, name) => {
 				const theme = renderedThemes.find((item) => item.id === id);
 				if (theme) theme.name = name;
-			},
-			onpreviewtheme: (id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			}
+			})
 		});
 		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Aurora');
 		await expect.element(page.getByRole('tab', { name: 'Aurora' })).toBeInTheDocument();

@@ -1,5 +1,6 @@
 import { clone } from '../clone';
 import { normalizeCssPrefix } from '../cssVariables';
+import type { InlineEditSession, InlineEditSubmitResult } from '../ui/InlineInput.svelte';
 import {
 	applyThemeImport,
 	exportThemes as exportThemesJson,
@@ -43,8 +44,10 @@ import {
 	defaultVariantName,
 	ensureUniqueName,
 	familyNames,
+	type NamedItem,
 	rampNames,
 	themeNames,
+	validateName,
 	variantNames
 } from '../naming';
 import {
@@ -189,10 +192,7 @@ export class AppManager {
 		this.beginPreview();
 		const theme = this.data.themes.find((item) => item.id === themeId);
 		if (!theme) return;
-		theme.name = ensureUniqueName(name, themeNames(this.data.themes), {
-			exclude: theme,
-			fallbackBase: 'Theme'
-		});
+		theme.name = name;
 	}
 
 	renameTheme(themeId: Id, name: string): void {
@@ -208,6 +208,25 @@ export class AppManager {
 			},
 			{ includePreview: true }
 		);
+	}
+
+	editThemeName(themeId: Id): InlineEditSession {
+		const theme = this.data.themes.find((item) => item.id === themeId);
+		const previous = theme?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewThemeName(themeId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.data.themes.find((item) => item.id === themeId);
+				const result = resolveEditedName(draft, previous, themeNames(this.data.themes), theme, {
+					fallbackBase: 'Theme',
+					label: 'Theme'
+				});
+				this.renameTheme(themeId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteTheme(themeId: Id): void {
@@ -255,10 +274,7 @@ export class AppManager {
 		const theme = this.selectedTheme;
 		const variant = theme?.variants.find((item) => item.id === variantId);
 		if (!theme || !variant) return;
-		variant.name = ensureUniqueName(name, variantNames(theme), {
-			exclude: variant,
-			fallbackBase: 'Variant'
-		});
+		variant.name = name;
 	}
 
 	renameVariant(variantId: Id, name: string): void {
@@ -275,6 +291,33 @@ export class AppManager {
 			},
 			{ includePreview: true }
 		);
+	}
+
+	editVariantName(variantId: Id): InlineEditSession {
+		const theme = this.selectedTheme;
+		const variant = theme?.variants.find((item) => item.id === variantId);
+		const previous = variant?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewVariantName(variantId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const variant = theme?.variants.find((item) => item.id === variantId);
+				const result = resolveEditedName(
+					draft,
+					previous,
+					theme ? variantNames(theme) : [],
+					variant,
+					{
+						fallbackBase: 'Variant',
+						label: 'Variant'
+					}
+				);
+				this.renameVariant(variantId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteVariant(variantId: Id): void {
@@ -733,4 +776,43 @@ function isSameSnapshot(
 	right: { data: AppState; ui: PersistedUiState }
 ): boolean {
 	return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function resolveEditedName(
+	draft: string,
+	previous: string,
+	existingNames: readonly NamedItem[],
+	exclude: NamedItem | undefined,
+	options: { fallbackBase: string; label: 'Theme' | 'Variant' }
+): InlineEditSubmitResult {
+	const validation = validateName(draft, existingNames, {
+		exclude,
+		fallbackBase: options.fallbackBase
+	});
+	const value =
+		validation.error === 'empty-display-name' || validation.error === 'empty-css-name'
+			? previous ||
+				ensureUniqueName(options.fallbackBase, existingNames, {
+					exclude,
+					fallbackBase: options.fallbackBase
+				})
+			: ensureUniqueName(draft, existingNames, {
+					exclude,
+					fallbackBase: options.fallbackBase
+				});
+
+	if (validation.valid && value === draft) return { value };
+
+	const error =
+		validation.error === 'empty-display-name'
+			? `${options.label} name cannot be empty; restored "${value}".`
+			: validation.error === 'empty-css-name'
+				? `${options.label} name must contain a letter or number; restored "${value}".`
+				: validation.error === 'duplicate-name'
+					? `${options.label} name already exists; using "${value}".`
+					: validation.error === 'duplicate-css-name'
+						? `${options.label} name would create the same CSS name as another ${options.label.toLowerCase()}; using "${value}".`
+						: `${options.label} name was adjusted to "${value}".`;
+
+	return { value, error };
 }

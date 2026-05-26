@@ -129,36 +129,38 @@ Manual QA:
 
 ## Phase 4: Inline Edit Sessions
 
+Status: complete.
+
 Goal: make inline editing safe by construction, with preview and submit packaged
 as one edit session.
 
 Work:
 
-- Replace independent `oninput` and `onsubmit` callbacks in `InlineInput` with
-  an edit-session API.
-- Let `InlineInput` start an edit session when editing begins.
-- Let AppManager capture the previous value internally when creating each edit
-  session, such as `app.editThemeName(themeId)`.
-- Expose `preview(draft)` and `submit(draft)` on each edit session.
-- Keep submit result support for resolved values and toastable adjustment
-  messages.
-- Update all inline input call sites to use edit sessions.
+- [x] Replace independent `oninput` and `onsubmit` callbacks in `InlineInput` with
+      an edit-session API.
+- [x] Let `InlineInput` start an edit session when editing begins.
+- [x] Let AppManager capture the previous value internally when creating each edit
+      session, such as `app.editThemeName(themeId)`.
+- [x] Expose `preview(draft)` and `submit(draft)` on each edit session.
+- [x] Keep submit result support for resolved values and toastable adjustment
+      messages.
+- [x] Update all inline input call sites to use edit sessions.
 
 Tests:
 
-- preview updates visible state without writing localStorage.
-- preview updates visible state without creating undo/redo entries.
-- submit resolves invalid values using the captured previous value where needed.
-- submit writes localStorage once.
-- submit creates one undo entry for an edit session.
-- Enter, Escape, and blur still finalize the current draft once.
-- IME composition still prevents accidental Enter submission.
+- [x] preview updates visible state without writing localStorage.
+- [x] preview updates visible state without creating undo/redo entries.
+- [x] submit resolves invalid values using the captured previous value where needed.
+- [x] submit writes localStorage once.
+- [x] submit creates one undo entry for an edit session.
+- [x] Enter, Escape, and blur still finalize the current draft once.
+- [x] IME composition still prevents accidental Enter submission.
 
 Manual QA:
 
-- Type invalid and duplicate names slowly and confirm the input experience does
-  not jump around during preview.
-- Confirm the final submitted value is normalized or repaired with a toast.
+- [x] Type invalid and duplicate names slowly and confirm the input experience does
+      not jump around during preview.
+- [x] Confirm the final submitted value is normalized or repaired with a toast.
 
 ## Phase 5: AppManager Context
 
@@ -215,12 +217,4 @@ Manual QA:
 
 ## Follow-up
 
-### Complex onsubmit flow in ThemeManager
-
-- Theme and variant inline rename submit currently waits for a Svelte flush before
-  invoking the outer rename callback.
-- This was added as a tactical fix for a repeated-submit UI bug during the Phase 3
-  persistence/undo refactor.
-- Refactor inline edit flow so submit stays synchronous for local rename commits.
-- Remove any reliance on `tick()` or similar flush-order coordination in rename submit.
-- Keep regression coverage for repeated theme/variant rename submit without reload.
+- None currently.

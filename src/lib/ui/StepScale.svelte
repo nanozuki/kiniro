@@ -7,7 +7,7 @@
 
 <script lang="ts">
 	import InlineInput from './InlineInput.svelte';
-	import type { InlineInputSubmitResult } from './InlineInput.svelte';
+	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
 	import { formatLightness, normalizeChannelValue } from '../color';
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
@@ -45,7 +45,7 @@
 		return Number.isFinite(value) ? value : null;
 	}
 
-	function resolveStepCount(draft: string, previous: string): InlineInputSubmitResult {
+	function resolveStepCount(draft: string, previous: string): InlineEditSubmitResult {
 		const parsed = finiteNumber(draft);
 		const value = parsed ?? Number(previous);
 		const resolved = String(Math.min(9, Math.max(5, Math.trunc(value))));
@@ -65,7 +65,7 @@
 		return { value: resolved };
 	}
 
-	function resolveLightness(draft: string, previous: string): InlineInputSubmitResult {
+	function resolveLightness(draft: string, previous: string): InlineEditSubmitResult {
 		const parsed = finiteNumber(draft);
 		const value = parsed ?? Number(previous);
 		const resolved = String(normalizeChannelValue('lightness', value));
@@ -107,15 +107,17 @@
 					aria-label="Step count"
 					inputmode="numeric"
 					value={String(structure.stepCount)}
-					oninput={(draft) => {
-						const value = finiteNumber(draft);
-						if (value != null) onstepcount(value);
-					}}
-					onsubmit={(draft, previous) => {
-						const result = resolveStepCount(draft, previous);
-						onstepcount(Number(result.value));
-						return result;
-					}}
+					session={createInlineEditSession({
+						preview: (draft) => {
+							const value = finiteNumber(draft);
+							if (value != null) onstepcount(value);
+						},
+						submit: (draft) => {
+							const result = resolveStepCount(draft, String(structure.stepCount));
+							onstepcount(Number(result.value));
+							return result;
+						}
+					})}
 				/></label
 			>
 			<label
@@ -158,15 +160,17 @@
 					aria-label="Start lightness"
 					inputmode="decimal"
 					value={String(values.lightnessStart)}
-					oninput={(draft) => {
-						const value = finiteNumber(draft);
-						if (value != null) onrange(value, values.lightnessEnd);
-					}}
-					onsubmit={(draft, previous) => {
-						const result = resolveLightness(draft, previous);
-						onrange(Number(result.value), values.lightnessEnd);
-						return result;
-					}}
+					session={createInlineEditSession({
+						preview: (draft) => {
+							const value = finiteNumber(draft);
+							if (value != null) onrange(value, values.lightnessEnd);
+						},
+						submit: (draft) => {
+							const result = resolveLightness(draft, String(values.lightnessStart));
+							onrange(Number(result.value), values.lightnessEnd);
+							return result;
+						}
+					})}
 				/></label
 			>
 			<label
@@ -174,15 +178,17 @@
 					aria-label="End lightness"
 					inputmode="decimal"
 					value={String(values.lightnessEnd)}
-					oninput={(draft) => {
-						const value = finiteNumber(draft);
-						if (value != null) onrange(values.lightnessStart, value);
-					}}
-					onsubmit={(draft, previous) => {
-						const result = resolveLightness(draft, previous);
-						onrange(values.lightnessStart, Number(result.value));
-						return result;
-					}}
+					session={createInlineEditSession({
+						preview: (draft) => {
+							const value = finiteNumber(draft);
+							if (value != null) onrange(values.lightnessStart, value);
+						},
+						submit: (draft) => {
+							const result = resolveLightness(draft, String(values.lightnessEnd));
+							onrange(values.lightnessStart, Number(result.value));
+							return result;
+						}
+					})}
 				/></label
 			>
 			<button type="button" onclick={onreverse}>Reverse lightness</button>
@@ -197,15 +203,17 @@
 								inputmode="decimal"
 								value={String(step.lightness)}
 								disabled={!steps.slice(1, -1).includes(step)}
-								oninput={(draft) => {
-									const value = finiteNumber(draft);
-									if (value != null) onoverride(step.index, value);
-								}}
-								onsubmit={(draft, previous) => {
-									const result = resolveLightness(draft, previous);
-									onoverride(step.index, Number(result.value));
-									return result;
-								}}
+								session={createInlineEditSession({
+									preview: (draft) => {
+										const value = finiteNumber(draft);
+										if (value != null) onoverride(step.index, value);
+									},
+									submit: (draft) => {
+										const result = resolveLightness(draft, String(step.lightness));
+										onoverride(step.index, Number(result.value));
+										return result;
+									}
+								})}
 							/></label
 						>
 						<button

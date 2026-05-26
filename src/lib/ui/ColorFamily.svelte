@@ -8,6 +8,7 @@
 <script lang="ts">
 	import ColorRamp from './ColorRamp.svelte';
 	import InlineInput from './InlineInput.svelte';
+	import { createInlineEditSession } from './InlineInput.svelte';
 	import { generateFamily } from '../palette';
 	import StepScale from './StepScale.svelte';
 	import type { ColorFamilyStructure, Gamut, StepIndexStyle, ThemeVariant } from '../model';
@@ -64,15 +65,17 @@
 				<InlineInput
 					aria-label="Family name"
 					value={nameDraft}
-					oninput={(draft) => {
-						nameDraft = draft;
-						onrename(family.id, draft);
-					}}
-					onsubmit={(draft) => {
-						onrename(family.id, draft);
-						editingName = false;
-						return { value: draft };
-					}}
+					session={createInlineEditSession({
+						preview: (draft) => {
+							nameDraft = draft;
+							onrename(family.id, draft);
+						},
+						submit: (draft) => {
+							onrename(family.id, draft);
+							editingName = false;
+							return { value: draft };
+						}
+					})}
 				/>
 			{:else}
 				<h3>{family.name}</h3>

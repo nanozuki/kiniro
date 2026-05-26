@@ -7,12 +7,21 @@ import { createAppManager } from './state.svelte';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
 
-function memoryStorage(initial: Record<string, string> = {}): StorageLike {
+function memoryStorage(
+	initial: Record<string, string> = {}
+): StorageLike & { readonly writes: number } {
 	const data = { ...initial };
+	let writes = 0;
 	return {
 		getItem: (key) => data[key] ?? null,
-		setItem: (key, value) => (data[key] = value),
-		removeItem: (key) => delete data[key]
+		setItem: (key, value) => {
+			writes += 1;
+			data[key] = value;
+		},
+		removeItem: (key) => delete data[key],
+		get writes() {
+			return writes;
+		}
 	};
 }
 
@@ -71,6 +80,55 @@ describe('AppManager selection and persistence', () => {
 
 		expect(manager.history.past).toHaveLength(1);
 		expect(saved.data.themes[0].name).toBe('Preview');
+	});
+
+	it('previews inline theme names without persistence or history until submit', () => {
+		const theme = createDefaultTheme({ name: 'Theme' });
+		const other = createDefaultTheme({ name: 'Existing' });
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [theme, other];
+		state.ui = {
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
+			workspaceTab: 'palette'
+		};
+		const manager = createAppManager({ persistedState: state, storage });
+		const edit = manager.editThemeName(theme.id);
+
+		edit.preview('Existing');
+		expect(manager.data.themes[0].name).toBe('Existing');
+		expect(manager.history.past).toHaveLength(0);
+		expect(storage.getItem(STORAGE_KEY)).toBeNull();
+
+		const result = edit.submit('Existing');
+		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
+
+		expect(result).toMatchObject({
+			value: 'Existing 2',
+			error: 'Theme name already exists; using "Existing 2".'
+		});
+		expect(manager.data.themes[0].name).toBe('Existing 2');
+		expect(manager.history.past).toHaveLength(1);
+		expect(saved.data.themes[0].name).toBe('Existing 2');
+		expect(storage.writes).toBe(1);
+	});
+
+	it('uses the captured previous variant name when submitting an invalid draft', () => {
+		const theme = createDefaultTheme({ variantName: 'Default' });
+		const manager = createAppManager({ data: { themes: [theme] } });
+		const variant = theme.variants[0];
+		const edit = manager.editVariantName(variant.id);
+
+		edit.preview('');
+		const result = edit.submit('');
+
+		expect(result).toMatchObject({
+			value: 'Default',
+			error: 'Variant name cannot be empty; restored "Default".'
+		});
+		expect(manager.selectedVariant?.name).toBe('Default');
+		expect(manager.history.past).toHaveLength(0);
 	});
 
 	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {

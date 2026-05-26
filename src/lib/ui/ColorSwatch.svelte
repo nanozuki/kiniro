@@ -7,7 +7,7 @@
 
 <script lang="ts">
 	import InlineInput from './InlineInput.svelte';
-	import type { InlineInputSubmitResult } from './InlineInput.svelte';
+	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
 	import {
 		formatChroma,
 		formatHue,
@@ -60,7 +60,7 @@
 		channel: OklchChannel,
 		draft: string,
 		previous: string
-	): InlineInputSubmitResult {
+	): InlineEditSubmitResult {
 		const parsed = finiteNumber(draft);
 		const value = parsed ?? Number(previous);
 		const resolved = String(normalizeChannelValue(channel, value));
@@ -137,12 +137,18 @@
 						aria-label={channel.label}
 						inputmode="decimal"
 						value={String(swatch.oklch[channel.key])}
-						oninput={(draft) => setChannel(channel.key, draft)}
-						onsubmit={(draft, previous) => {
-							const result = resolveChannel(channel.key, draft, previous);
-							onoverride(swatch.stepIndex, channel.key, Number(result.value));
-							return result;
-						}}
+						session={createInlineEditSession({
+							preview: (draft) => setChannel(channel.key, draft),
+							submit: (draft) => {
+								const result = resolveChannel(
+									channel.key,
+									draft,
+									String(swatch.oklch[channel.key])
+								);
+								onoverride(swatch.stepIndex, channel.key, Number(result.value));
+								return result;
+							}
+						})}
 					/>
 				</label>
 				<button

@@ -94,10 +94,8 @@
 				onselectvariant={(id) => app.selectVariant(id)}
 				onaddtheme={() => void app.addTheme()}
 				onaddvariant={() => void app.addVariant()}
-				onrenametheme={(id, name) => app.renameTheme(id, name)}
-				onpreviewtheme={(id, name) => app.previewThemeName(id, name)}
-				onrenamevariant={(id, name) => app.renameVariant(id, name)}
-				onpreviewvariant={(id, name) => app.previewVariantName(id, name)}
+				onedittheme={(id) => app.editThemeName(id)}
+				oneditvariant={(id) => app.editVariantName(id)}
 				ondeletetheme={(id) => app.deleteTheme(id)}
 				ondeletevariant={(id) => app.deleteVariant(id)}
 				onthemegamut={(id, gamut) => app.setThemeTargetGamut(id, gamut)}
