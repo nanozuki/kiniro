@@ -5,6 +5,7 @@ allowBuilds:
   esbuild: true
   sharp: true
   workerd: true
-
-onlyBuiltDependencies:
-  - esbuild
+engineStrict: true
+packageConfigs:
+  kiniro:
+    engineStrict: true
