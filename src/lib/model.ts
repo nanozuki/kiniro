@@ -183,6 +183,6 @@ export function syncThemeVariantValues(theme: Theme): Theme {
 	};
 }
 
-function generateId(): Id {
+export function generateId(): Id {
 	return nanoid();
 }

@@ -2,9 +2,9 @@ import {
 	createColorFamily,
 	createColorRamp,
 	createDefaultRampValues,
-	createDefaultTheme,
 	createDefaultStepScaleValues,
 	createThemeVariant,
+	generateId,
 	type ColorFamilyValues,
 	type Theme,
 	type ThemeStructure,
@@ -146,7 +146,7 @@ function exportDtoToTheme(theme: ExportTheme): Theme {
 
 	return {
 		...theme,
-		id: createDefaultTheme().id,
+		id: generateId(),
 		structure,
 		variants: theme.variants.map((variant) => exportDtoToVariant(variant, structure))
 	};
