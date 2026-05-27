@@ -407,13 +407,14 @@ export class AppManager {
 		});
 	}
 
+	previewStepCount(familyId: Id, count: number): void {
+		this.beginPreview();
+		this.applyStepCount(familyId, count);
+	}
+
 	setStepCount(familyId: Id, count: number): void {
-		this.commitMutation('Set step count', () => {
-			const theme = this.selectedTheme;
-			const family = theme?.structure.families.find((item) => item.id === familyId);
-			if (!theme || !family) return;
-			family.stepScale.stepCount = Math.min(9, Math.max(5, Math.trunc(count)));
-			this.cleanFamilyStepValues(theme, family);
+		this.commitMutation('Set step count', () => this.applyStepCount(familyId, count), {
+			includePreview: true
 		});
 	}
 
@@ -447,23 +448,32 @@ export class AppManager {
 		});
 	}
 
+	previewLightnessRange(familyId: Id, start: number, end: number): void {
+		this.beginPreview();
+		this.applyLightnessRange(familyId, start, end);
+	}
+
 	setLightnessRange(familyId: Id, start: number, end: number): void {
-		this.commitMutation('Set lightness range', () => {
-			const values = this.selectedVariant?.values.families[familyId]?.stepScale;
-			if (!values) return;
-			values.lightnessStart = start;
-			values.lightnessEnd = end;
-		});
+		this.commitMutation(
+			'Set lightness range',
+			() => this.applyLightnessRange(familyId, start, end),
+			{
+				includePreview: true
+			}
+		);
+	}
+
+	previewLightness(familyId: Id, stepIndex: string, lightness: number): void {
+		this.beginPreview();
+		this.applyLightnessOverride(familyId, stepIndex, lightness);
 	}
 
 	overrideLightness(familyId: Id, stepIndex: string, lightness: number): void {
-		this.commitMutation('Override lightness', () => {
-			const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
-			const values = this.selectedVariant?.values.families[familyId]?.stepScale;
-			if (!family || !values) return;
-			if (getStepIndexes(family.stepScale).slice(1, -1).includes(stepIndex))
-				values.lightnessOverrides[stepIndex] = lightness;
-		});
+		this.commitMutation(
+			'Override lightness',
+			() => this.applyLightnessOverride(familyId, stepIndex, lightness),
+			{ includePreview: true }
+		);
 	}
 
 	resetLightness(familyId: Id, stepIndex: string): void {
@@ -582,6 +592,17 @@ export class AppManager {
 		});
 	}
 
+	previewSwatchChannel(
+		familyId: Id,
+		rampId: Id,
+		stepIndex: string,
+		channel: OklchChannel,
+		value: number
+	): void {
+		this.beginPreview();
+		this.applySwatchChannelOverride(familyId, rampId, stepIndex, channel, value);
+	}
+
 	overrideSwatchChannel(
 		familyId: Id,
 		rampId: Id,
@@ -589,11 +610,11 @@ export class AppManager {
 		channel: OklchChannel,
 		value: number
 	): void {
-		this.commitMutation('Override swatch channel', () => {
-			const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
-			if (!ramp) return;
-			ramp.swatchOverrides[stepIndex] = { ...ramp.swatchOverrides[stepIndex], [channel]: value };
-		});
+		this.commitMutation(
+			'Override swatch channel',
+			() => this.applySwatchChannelOverride(familyId, rampId, stepIndex, channel, value),
+			{ includePreview: true }
+		);
 	}
 
 	resetSwatchChannel(familyId: Id, rampId: Id, stepIndex: string, channel: OklchChannel): void {
@@ -804,6 +825,41 @@ export class AppManager {
 		this.data = previousData;
 		this.ui = previousUi;
 		return reconciled;
+	}
+
+	private applyStepCount(familyId: Id, count: number): void {
+		const theme = this.selectedTheme;
+		const family = theme?.structure.families.find((item) => item.id === familyId);
+		if (!theme || !family) return;
+		family.stepScale.stepCount = Math.min(9, Math.max(5, Math.trunc(count)));
+		this.cleanFamilyStepValues(theme, family);
+	}
+
+	private applyLightnessRange(familyId: Id, start: number, end: number): void {
+		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
+		if (!values) return;
+		values.lightnessStart = start;
+		values.lightnessEnd = end;
+	}
+
+	private applyLightnessOverride(familyId: Id, stepIndex: string, lightness: number): void {
+		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
+		if (!family || !values) return;
+		if (getStepIndexes(family.stepScale).slice(1, -1).includes(stepIndex))
+			values.lightnessOverrides[stepIndex] = lightness;
+	}
+
+	private applySwatchChannelOverride(
+		familyId: Id,
+		rampId: Id,
+		stepIndex: string,
+		channel: OklchChannel,
+		value: number
+	): void {
+		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+		if (!ramp) return;
+		ramp.swatchOverrides[stepIndex] = { ...ramp.swatchOverrides[stepIndex], [channel]: value };
 	}
 
 	private cleanFamilyStepValues(theme: Theme, family: ColorFamilyStructure): void {

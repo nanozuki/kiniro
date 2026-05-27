@@ -85,7 +85,7 @@ importers:
         specifier: 8.60.0
         version: 8.60.0(eslint@10.4.0)(typescript@6.0.3)
       typescript-svelte-plugin:
-        specifier: ^0.3.52
+        specifier: 0.3.52
         version: 0.3.52(svelte@5.55.9(@typescript-eslint/types@8.60.0))(typescript@6.0.3)
       vite:
         specifier: 8.0.14

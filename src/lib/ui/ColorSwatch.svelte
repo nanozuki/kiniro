@@ -88,7 +88,7 @@
 	function setChannel(channel: OklchChannel, draft: string) {
 		const value = finiteNumber(draft);
 		if (value != null)
-			app.overrideSwatchChannel(
+			app.previewSwatchChannel(
 				familyId,
 				rampId,
 				swatch.stepIndex,

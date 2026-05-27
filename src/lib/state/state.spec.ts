@@ -164,6 +164,53 @@ describe('AppManager selection and persistence', () => {
 		expect(storage.writes).toBe(4);
 	});
 
+	it('previews numeric palette edits without persistence or history until submit', () => {
+		const theme = createDefaultTheme();
+		const familyId = theme.structure.families[0].id;
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [theme];
+		state.ui = {
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
+			workspaceTab: 'palette'
+		};
+		const manager = createAppManager({ persistedState: state, storage });
+
+		manager.previewStepCount(familyId, 7);
+		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(7);
+		expect(manager.history.past).toHaveLength(0);
+		expect(storage.getItem(STORAGE_KEY)).toBeNull();
+
+		manager.setStepCount(familyId, 7);
+		expect(manager.history.past).toHaveLength(1);
+		expect(storage.writes).toBe(1);
+		manager.undo();
+		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(9);
+
+		manager.previewLightnessRange(familyId, 0.8, 0.2);
+		expect(manager.selectedVariant?.values.families[familyId].stepScale.lightnessStart).toBe(0.8);
+		expect(manager.history.past).toHaveLength(0);
+		expect(storage.writes).toBe(2);
+
+		manager.setLightnessRange(familyId, 0.8, 0.2);
+		expect(manager.history.past).toHaveLength(1);
+		expect(storage.writes).toBe(3);
+
+		manager.previewLightness(familyId, '500', 0.45);
+		expect(manager.selectedVariant?.values.families[familyId].stepScale.lightnessOverrides).toEqual(
+			{
+				'500': 0.45
+			}
+		);
+		expect(manager.history.past).toHaveLength(1);
+		expect(storage.writes).toBe(3);
+
+		manager.overrideLightness(familyId, '500', 0.45);
+		expect(manager.history.past).toHaveLength(2);
+		expect(storage.writes).toBe(4);
+	});
+
 	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {
 		const first = createDefaultTheme({ name: 'One' });
 		const second = createDefaultTheme({ name: 'Two' });
@@ -411,5 +458,36 @@ describe('AppManager ramp and swatch operations', () => {
 		expect(
 			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
 		).toEqual({});
+	});
+
+	it('previews swatch channel overrides without persistence or history until submit', () => {
+		const theme = createDefaultTheme();
+		const familyId = theme.structure.families[0].id;
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [theme];
+		state.ui = {
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
+			workspaceTab: 'palette'
+		};
+		const manager = createAppManager({ persistedState: state, storage });
+		const ramp = manager.addRamp(familyId, source, 'Ramp');
+		const rampId = ramp!.id;
+		const initialHistoryLength = manager.history.past.length;
+		const initialWrites = storage.writes;
+
+		manager.previewSwatchChannel(familyId, rampId, '300', 'hue', 120);
+		expect(
+			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
+		).toEqual({
+			'300': { hue: 120 }
+		});
+		expect(manager.history.past).toHaveLength(initialHistoryLength);
+		expect(storage.writes).toBe(initialWrites);
+
+		manager.overrideSwatchChannel(familyId, rampId, '300', 'hue', 120);
+		expect(manager.history.past).toHaveLength(initialHistoryLength + 1);
+		expect(storage.writes).toBe(initialWrites + 1);
 	});
 });

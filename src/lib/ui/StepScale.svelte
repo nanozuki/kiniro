@@ -96,7 +96,7 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) app.setStepCount(familyId, value);
+							if (value != null) app.previewStepCount(familyId, value);
 						},
 						submit: (draft) => {
 							const result = resolveStepCount(draft, String(structure.stepCount));
@@ -157,7 +157,7 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) app.setLightnessRange(familyId, value, values.lightnessEnd);
+							if (value != null) app.previewLightnessRange(familyId, value, values.lightnessEnd);
 						},
 						submit: (draft) => {
 							const result = resolveLightness(draft, String(values.lightnessStart));
@@ -175,7 +175,7 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) app.setLightnessRange(familyId, values.lightnessStart, value);
+							if (value != null) app.previewLightnessRange(familyId, values.lightnessStart, value);
 						},
 						submit: (draft) => {
 							const result = resolveLightness(draft, String(values.lightnessEnd));
@@ -202,7 +202,7 @@
 								session={createInlineEditSession({
 									preview: (draft) => {
 										const value = finiteNumber(draft);
-										if (value != null) app.overrideLightness(familyId, step.index, value);
+										if (value != null) app.previewLightness(familyId, step.index, value);
 									},
 									submit: (draft) => {
 										const result = resolveLightness(draft, String(step.lightness));
