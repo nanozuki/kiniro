@@ -13,19 +13,16 @@
 	import Palette from './Palette.svelte';
 	import ThemeManager from './ThemeManager.svelte';
 	import WorkspaceTabs from './WorkspaceTabs.svelte';
-	import { createSourceColor } from '$lib/color';
-	import type { ImportThemeChoice, ThemeExportFile } from '$lib/importExport';
 	import { generateVariantPalette } from '$lib/palette';
+	import { setAppManagerContext } from '$lib/state/appContext';
 	import { createAppManager } from '$lib/state/state.svelte';
 	import { addToast } from '$lib/ui/Toaster.svelte';
 
 	const app = createAppManager({ storage: browser ? localStorage : undefined });
+	setAppManagerContext(app);
 
-	let themes = $derived(app.data.themes);
 	let selectedTheme = $derived(app.selectedTheme);
 	let selectedVariant = $derived(app.selectedVariant);
-	let selectedThemeId = $derived(app.ui.selection.themeId);
-	let selectedVariantId = $derived(app.ui.selection.variantId);
 	let workspaceTab = $derived(app.ui.workspaceTab);
 	let palette = $derived(
 		selectedTheme && selectedVariant ? generateVariantPalette(selectedTheme, selectedVariant) : null
@@ -56,10 +53,6 @@
 		link.click();
 		URL.revokeObjectURL(url);
 	}
-
-	function importThemes(file: ThemeExportFile, choices: ImportThemeChoice[]) {
-		app.importThemes(file, choices);
-	}
 </script>
 
 <svelte:head><title>Kiniro</title></svelte:head>
@@ -75,60 +68,25 @@
 				<button type="button" disabled={!app.canUndo} onclick={() => app.undo()}>Undo</button>
 				<button type="button" disabled={!app.canRedo} onclick={() => app.redo()}>Redo</button>
 			{/if}
-			<ImportExportDialogs
-				{themes}
-				onexport={(filename, _json) => download(filename, app.exportThemes())}
-				onimport={importThemes}
-			/>
+			<ImportExportDialogs onexport={(filename, json) => download(filename, json)} />
 			{#if !selectedTheme}<button onclick={addFirstTheme}>Add first Theme</button>{/if}
 		</div>
 	</section>
 
 	{#if selectedTheme && selectedVariant}
 		<section class="panel">
-			<ThemeManager
-				{themes}
-				{selectedThemeId}
-				{selectedVariantId}
-				onselecttheme={(id) => app.selectTheme(id)}
-				onselectvariant={(id) => app.selectVariant(id)}
-				onaddtheme={() => void app.addTheme()}
-				onaddvariant={() => void app.addVariant()}
-				onedittheme={(id) => app.editThemeName(id)}
-				oneditvariant={(id) => app.editVariantName(id)}
-				ondeletetheme={(id) => app.deleteTheme(id)}
-				ondeletevariant={(id) => app.deleteVariant(id)}
-				onthemegamut={(id, gamut) => app.setThemeTargetGamut(id, gamut)}
-			/>
+			<ThemeManager />
 		</section>
 
 		<section class="panel">
-			<WorkspaceTabs
-				theme={selectedTheme}
-				activeTab={workspaceTab}
-				onselect={(tab) => app.setWorkspaceTab(tab)}
-			/>
+			<WorkspaceTabs />
 		</section>
 
 		<section aria-label="Workspace" class="panel">
 			{#if workspaceTab === 'palette'}
-				<Palette
-					families={selectedTheme.structure.families}
-					variant={selectedVariant}
-					targetGamut={selectedTheme.targetGamut}
-					variantCount={selectedTheme.variants.length}
-					onaddfamily={() => void app.addFamily()}
-					onrenamefamily={(id, name) => app.renameFamily(id, name)}
-					ondeletefamily={(id) => app.deleteFamily(id)}
-					onaddramp={(familyId) =>
-						void app.addRamp(familyId, createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 0 }))}
-				/>
+				<Palette />
 			{:else if workspaceTab === 'cssVariables'}
-				<CSSVariables
-					theme={selectedTheme}
-					variant={selectedVariant}
-					onprefix={(prefix) => app.setThemeCssPrefix(selectedTheme.id, prefix)}
-				/>
+				<CSSVariables />
 			{:else if palette}
 				<ContrastChecker {palette} gamut={selectedTheme.targetGamut} />
 			{/if}

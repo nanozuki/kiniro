@@ -2,44 +2,26 @@
 @component
 - Presents one source color and its generated swatches.
 - Stays a pure view over derived ramp data.
-- Parents own dialogs, reordering, and authored-data mutations.
+- Reads AppManager from context for authored ramp and swatch mutations.
 -->
 
 <script lang="ts">
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import ColorSwatch from './ColorSwatch.svelte';
 	import { formatChroma, formatHue, formatLightness, getPreviewColor } from '../color';
-	import type { Gamut, OklchChannel } from '../model';
+	import type { Gamut } from '../model';
 	import type { GeneratedColorRamp } from '../palette';
 
 	type ColorRampProps = {
+		familyId: string;
 		ramp: GeneratedColorRamp;
 		sourceValue: string;
 		gamut: Gamut;
-		onedit?: (id: string) => void;
-		ondelete?: (id: string) => void;
-		onmove?: (id: string, direction: 'up' | 'down') => void;
-		onoverride?: (rampId: string, stepIndex: string, channel: OklchChannel, value: number) => void;
-		onreset?: (rampId: string, stepIndex: string, channel: OklchChannel) => void;
-		onresetall?: (rampId: string, stepIndex: string) => void;
 	};
 
-	let {
-		ramp,
-		sourceValue,
-		gamut,
-		onedit = (_id: string) => {},
-		ondelete = (_id: string) => {},
-		onmove = (_id: string, _direction: 'up' | 'down') => {},
-		onoverride = (
-			_rampId: string,
-			_stepIndex: string,
-			_channel: OklchChannel,
-			_value: number
-		) => {},
-		onreset = (_rampId: string, _stepIndex: string, _channel: OklchChannel) => {},
-		onresetall = (_rampId: string, _stepIndex: string) => {}
-	}: ColorRampProps = $props();
+	let { familyId, ramp, sourceValue, gamut }: ColorRampProps = $props();
 
+	const app = getAppManagerContext();
 	let sourcePreview = $derived(getPreviewColor(ramp.sourceColor, gamut));
 </script>
 
@@ -57,26 +39,16 @@
 	</div>
 	<div class="swatches">
 		{#each ramp.swatches as swatch}
-			<ColorSwatch
-				{swatch}
-				{gamut}
-				onoverride={(stepIndex, channel, value) => onoverride(ramp.id, stepIndex, channel, value)}
-				onreset={(stepIndex, channel) => onreset(ramp.id, stepIndex, channel)}
-				onresetall={(stepIndex) => onresetall(ramp.id, stepIndex)}
-			/>
+			<ColorSwatch {swatch} {familyId} rampId={ramp.id} {gamut} />
 		{/each}
 	</div>
 	<div class="actions">
-		<button type="button" aria-label={`Move ${ramp.name} up`} onclick={() => onmove(ramp.id, 'up')}
-			>↕ Up</button
+		<button type="button" aria-label={`Move ${ramp.name} up`} disabled>↕ Up</button>
+		<button type="button" aria-label={`Move ${ramp.name} down`} disabled>↕ Down</button>
+		<button type="button" disabled>Edit Color Ramp</button>
+		<button type="button" onclick={() => app.deleteRamp(familyId, ramp.id)}
+			>Delete Color Ramp</button
 		>
-		<button
-			type="button"
-			aria-label={`Move ${ramp.name} down`}
-			onclick={() => onmove(ramp.id, 'down')}>↕ Down</button
-		>
-		<button type="button" onclick={() => onedit(ramp.id)}>Edit Color Ramp</button>
-		<button type="button" onclick={() => ondelete(ramp.id)}>Delete Color Ramp</button>
 	</div>
 </section>
 

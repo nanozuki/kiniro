@@ -6,6 +6,7 @@
 -->
 
 <script lang="ts">
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import InlineInput from './InlineInput.svelte';
 	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
 	import { formatLightness, normalizeChannelValue } from '../color';
@@ -13,29 +14,14 @@
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
 
 	type StepScaleProps = {
+		familyId: string;
 		structure: StepScaleStructure;
 		values: StepScaleValues;
-		onstepcount?: (count: number) => void;
-		onindexstyle?: (style: StepIndexStyle) => void;
-		onhalfsteps?: (start: boolean, end: boolean) => void;
-		onrange?: (start: number, end: number) => void;
-		onoverride?: (index: string, lightness: number) => void;
-		onreset?: (index: string) => void;
-		onreverse?: () => void;
 	};
 
-	let {
-		structure,
-		values,
-		onstepcount = (_count: number) => {},
-		onindexstyle = (_style: StepIndexStyle) => {},
-		onhalfsteps = (_start: boolean, _end: boolean) => {},
-		onrange = (_start: number, _end: number) => {},
-		onoverride = (_index: string, _lightness: number) => {},
-		onreset = (_index: string) => {},
-		onreverse = () => {}
-	}: StepScaleProps = $props();
+	let { familyId, structure, values }: StepScaleProps = $props();
 
+	const app = getAppManagerContext();
 	let editing = $state(false);
 	let steps = $derived(buildSteps(structure, values));
 
@@ -110,11 +96,11 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) onstepcount(value);
+							if (value != null) app.setStepCount(familyId, value);
 						},
 						submit: (draft) => {
 							const result = resolveStepCount(draft, String(structure.stepCount));
-							onstepcount(Number(result.value));
+							app.setStepCount(familyId, Number(result.value));
 							return result;
 						}
 					})}
@@ -126,7 +112,10 @@
 					aria-label="Index style"
 					value={structure.indexStyle}
 					onchange={(event) =>
-						onindexstyle((event.currentTarget as HTMLSelectElement).value as StepIndexStyle)}
+						app.setIndexStyle(
+							familyId,
+							(event.currentTarget as HTMLSelectElement).value as StepIndexStyle
+						)}
 				>
 					<option value="scale">Scale</option>
 					<option value="ordinal">Ordinal</option>
@@ -139,7 +128,11 @@
 						type="checkbox"
 						checked={structure.halfStepStart}
 						onchange={(event) =>
-							onhalfsteps((event.currentTarget as HTMLInputElement).checked, structure.halfStepEnd)}
+							app.setHalfSteps(
+								familyId,
+								(event.currentTarget as HTMLInputElement).checked,
+								structure.halfStepEnd
+							)}
 					/> Half step start</label
 				>
 				<label
@@ -148,7 +141,8 @@
 						type="checkbox"
 						checked={structure.halfStepEnd}
 						onchange={(event) =>
-							onhalfsteps(
+							app.setHalfSteps(
+								familyId,
 								structure.halfStepStart,
 								(event.currentTarget as HTMLInputElement).checked
 							)}
@@ -163,11 +157,11 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) onrange(value, values.lightnessEnd);
+							if (value != null) app.setLightnessRange(familyId, value, values.lightnessEnd);
 						},
 						submit: (draft) => {
 							const result = resolveLightness(draft, String(values.lightnessStart));
-							onrange(Number(result.value), values.lightnessEnd);
+							app.setLightnessRange(familyId, Number(result.value), values.lightnessEnd);
 							return result;
 						}
 					})}
@@ -181,17 +175,19 @@
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
-							if (value != null) onrange(values.lightnessStart, value);
+							if (value != null) app.setLightnessRange(familyId, values.lightnessStart, value);
 						},
 						submit: (draft) => {
 							const result = resolveLightness(draft, String(values.lightnessEnd));
-							onrange(values.lightnessStart, Number(result.value));
+							app.setLightnessRange(familyId, values.lightnessStart, Number(result.value));
 							return result;
 						}
 					})}
 				/></label
 			>
-			<button type="button" onclick={onreverse}>Reverse lightness</button>
+			<button type="button" onclick={() => app.reverseFamilyLightness(familyId)}
+				>Reverse lightness</button
+			>
 
 			<div class="overrides">
 				{#each steps as step}
@@ -206,11 +202,11 @@
 								session={createInlineEditSession({
 									preview: (draft) => {
 										const value = finiteNumber(draft);
-										if (value != null) onoverride(step.index, value);
+										if (value != null) app.overrideLightness(familyId, step.index, value);
 									},
 									submit: (draft) => {
 										const result = resolveLightness(draft, String(step.lightness));
-										onoverride(step.index, Number(result.value));
+										app.overrideLightness(familyId, step.index, Number(result.value));
 										return result;
 									}
 								})}
@@ -219,7 +215,7 @@
 						<button
 							type="button"
 							disabled={!step.controlled || step === steps[0] || step === steps[steps.length - 1]}
-							onclick={() => onreset(step.index)}>Reset {step.index}</button
+							onclick={() => app.resetLightness(familyId, step.index)}>Reset {step.index}</button
 						>
 					</div>
 				{/each}

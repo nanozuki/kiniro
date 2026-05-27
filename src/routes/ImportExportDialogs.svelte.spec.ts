@@ -4,6 +4,8 @@ import { render } from 'vitest-browser-svelte';
 import ImportExportDialogs from './ImportExportDialogs.svelte';
 import { exportThemes } from '$lib/importExport';
 import { createDefaultTheme } from '$lib/model';
+import { createAppManager } from '$lib/state/state.svelte';
+import { appManagerContextOption } from '$lib/state/testAppContext';
 
 function themes() {
 	return [createDefaultTheme({ name: 'Theme 1' })];
@@ -21,7 +23,8 @@ async function uploadJson(name: string, json: string) {
 describe('ImportExportDialogs', () => {
 	it('keeps export confirm disabled until a theme is selected and exports filename payload', async () => {
 		const onexport = vi.fn();
-		render(ImportExportDialogs, { themes: themes(), onexport });
+		const app = createAppManager({ data: { themes: themes() } });
+		render(ImportExportDialogs, { ...appManagerContextOption(app), props: { onexport } });
 
 		await page.getByRole('button', { name: 'Export themes' }).click();
 		await page.getByLabelText('Theme 1').click();
@@ -33,7 +36,8 @@ describe('ImportExportDialogs', () => {
 	});
 
 	it('shows import validation summary and disables confirm for invalid files', async () => {
-		render(ImportExportDialogs, { themes: themes() });
+		const app = createAppManager({ data: { themes: themes() } });
+		render(ImportExportDialogs, appManagerContextOption(app));
 
 		await page.getByRole('button', { name: 'Import themes' }).click();
 		await uploadJson('bad.json', '{ nope');
@@ -42,17 +46,15 @@ describe('ImportExportDialogs', () => {
 	});
 
 	it('supports conflict choices and successful import callback', async () => {
-		const onimport = vi.fn();
-		render(ImportExportDialogs, { themes: themes(), onimport });
+		const app = createAppManager({ data: { themes: themes() } });
+		render(ImportExportDialogs, appManagerContextOption(app));
 		const imported = createDefaultTheme({ name: 'Theme 1' });
 
 		await page.getByRole('button', { name: 'Import themes' }).click();
 		await uploadJson('themes.json', exportThemes([imported]));
 		await page.getByLabelText('Conflict choice for Theme 1').selectOptions('overwrite');
 		await page.getByRole('button', { name: 'Confirm import' }).click();
-		expect(onimport).toHaveBeenCalledWith(
-			expect.objectContaining({ themes: [expect.objectContaining({ name: imported.name })] }),
-			[{ importKey: '0', conflict: 'overwrite' }]
-		);
+		expect(app.data.themes).toHaveLength(1);
+		expect(app.data.themes[0].name).toBe(imported.name);
 	});
 });

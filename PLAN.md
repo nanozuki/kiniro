@@ -164,32 +164,34 @@ Manual QA:
 
 ## Phase 5: AppManager Context
 
+Status: complete.
+
 Goal: remove prop drilling for AppManager-owned data and mutations.
 
 Work:
 
-- Add `runed` as a direct dependency if the project imports Runed context
-  directly.
-- Add an AppManager context module.
-- Set AppManager context at the route boundary.
-- Refactor route-owned components to read AppManager from context.
-- Refactor reusable UI components that edit app-owned data to read AppManager
-  from context when possible.
-- Pass only identity/scope props when a component cannot infer what to read.
-- Keep purely presentational or generic components prop-driven.
+- [x] Add `runed` as a direct dependency if the project imports Runed context
+      directly.
+- [x] Add an AppManager context module.
+- [x] Set AppManager context at the route boundary.
+- [x] Refactor route-owned components to read AppManager from context.
+- [x] Refactor reusable UI components that edit app-owned data to read AppManager
+      from context when possible.
+- [x] Pass only identity/scope props when a component cannot infer what to read.
+- [x] Keep purely presentational or generic components prop-driven.
 
 Tests:
 
-- Existing component behavior remains covered after moving to context.
-- Components that need AppManager throw clearly or fail tests when rendered
-  without the provider.
-- ID-scoped components render the right family/ramp/swatch after selection
-  changes.
+- [x] Existing component behavior remains covered after moving to context.
+- [x] Components that need AppManager throw clearly or fail tests when rendered
+      without the provider.
+- [x] ID-scoped components render the right family/ramp/swatch after selection
+      changes.
 
 Manual QA:
 
-- Navigate through theme, variant, palette, CSS variable, and contrast checker
-  workflows to catch context wiring mistakes that unit tests may miss.
+- [x] Navigate through theme, variant, palette, CSS variable, and contrast checker
+      workflows to catch context wiring mistakes that unit tests may miss.
 
 ## Phase 6: Cleanup And Documentation
 

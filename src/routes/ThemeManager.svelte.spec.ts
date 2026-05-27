@@ -1,8 +1,10 @@
 import { page, userEvent } from 'vitest/browser';
-import { describe, expect, it, vi } from 'vitest';
+import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { createInlineEditSession, type InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
+import { getAppManagerContext } from '$lib/state/appContext';
+import { createAppManager } from '$lib/state/state.svelte';
+import { appManagerContextOption } from '$lib/state/testAppContext';
 import Toaster from '$lib/ui/Toaster.svelte';
 import ThemeManager from './ThemeManager.svelte';
 
@@ -19,156 +21,86 @@ function themes() {
 	return [first, second];
 }
 
-function editSession(
-	callback: (id: string, name: string) => void,
-	resolve: (draft: string, previous: string) => InlineEditSubmitResult = (draft) => ({
-		value: draft
-	})
-) {
-	return (id: string) =>
-		createInlineEditSession({
-			preview: (draft) => callback(id, draft),
-			submit: (draft) => {
-				const result = resolve(draft, '');
-				callback(id, result.value);
-				return result;
-			}
-		});
+function manager() {
+	return createAppManager({ data: { themes: themes() } });
 }
 
 describe('ThemeManager', () => {
-	it('renders theme and variant navigation and selection callbacks', async () => {
-		const onselecttheme = vi.fn();
-		const onselectvariant = vi.fn();
-		const renderedThemes = themes();
-		render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: renderedThemes[0].id,
-			selectedVariantId: renderedThemes[0].variants[0].id,
-			onselecttheme,
-			onselectvariant
-		});
+	it('renders theme and variant navigation and updates selection through context', async () => {
+		const app = manager();
+		render(ThemeManager, appManagerContextOption(app));
 
 		await expect
 			.element(page.getByRole('tab', { name: 'Rose Pine' }))
 			.toHaveAttribute('aria-selected', 'true');
 		await page.getByRole('tab', { name: 'Gruvbox' }).click();
+		expect(app.ui.selection.themeId).toBe(app.data.themes[1].id);
+		await page.getByRole('tab', { name: 'Rose Pine' }).click();
 		await page.getByRole('tab', { name: 'Moon' }).click();
-		expect(onselecttheme).toHaveBeenCalledWith(renderedThemes[1].id);
-		expect(onselectvariant).toHaveBeenCalledWith(renderedThemes[0].variants[1].id);
+		expect(app.ui.selection.variantId).toBe(app.data.themes[0].variants[1].id);
 	});
 
-	it('delegates create actions', async () => {
-		const onaddtheme = vi.fn();
-		const onaddvariant = vi.fn();
-		const renderedThemes = themes();
-		render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: renderedThemes[0].id,
-			selectedVariantId: renderedThemes[0].variants[0].id,
-			onaddtheme,
-			onaddvariant
-		});
+	it('creates themes and variants through context', async () => {
+		const app = manager();
+		render(ThemeManager, appManagerContextOption(app));
 
 		await page.getByLabelText('Add theme').click();
+		expect(app.data.themes).toHaveLength(3);
 		await page.getByLabelText('Add variant').click();
-		expect(onaddtheme).toHaveBeenCalled();
-		expect(onaddvariant).toHaveBeenCalled();
+		expect(app.selectedTheme?.variants).toHaveLength(2);
 	});
 
 	it('renames and deletes selected theme and variant', async () => {
-		const onrenametheme = vi.fn();
-		const onrenamevariant = vi.fn();
-		const ondeletetheme = vi.fn();
-		const ondeletevariant = vi.fn();
-		const renderedThemes = themes();
-		const selectedTheme = renderedThemes[0];
-		const selectedVariant = selectedTheme.variants[0];
-		render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession(onrenametheme),
-			oneditvariant: editSession(onrenamevariant),
-			ondeletetheme,
-			ondeletevariant
-		});
+		const app = manager();
+		const selectedTheme = app.selectedTheme;
+		const selectedVariant = app.selectedVariant;
+		render(ThemeManager, appManagerContextOption(app));
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
-		await page.getByLabelText('Theme name').fill('Rosé');
-		await page.getByRole('button', { name: 'Delete theme' }).click();
+		await page.getByLabelText('Theme name').fill('Rose');
+		await userEvent.keyboard('{Enter}');
+		expect(selectedTheme?.name).toBe('Rose');
+
 		await page.getByRole('button', { name: 'Rename variant' }).click();
 		await page.getByLabelText('Variant name').fill('Dawn');
-		await page.getByRole('button', { name: 'Delete theme' }).click();
-		await page.getByRole('button', { name: 'Delete variant' }).click();
+		await userEvent.keyboard('{Enter}');
+		expect(app.selectedVariant?.name).toBe('Dawn');
 
-		expect(onrenametheme).toHaveBeenCalledWith(selectedTheme.id, 'Rosé');
-		expect(onrenamevariant).toHaveBeenCalledWith(selectedVariant.id, 'Dawn');
-		expect(ondeletetheme).toHaveBeenCalledWith(selectedTheme.id);
-		expect(ondeletevariant).toHaveBeenCalledWith(selectedVariant.id);
+		await page.getByRole('button', { name: 'Delete variant' }).click();
+		expect(selectedTheme?.variants.some((variant) => variant.id === selectedVariant?.id)).toBe(
+			false
+		);
+		await page.getByRole('button', { name: 'Delete theme' }).click();
+		expect(app.data.themes.some((theme) => theme.id === selectedTheme?.id)).toBe(false);
 	});
 
 	it('submits inline renames with Enter and Escape', async () => {
-		const onrenametheme = vi.fn();
-		const onrenamevariant = vi.fn();
-		const renderedThemes = themes();
-		const selectedTheme = renderedThemes[0];
-		const selectedVariant = selectedTheme.variants[0];
-		render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession(onrenametheme),
-			oneditvariant: editSession(onrenamevariant)
-		});
+		const app = manager();
+		render(ThemeManager, appManagerContextOption(app));
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
-		await page.getByLabelText('Theme name').fill('Rosé');
+		await page.getByLabelText('Theme name').fill('Rose');
 		await userEvent.keyboard('{Enter}');
 		await expect.element(page.getByLabelText('Theme name')).not.toBeInTheDocument();
-		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Rosé');
+		expect(app.data.themes[0].name).toBe('Rose');
 
 		await page.getByRole('button', { name: 'Rename variant' }).click();
 		await page.getByLabelText('Variant name').fill('Dawn');
 		await userEvent.keyboard('{Escape}');
 		await expect.element(page.getByLabelText('Variant name')).not.toBeInTheDocument();
-		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Dawn');
+		expect(app.data.themes[0].variants[0].name).toBe('Dawn');
 	});
 
 	it('shows repair toasts for duplicate theme and variant names', async () => {
-		const onrenametheme = vi.fn();
-		const onrenamevariant = vi.fn();
-		const renderedThemes = themes();
-		const selectedTheme = renderedThemes[0];
-		const selectedVariant = selectedTheme.variants[0];
+		const app = manager();
 		render(Toaster);
-		render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession(onrenametheme, (draft) =>
-				draft === 'Gruvbox'
-					? {
-							value: 'Gruvbox 2',
-							error: 'Theme name already exists; using "Gruvbox 2".'
-						}
-					: { value: draft }
-			),
-			oneditvariant: editSession(onrenamevariant, (draft) =>
-				draft === 'Moon'
-					? {
-							value: 'Moon 2',
-							error: 'Variant name already exists; using "Moon 2".'
-						}
-					: { value: draft }
-			)
-		});
+		render(ThemeManager, appManagerContextOption(app));
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
 		await page.getByLabelText('Theme name').fill('Gruvbox');
 		await userEvent.keyboard('{Enter}');
 
-		expect(onrenametheme).toHaveBeenLastCalledWith(selectedTheme.id, 'Gruvbox 2');
+		expect(app.data.themes[0].name).toBe('Gruvbox 2');
 		await expect
 			.element(page.getByText('Theme name already exists; using "Gruvbox 2".'))
 			.toBeInTheDocument();
@@ -177,55 +109,31 @@ describe('ThemeManager', () => {
 		await page.getByLabelText('Variant name').fill('Moon');
 		await userEvent.keyboard('{Enter}');
 
-		expect(onrenamevariant).toHaveBeenLastCalledWith(selectedVariant.id, 'Moon 2');
+		expect(app.data.themes[0].variants[0].name).toBe('Moon 2');
 		await expect
 			.element(page.getByText('Variant name already exists; using "Moon 2".'))
 			.toBeInTheDocument();
 	});
 
-	it('supports repeated theme rename submissions when the parent mutates nested state in place', async () => {
-		const renderedThemes = themes();
-		const selectedTheme = renderedThemes[0];
-		const selectedVariant = selectedTheme.variants[0];
-		const { rerender } = render(ThemeManager, {
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession((id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			})
-		});
+	it('supports repeated theme rename submissions when AppManager mutates nested state in place', async () => {
+		const app = manager();
+		render(ThemeManager, appManagerContextOption(app));
 
 		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rose Pine');
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
-		await page.getByLabelText('Theme name').fill('Rosé');
+		await page.getByLabelText('Theme name').fill('Rose');
 		await userEvent.keyboard('{Enter}');
-		await rerender({
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession((id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			})
-		});
-		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rosé');
+		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Rose');
 
 		await page.getByRole('button', { name: 'Rename theme' }).click();
 		await page.getByLabelText('Theme name').fill('Aurora');
 		await userEvent.keyboard('{Enter}');
-		await rerender({
-			themes: renderedThemes,
-			selectedThemeId: selectedTheme.id,
-			selectedVariantId: selectedVariant.id,
-			onedittheme: editSession((id, name) => {
-				const theme = renderedThemes.find((item) => item.id === id);
-				if (theme) theme.name = name;
-			})
-		});
 		await expect.element(page.getByRole('heading', { level: 2 })).toHaveTextContent('Aurora');
 		await expect.element(page.getByRole('tab', { name: 'Aurora' })).toBeInTheDocument();
+	});
+
+	it('throws clearly when rendered without AppManager context', () => {
+		expect(() => getAppManagerContext()).toThrow('AppManager context is required');
 	});
 });

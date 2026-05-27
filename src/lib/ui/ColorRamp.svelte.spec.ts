@@ -4,6 +4,8 @@ import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '../model';
 import { createSourceColor } from '../color';
 import { generateFamily } from '../palette';
+import { createAppManager } from '../state/state.svelte';
+import { appManagerContextOption } from '../state/testAppContext';
 import ColorRamp from './ColorRamp.svelte';
 
 describe('ColorRamp', () => {
@@ -15,14 +17,24 @@ describe('ColorRamp', () => {
 			sourceColor: createSourceColor({ lightness: 0.7, chroma: 0.12, hue: 210 }),
 			swatchOverrides: {}
 		};
-		return generateFamily(family, theme.variants[0], theme.targetGamut).ramps[0];
+		return {
+			theme,
+			family,
+			ramp: generateFamily(family, theme.variants[0], theme.targetGamut).ramps[0]
+		};
 	}
 
 	it('renders the source cell and generated swatches', async () => {
+		const { theme, family, ramp } = rampFixture();
+		const app = createAppManager({ data: { themes: [theme] } });
 		render(ColorRamp, {
-			ramp: rampFixture(),
-			sourceValue: 'oklch(0.7000 0.1200 210.00)',
-			gamut: 'srgb'
+			...appManagerContextOption(app),
+			props: {
+				familyId: family.id,
+				ramp,
+				sourceValue: 'oklch(0.7000 0.1200 210.00)',
+				gamut: 'srgb'
+			}
 		});
 
 		await expect.element(page.getByRole('heading', { name: 'Accent' })).toBeInTheDocument();
@@ -30,20 +42,21 @@ describe('ColorRamp', () => {
 		await expect.element(page.getByLabelText(/Accent-100/)).toBeInTheDocument();
 	});
 
-	it('opens edit and delegates delete behavior', async () => {
-		const onedit = vi.fn();
-		const ondelete = vi.fn();
+	it('deletes the ramp through context', async () => {
+		const { theme, family, ramp } = rampFixture();
+		const app = createAppManager({ data: { themes: [theme] } });
+		const deleteRamp = vi.spyOn(app, 'deleteRamp');
 		render(ColorRamp, {
-			ramp: rampFixture(),
-			sourceValue: 'oklch(0.7000 0.1200 210.00)',
-			gamut: 'srgb',
-			onedit,
-			ondelete
+			...appManagerContextOption(app),
+			props: {
+				familyId: family.id,
+				ramp,
+				sourceValue: 'oklch(0.7000 0.1200 210.00)',
+				gamut: 'srgb'
+			}
 		});
 
-		await page.getByRole('button', { name: 'Edit Color Ramp' }).click();
 		await page.getByRole('button', { name: 'Delete Color Ramp' }).click();
-		expect(onedit).toHaveBeenCalledWith('ramp-1');
-		expect(ondelete).toHaveBeenCalledWith('ramp-1');
+		expect(deleteRamp).toHaveBeenCalledWith(family.id, 'ramp-1');
 	});
 });

@@ -2,57 +2,26 @@
 @component
 - Flattens theme and variant navigation into one panel.
 - Renders tabs plus inline rename drafts for the current selection.
-- Parents own normalization, deletion policy, and selection repair.
+- Reads AppManager from context for selection and authored theme mutations.
 -->
 
 <script lang="ts">
 	import type { InlineEditSession } from '$lib/ui/InlineInput.svelte';
 	import type { Gamut, Theme, ThemeVariant } from '$lib/model';
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import InlineInput from '$lib/ui/InlineInput.svelte';
 	import Tabs from '$lib/ui/Tabs.svelte';
 
-	type ThemeManagerProps = {
-		themes: Theme[];
-		selectedThemeId: string | null;
-		selectedVariantId: string | null;
-		onselecttheme?: (id: string) => void;
-		onselectvariant?: (id: string) => void;
-		onaddtheme?: () => void;
-		onaddvariant?: () => void;
-		onedittheme?: (id: string) => InlineEditSession;
-		oneditvariant?: (id: string) => InlineEditSession;
-		ondeletetheme?: (id: string) => void;
-		ondeletevariant?: (id: string) => void;
-		onthemegamut?: (id: string, gamut: Gamut) => void;
-	};
-
-	let {
-		themes,
-		selectedThemeId,
-		selectedVariantId,
-		onselecttheme = (_id: string) => {},
-		onselectvariant = (_id: string) => {},
-		onaddtheme = () => {},
-		onaddvariant = () => {},
-		onedittheme = () => ({
-			preview: () => {},
-			submit: (draft) => ({ value: draft })
-		}),
-		oneditvariant = () => ({
-			preview: () => {},
-			submit: (draft) => ({ value: draft })
-		}),
-		ondeletetheme = (_id: string) => {},
-		ondeletevariant = (_id: string) => {},
-		onthemegamut = (_id: string, _gamut: Gamut) => {}
-	}: ThemeManagerProps = $props();
-
+	const app = getAppManagerContext();
 	let editingTheme = $state(false);
 	let editingVariant = $state(false);
 	let themeEditSession = $state(0);
 	let variantEditSession = $state(0);
 	let themeHeading: HTMLHeadingElement | null = $state(null);
 	let variantHeading: HTMLHeadingElement | null = $state(null);
+	let themes = $derived(app.data.themes);
+	let selectedThemeId = $derived(app.ui.selection.themeId);
+	let selectedVariantId = $derived(app.ui.selection.variantId);
 	let selectedTheme = $derived(themes.find((theme: Theme) => theme.id === selectedThemeId) ?? null);
 	let selectedVariant = $derived(
 		selectedTheme?.variants.find((variant: ThemeVariant) => variant.id === selectedVariantId) ??
@@ -99,10 +68,10 @@
 				items={themeTabs}
 				value={selectedThemeId}
 				aria-label="Themes"
-				onchange={onselecttheme}
+				onchange={(id) => app.selectTheme(id)}
 			/>
 		{/if}
-		<button aria-label="Add theme" onclick={onaddtheme}>+</button>
+		<button aria-label="Add theme" onclick={() => void app.addTheme()}>+</button>
 	</nav>
 
 	{#if selectedTheme}
@@ -113,10 +82,10 @@
 					items={variantTabs}
 					value={selectedVariantId}
 					aria-label="Variants"
-					onchange={onselectvariant}
+					onchange={(id) => app.selectVariant(id)}
 				/>
 			{/if}
-			<button aria-label="Add variant" onclick={onaddvariant}>+</button>
+			<button aria-label="Add variant" onclick={() => void app.addVariant()}>+</button>
 		</nav>
 
 		<div class="titles">
@@ -125,7 +94,7 @@
 					<InlineInput
 						aria-label="Theme name"
 						value={selectedTheme.name}
-						session={withThemeCompletion(onedittheme(selectedTheme.id))}
+						session={withThemeCompletion(app.editThemeName(selectedTheme.id))}
 					/>
 				{/key}
 			{:else}
@@ -137,12 +106,13 @@
 					}}>Rename theme</button
 				>
 			{/if}
-			<button onclick={() => ondeletetheme(selectedTheme.id)}>Delete theme</button>
+			<button onclick={() => app.deleteTheme(selectedTheme.id)}>Delete theme</button>
 			<label>
 				Target gamut
 				<select
 					value={selectedTheme.targetGamut}
-					onchange={(event) => onthemegamut(selectedTheme.id, event.currentTarget.value as Gamut)}
+					onchange={(event) =>
+						app.setThemeTargetGamut(selectedTheme.id, event.currentTarget.value as Gamut)}
 				>
 					<option value="srgb">sRGB</option>
 					<option value="p3">Display P3</option>
@@ -155,7 +125,7 @@
 						<InlineInput
 							aria-label="Variant name"
 							value={selectedVariant.name}
-							session={withVariantCompletion(oneditvariant(selectedVariant.id))}
+							session={withVariantCompletion(app.editVariantName(selectedVariant.id))}
 						/>
 					{/key}
 				{:else}
@@ -168,7 +138,7 @@
 					>
 				{/if}
 				{#if selectedTheme.variants.length > 1}<button
-						onclick={() => ondeletevariant(selectedVariant.id)}>Delete variant</button
+						onclick={() => app.deleteVariant(selectedVariant.id)}>Delete variant</button
 					>{/if}
 			{/if}
 		</div>

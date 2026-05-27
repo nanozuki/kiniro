@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ColorSwatch from './ColorSwatch.svelte';
 import type { GeneratedSwatch } from '../palette';
+import { createAppManager } from '../state/state.svelte';
+import { appManagerContextOption } from '../state/testAppContext';
 
 function swatch(overrides = {}): GeneratedSwatch {
 	return {
@@ -15,8 +17,20 @@ function swatch(overrides = {}): GeneratedSwatch {
 }
 
 describe('ColorSwatch', () => {
+	function context() {
+		return appManagerContextOption(createAppManager());
+	}
+
 	it('renders displayed values and override indicators', async () => {
-		render(ColorSwatch, { swatch: swatch({ chroma: 0.2 }), gamut: 'srgb' });
+		render(ColorSwatch, {
+			...context(),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: swatch({ chroma: 0.2 }),
+				gamut: 'srgb'
+			}
+		});
 
 		await expect
 			.element(page.getByRole('button', { name: /Accent-100 .* overridden/ }))
@@ -25,15 +39,18 @@ describe('ColorSwatch', () => {
 	});
 
 	it('delegates channel overrides and resets from the modal', async () => {
-		const onoverride = vi.fn();
-		const onreset = vi.fn();
-		const onresetall = vi.fn();
+		const app = createAppManager();
+		const overrideSwatchChannel = vi.spyOn(app, 'overrideSwatchChannel');
+		const resetSwatchChannel = vi.spyOn(app, 'resetSwatchChannel');
+		const resetSwatchColor = vi.spyOn(app, 'resetSwatchColor');
 		render(ColorSwatch, {
-			swatch: swatch({ chroma: 0.2 }),
-			gamut: 'srgb',
-			onoverride,
-			onreset,
-			onresetall
+			...appManagerContextOption(app),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: swatch({ chroma: 0.2 }),
+				gamut: 'srgb'
+			}
 		});
 
 		await page.getByRole('button', { name: /Accent-100/ }).click();
@@ -41,13 +58,21 @@ describe('ColorSwatch', () => {
 		await page.getByRole('button', { name: 'Reset Chroma' }).click();
 		await page.getByRole('button', { name: 'Reset all channels' }).click();
 
-		expect(onoverride).toHaveBeenCalledWith('100', 'hue', 180);
-		expect(onreset).toHaveBeenCalledWith('100', 'chroma');
-		expect(onresetall).toHaveBeenCalledWith('100');
+		expect(overrideSwatchChannel).toHaveBeenCalledWith('family-1', 'ramp-1', '100', 'hue', 180);
+		expect(resetSwatchChannel).toHaveBeenCalledWith('family-1', 'ramp-1', '100', 'chroma');
+		expect(resetSwatchColor).toHaveBeenCalledWith('family-1', 'ramp-1', '100');
 	});
 
 	it('marks colors outside the selected gamut', async () => {
-		render(ColorSwatch, { swatch: swatch({ chroma: 0.37 }), gamut: 'srgb' });
+		render(ColorSwatch, {
+			...context(),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: swatch({ chroma: 0.37 }),
+				gamut: 'srgb'
+			}
+		});
 
 		await expect.element(page.getByText('⚠')).toBeInTheDocument();
 	});

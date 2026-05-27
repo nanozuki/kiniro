@@ -6,8 +6,8 @@
 -->
 
 <script lang="ts">
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import {
-		exportThemes,
 		validateThemeImport,
 		type ImportConflictChoice,
 		type ImportThemeChoice,
@@ -16,17 +16,12 @@
 	import type { Theme } from '$lib/model';
 
 	type ImportExportDialogsProps = {
-		themes: Theme[];
 		onexport?: (filename: string, json: string) => void;
-		onimport?: (file: ThemeExportFile, choices: ImportThemeChoice[]) => void;
 	};
 
-	let {
-		themes,
-		onexport = (_filename: string, _json: string) => {},
-		onimport = (_file: ThemeExportFile, _choices: ImportThemeChoice[]) => {}
-	}: ImportExportDialogsProps = $props();
+	let { onexport = (_filename: string, _json: string) => {} }: ImportExportDialogsProps = $props();
 
+	const app = getAppManagerContext();
 	let exportOpen = $state(false);
 	let importOpen = $state(false);
 	let selectedThemeIds = $state<string[]>([]);
@@ -34,6 +29,7 @@
 	let importSummary = $state('');
 	let importFile = $state<ThemeExportFile | null>(null);
 	let importChoices = $state<ImportThemeChoice[]>([]);
+	let themes = $derived(app.data.themes);
 	let exportSelection = $derived(
 		themes.filter((theme: Theme) => selectedThemeIds.includes(theme.id))
 	);
@@ -50,7 +46,10 @@
 	}
 
 	function confirmExport() {
-		onexport(filename.trim() || 'kiniro-themes.json', exportThemes(exportSelection));
+		onexport(
+			filename.trim() || 'kiniro-themes.json',
+			app.exportThemes(exportSelection.map((theme) => theme.id))
+		);
 		exportOpen = false;
 	}
 
@@ -95,7 +94,7 @@
 
 	function confirmImport() {
 		if (!importFile || importChoices.length === 0) return;
-		onimport(importFile, importChoices);
+		app.importThemes(importFile, importChoices);
 		importOpen = false;
 	}
 </script>

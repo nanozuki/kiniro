@@ -4,6 +4,8 @@ import { render } from 'vitest-browser-svelte';
 import CSSVariables from './CSSVariables.svelte';
 import { createSourceColor } from '$lib/color';
 import { createDefaultTheme } from '$lib/model';
+import { createAppManager } from '$lib/state/state.svelte';
+import { appManagerContextOption } from '$lib/state/testAppContext';
 
 function fixture() {
 	const theme = createDefaultTheme();
@@ -19,7 +21,9 @@ function fixture() {
 
 describe('CSSVariables', () => {
 	it('renders generated output and usage example', async () => {
-		render(CSSVariables, fixture());
+		const { theme } = fixture();
+		const app = createAppManager({ data: { themes: [theme] } });
+		render(CSSVariables, appManagerContextOption(app));
 
 		await expect
 			.element(page.getByLabelText('Generated CSS'))
@@ -30,12 +34,13 @@ describe('CSSVariables', () => {
 	});
 
 	it('normalizes the prefix on submit and calls onprefix with the resolved value', async () => {
-		const onprefix = vi.fn();
-		render(CSSVariables, { ...fixture(), onprefix });
+		const { theme } = fixture();
+		const app = createAppManager({ data: { themes: [theme] } });
+		render(CSSVariables, appManagerContextOption(app));
 
 		await page.getByLabelText('Variable prefix').fill('');
 		await page.getByRole('button', { name: 'Copy CSS' }).click();
-		expect(onprefix).toHaveBeenCalledWith('color');
+		expect(theme.cssPrefix).toBe('color');
 		await expect
 			.element(page.getByLabelText('Generated CSS'))
 			.toHaveTextContent('--color-default-accent-100');
@@ -43,17 +48,20 @@ describe('CSSVariables', () => {
 
 	it('reports copy success', async () => {
 		const success = vi.fn().mockResolvedValue(undefined);
-		const data = fixture();
-		render(CSSVariables, { ...data, copyText: success });
+		const { theme } = fixture();
+		const app = createAppManager({ data: { themes: [theme] } });
+		render(CSSVariables, { ...appManagerContextOption(app), props: { copyText: success } });
 		await page.getByRole('button', { name: 'Copy CSS' }).click();
 		await expect.element(page.getByRole('status')).toHaveTextContent('CSS copied.');
 		expect(success).toHaveBeenCalledWith(expect.stringContaining('--color-default-accent-100'));
 	});
 
 	it('reports copy failure', async () => {
+		const { theme } = fixture();
+		const app = createAppManager({ data: { themes: [theme] } });
 		render(CSSVariables, {
-			...fixture(),
-			copyText: vi.fn().mockRejectedValue(new Error('denied'))
+			...appManagerContextOption(app),
+			props: { copyText: vi.fn().mockRejectedValue(new Error('denied')) }
 		});
 		await page.getByRole('button', { name: 'Copy CSS' }).click();
 		await expect.element(page.getByRole('status')).toHaveTextContent('Could not copy CSS.');

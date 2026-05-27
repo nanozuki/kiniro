@@ -7,51 +7,30 @@
 
 <script lang="ts">
 	import ColorFamily from '$lib/ui/ColorFamily.svelte';
-	import type { ColorFamilyStructure, Gamut, ThemeVariant } from '$lib/model';
+	import { getAppManagerContext } from '$lib/state/appContext';
 
-	type PaletteProps = {
-		families: ColorFamilyStructure[];
-		variant: ThemeVariant;
-		targetGamut: Gamut;
-		variantCount?: number;
-		onaddfamily?: () => void;
-		onrenamefamily?: (id: string, name: string) => void;
-		ondeletefamily?: (id: string) => void;
-		onaddramp?: (familyId: string) => void;
-	};
-
-	let {
-		families,
-		variant,
-		targetGamut,
-		variantCount = 1,
-		onaddfamily = () => {},
-		onrenamefamily = (_id: string, _name: string) => {},
-		ondeletefamily = (_id: string) => {},
-		onaddramp = (_familyId: string) => {}
-	}: PaletteProps = $props();
+	const app = getAppManagerContext();
+	let theme = $derived(app.selectedTheme);
+	let variant = $derived(app.selectedVariant);
+	let families = $derived(theme?.structure.families ?? []);
+	let targetGamut = $derived(theme?.targetGamut ?? 'srgb');
+	let variantCount = $derived(theme?.variants.length ?? 1);
 </script>
 
 <section aria-label="Palette" class="palette">
 	<header>
 		<h2>Palette</h2>
-		<button type="button" onclick={onaddfamily}>Add Color Family</button>
+		<button type="button" onclick={() => void app.addFamily()}>Add Color Family</button>
 	</header>
 
-	{#if families.length === 0}
+	{#if !theme || !variant}
+		<p>No theme selected.</p>
+	{:else if families.length === 0}
 		<p>No color families yet.</p>
 	{:else}
 		<div class="families">
 			{#each families as family (family.id)}
-				<ColorFamily
-					{family}
-					{variant}
-					gamut={targetGamut}
-					{variantCount}
-					onrename={onrenamefamily}
-					ondelete={ondeletefamily}
-					{onaddramp}
-				/>
+				<ColorFamily {family} {variant} gamut={targetGamut} {variantCount} />
 			{/each}
 		</div>
 	{/if}
