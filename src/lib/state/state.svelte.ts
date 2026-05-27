@@ -354,15 +354,46 @@ export class AppManager {
 	}
 
 	renameFamily(familyId: Id, name: string): void {
-		this.commitMutation('Rename family', () => {
-			const theme = this.selectedTheme;
-			const family = theme?.structure.families.find((item) => item.id === familyId);
-			if (!theme || !family) return;
-			family.name = ensureUniqueName(name, familyNames(theme), {
-				exclude: family,
-				fallbackBase: 'Family'
-			});
-		});
+		this.commitMutation(
+			'Rename family',
+			() => {
+				const theme = this.selectedTheme;
+				const family = theme?.structure.families.find((item) => item.id === familyId);
+				if (!theme || !family) return;
+				family.name = ensureUniqueName(name, familyNames(theme), {
+					exclude: family,
+					fallbackBase: 'Family'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	previewFamilyName(familyId: Id, name: string): void {
+		this.beginPreview();
+		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+		if (family) family.name = name;
+	}
+
+	editFamilyName(familyId: Id): InlineEditSession {
+		const theme = this.selectedTheme;
+		const family = theme?.structure.families.find((item) => item.id === familyId);
+		const previous = family?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewFamilyName(familyId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const family = theme?.structure.families.find((item) => item.id === familyId);
+				const result = resolveEditedName(draft, previous, theme ? familyNames(theme) : [], family, {
+					fallbackBase: 'Family',
+					label: 'Family'
+				});
+				this.renameFamily(familyId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteFamily(familyId: Id): void {
@@ -472,13 +503,65 @@ export class AppManager {
 	}
 
 	renameRamp(rampId: Id, name: string): void {
-		this.commitMutation('Rename ramp', () => {
-			const theme = this.selectedTheme;
-			const ramp = theme?.structure.families
-				.flatMap((family) => family.ramps)
-				.find((item) => item.id === rampId);
-			if (!theme || !ramp) return;
-			ramp.name = ensureUniqueName(name, rampNames(theme), { exclude: ramp, fallbackBase: 'Ramp' });
+		this.commitMutation(
+			'Rename ramp',
+			() => {
+				const theme = this.selectedTheme;
+				const ramp = theme?.structure.families
+					.flatMap((family) => family.ramps)
+					.find((item) => item.id === rampId);
+				if (!theme || !ramp) return;
+				ramp.name = ensureUniqueName(name, rampNames(theme), {
+					exclude: ramp,
+					fallbackBase: 'Ramp'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	previewRampName(rampId: Id, name: string): void {
+		this.beginPreview();
+		const ramp = this.selectedTheme?.structure.families
+			.flatMap((family) => family.ramps)
+			.find((item) => item.id === rampId);
+		if (ramp) ramp.name = name;
+	}
+
+	editRampName(rampId: Id): InlineEditSession {
+		const theme = this.selectedTheme;
+		const ramp = theme?.structure.families
+			.flatMap((family) => family.ramps)
+			.find((item) => item.id === rampId);
+		const previous = ramp?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewRampName(rampId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const ramp = theme?.structure.families
+					.flatMap((family) => family.ramps)
+					.find((item) => item.id === rampId);
+				const result = resolveEditedName(draft, previous, theme ? rampNames(theme) : [], ramp, {
+					fallbackBase: 'Ramp',
+					label: 'Ramp'
+				});
+				this.renameRamp(rampId, result.value);
+				return result;
+			}
+		};
+	}
+
+	moveRamp(familyId: Id, rampId: Id, direction: -1 | 1): void {
+		this.commitMutation('Move ramp', () => {
+			const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+			if (!family) return;
+			const index = family.ramps.findIndex((ramp) => ramp.id === rampId);
+			const nextIndex = index + direction;
+			if (index < 0 || nextIndex < 0 || nextIndex >= family.ramps.length) return;
+			const [ramp] = family.ramps.splice(index, 1);
+			family.ramps.splice(nextIndex, 0, ramp);
 		});
 	}
 
@@ -783,7 +866,7 @@ function resolveEditedName(
 	previous: string,
 	existingNames: readonly NamedItem[],
 	exclude: NamedItem | undefined,
-	options: { fallbackBase: string; label: 'Theme' | 'Variant' }
+	options: { fallbackBase: string; label: 'Theme' | 'Variant' | 'Family' | 'Ramp' }
 ): InlineEditSubmitResult {
 	const validation = validateName(draft, existingNames, {
 		exclude,

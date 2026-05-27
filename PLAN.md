@@ -200,27 +200,29 @@ Manual QA:
 
 ## Phase 6: Cleanup And Documentation
 
+Status: complete.
+
 Goal: remove old ownership leaks and document the settled model.
 
 Work:
 
-- Remove direct external writes to `app.data` and `app.ui`.
-- Remove disabled undo/redo placeholders and wire real controls.
-- Update architecture docs to match the final history, persistence, context,
-  inline edit, and import/export model.
-- Keep module comments current where interfaces changed.
-- Remove obsolete tests that only covered old callback plumbing.
+- [x] Remove direct external writes to `app.data` and `app.ui`.
+- [x] Remove disabled undo/redo placeholders and wire real controls.
+- [x] Update architecture docs to match the final history, persistence, context,
+      inline edit, and import/export model.
+- [x] Keep module comments current where interfaces changed.
+- [x] Remove obsolete tests that only covered old callback plumbing.
 
 Tests:
 
-- `pnpm run lint`
-- `pnpm run check`
-- `pnpm run test`
+- [x] `pnpm run lint`
+- [x] `pnpm run check`
+- [x] `pnpm run test`
 
 Manual QA:
 
-- Full browser pass through create, rename, add family/ramp, edit scale, export,
-  import, undo, redo, reload, and copy CSS workflows.
+- [x] Full browser pass through create, rename, add family/ramp, edit scale, export,
+      import, undo, redo, reload, and copy CSS workflows.
 
 ## Follow-up
 

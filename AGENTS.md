@@ -2,7 +2,9 @@
 
 Read @README.md to get an overview of this project.
 
-## Documentation Map
+## Documentation
+
+### Map
 
 - `docs/terminology.md`: Shared domain terms for themes, variants, palettes,
   color families, color ramps, swatches, source colors, and generated values.
@@ -12,6 +14,18 @@ Read @README.md to get an overview of this project.
 - `docs/third-party/README.md`: Index of local snapshots for external docs.
 - `docs/third-party/melt-ui`: Local snapshot of Melt UI next-gen docs.
 - `docs/third-party/runed`: Local snapshot of Runed docs.
+
+### Writing Guidelines
+
+Keep documentation close to the abstraction it describes. Component-specific
+behavior, responsibilities, state ownership, and interaction constraints should
+usually live in that component's module comment. Use `docs/architecture.md` for
+cross-cutting rules that span multiple modules, such as state ownership,
+persistence, undo/redo, validation boundaries, import/export formats, and shared
+domain invariants.
+
+Update related documentation when changing domain concepts, layout behavior, or
+component responsibilities.
 
 ## Source Layout
 
@@ -24,16 +38,20 @@ Read @README.md to get an overview of this project.
 ## Techniques
 
 - Use `nix flake` and `direnv` for development environment.
+- Use `color.js` for color calculations.
+
+### Svelte
+
 - Use SvelteKit and Svelte 5. Use runes for reactivity.
 - Put route-level UI in `src/routes` and reusable logic in `src/lib`.
 - In Svelte components, name the props type after the component, such as
   `TabsProps`, instead of using a generic `Props` alias.
 - When a component accepts ARIA attributes, extend Svelte's `AriaAttributes`
   rather than hand-writing individual ARIA prop types.
-- Use `color.js` for color calculations.
+- When a Svelte component owns exported helper types or functions, export them
+  from `<script module lang="ts">` instead of splitting out an extra file only
+  for TypeScript discovery.
 - Use the next version of `melt-ui` to build components.
-- Update related documentation when changing domain concepts, layout behavior,
-  or component responsibilities.
 
 ## Comments
 

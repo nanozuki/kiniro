@@ -131,6 +131,39 @@ describe('AppManager selection and persistence', () => {
 		expect(manager.history.past).toHaveLength(0);
 	});
 
+	it('previews inline family and ramp names without persistence or history until submit', () => {
+		const theme = createDefaultTheme({ familyName: 'Neutral' });
+		const familyId = theme.structure.families[0].id;
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		state.data.themes = [theme];
+		state.ui = {
+			selectedThemeId: theme.id,
+			selectedVariantId: theme.variants[0].id,
+			workspaceTab: 'palette'
+		};
+		const manager = createAppManager({ persistedState: state, storage });
+		const ramp = manager.addRamp(familyId, source, 'Accent');
+		manager.addRamp(familyId, source, 'Existing');
+		const initialHistoryLength = manager.history.past.length;
+		const familyEdit = manager.editFamilyName(familyId);
+		const rampEdit = manager.editRampName(ramp!.id);
+
+		familyEdit.preview('Accent');
+		rampEdit.preview('Existing');
+		expect(manager.selectedTheme?.structure.families[0].name).toBe('Accent');
+		expect(manager.selectedTheme?.structure.families[0].ramps[0].name).toBe('Existing');
+		expect(manager.history.past).toHaveLength(initialHistoryLength);
+
+		expect(familyEdit.submit('Accent')).toMatchObject({ value: 'Accent' });
+		expect(rampEdit.submit('Existing')).toMatchObject({
+			value: 'Existing 2',
+			error: 'Ramp name already exists; using "Existing 2".'
+		});
+		expect(manager.history.past).toHaveLength(initialHistoryLength + 2);
+		expect(storage.writes).toBe(4);
+	});
+
 	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {
 		const first = createDefaultTheme({ name: 'One' });
 		const second = createDefaultTheme({ name: 'Two' });
@@ -326,6 +359,28 @@ describe('AppManager ramp and swatch operations', () => {
 		manager.deleteRamp(familyId, ramp!.id);
 		expect(manager.selectedTheme?.structure.families[0].ramps).toEqual([]);
 		expect(manager.ui.workspaceTab).toBe('palette');
+	});
+
+	it('moves ramps within their shared family order', () => {
+		const theme = createDefaultTheme();
+		const familyId = theme.structure.families[0].id;
+		const manager = createAppManager({
+			data: { themes: [theme] }
+		});
+		const first = manager.addRamp(familyId, source, 'First');
+		const second = manager.addRamp(familyId, source, 'Second');
+
+		manager.moveRamp(familyId, second!.id, -1);
+		expect(manager.selectedTheme?.structure.families[0].ramps.map((ramp) => ramp.id)).toEqual([
+			second!.id,
+			first!.id
+		]);
+
+		manager.moveRamp(familyId, second!.id, -1);
+		expect(manager.selectedTheme?.structure.families[0].ramps.map((ramp) => ramp.id)).toEqual([
+			second!.id,
+			first!.id
+		]);
 	});
 
 	it('sets and resets swatch overrides and reverses selected variant overrides only', () => {

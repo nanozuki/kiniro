@@ -45,6 +45,10 @@ accessors, or helpers. All changes to AppManager persisted state must go through
 AppManager methods, which also coordinate validation, selection repair,
 undo/redo, and persistence.
 
+`AppManager` is provided with Runed context at the route boundary. UI modules
+that need scoped app data receive stable identity props, such as theme, family,
+ramp, or step IDs, and resolve the rest through the manager.
+
 ## Persistence
 
 Local storage persists:
@@ -55,6 +59,21 @@ Local storage persists:
 
 If stored data fails validation, Kiniro discards it, rebuilds an empty state,
 and notifies the user that local data was reset.
+
+The local-storage shape is internal and may include generated IDs. It is parsed
+through the internal zod schemas before `AppManager` exposes the state to
+components. `AppManager` runs a repair pass after loading, importing, undoing, or
+redoing so selection and variant values line up with the current theme
+structure.
+
+Undo and redo history stores the previous authored app data plus durable UI
+choices for each committed mutation. It does not store the history stacks inside
+history entries. Undo and redo restore selected theme, selected variant, and
+workspace tab along with the authored data, then persist the restored snapshot.
+
+Inline edit previews are temporary. Preview mutations may show unresolved draft
+text in the UI, but they do not write local storage or add undo entries.
+Submission resolves names, creates at most one history entry, and persists once.
 
 ## Shared Naming and Validation Rules
 
@@ -75,6 +94,18 @@ is empty.
 
 Inside dialogs, validation is live and confirmation stays disabled until every
 value is valid.
+
+## Import And Export
+
+Theme export files are public DTOs, not internal persisted state. They do not
+include internal IDs at any depth. Import validates this public shape, generates
+fresh internal IDs, remaps family and ramp values onto those IDs, and applies the
+result through `AppManager` so history, selection, and persistence stay
+consistent.
+
+When importing a theme with the same name as an existing theme, the import flow
+lets the user choose whether to rename the incoming theme or overwrite the
+existing one. The matching key is the theme name, not an internal ID.
 
 ## Shared Structure Across Variants
 
