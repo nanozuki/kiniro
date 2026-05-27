@@ -1,91 +1,53 @@
 import { nanoid } from 'nanoid';
+import type { z } from 'zod';
 import { clone } from './clone';
+import type {
+	appStateSchema,
+	colorFamilyStructureSchema,
+	colorFamilyValuesSchema,
+	colorRampStructureSchema,
+	colorRampValuesSchema,
+	gamutPreviewSchema,
+	gamutSchema,
+	idSchema,
+	oklchChannelSchema,
+	oklchColorSchema,
+	sourceColorFormatSchema,
+	sourceColorSchema,
+	stepIndexStyleSchema,
+	stepScaleStructureSchema,
+	stepScaleValuesSchema,
+	swatchChannelOverridesSchema,
+	themeSchema,
+	themeStructureSchema,
+	themeVariantSchema,
+	variantValuesSchema,
+	workspaceTabSchema
+} from './schemas';
 
-export type Id = string;
+export type Id = z.infer<typeof idSchema>;
 
-export type WorkspaceTab = 'palette' | 'cssVariables' | 'contrastChecker';
-export type Gamut = 'srgb' | 'p3';
-export type GamutPreview = Gamut;
-export type StepIndexStyle = 'scale' | 'ordinal';
-export type SourceColorFormat = 'oklch' | 'hex' | 'rgb' | 'hsl';
-export type OklchChannel = 'lightness' | 'chroma' | 'hue';
+export type WorkspaceTab = z.infer<typeof workspaceTabSchema>;
+export type Gamut = z.infer<typeof gamutSchema>;
+export type GamutPreview = z.infer<typeof gamutPreviewSchema>;
+export type StepIndexStyle = z.infer<typeof stepIndexStyleSchema>;
+export type SourceColorFormat = z.infer<typeof sourceColorFormatSchema>;
+export type OklchChannel = z.infer<typeof oklchChannelSchema>;
 
-export type OklchColor = {
-	lightness: number;
-	chroma: number;
-	hue: number;
-};
-
-export type SourceColor = {
-	format: SourceColorFormat;
-	oklch: OklchColor;
-	serialized: string;
-};
-
-export type SwatchChannelOverrides = Partial<Record<OklchChannel, number>>;
-
-export type StepScaleStructure = {
-	stepCount: number;
-	indexStyle: StepIndexStyle;
-	halfStepStart: boolean;
-	halfStepEnd: boolean;
-};
-
-export type StepScaleValues = {
-	lightnessStart: number;
-	lightnessEnd: number;
-	lightnessOverrides: Record<string, number>;
-	reversed: boolean;
-};
-
-export type ColorRampStructure = {
-	id: Id;
-	name: string;
-};
-
-export type ColorRampValues = {
-	sourceColor: SourceColor;
-	swatchOverrides: Record<string, SwatchChannelOverrides>;
-};
-
-export type ColorFamilyStructure = {
-	id: Id;
-	name: string;
-	stepScale: StepScaleStructure;
-	ramps: ColorRampStructure[];
-};
-
-export type ColorFamilyValues = {
-	stepScale: StepScaleValues;
-	ramps: Record<Id, ColorRampValues>;
-};
-
-export type ThemeStructure = {
-	families: ColorFamilyStructure[];
-};
-
-export type VariantValues = {
-	families: Record<Id, ColorFamilyValues>;
-};
-
-export type ThemeVariant = {
-	id: Id;
-	name: string;
-	values: VariantValues;
-};
-
-export type Theme = {
-	id: Id;
-	name: string;
-	cssPrefix: string;
-	targetGamut: Gamut;
-	structure: ThemeStructure;
-	variants: ThemeVariant[];
-};
-
-export type AppState = {
-	themes: Theme[];
-};
+export type OklchColor = z.infer<typeof oklchColorSchema>;
+export type SourceColor = z.infer<typeof sourceColorSchema>;
+export type SwatchChannelOverrides = z.infer<typeof swatchChannelOverridesSchema>;
+export type StepScaleStructure = z.infer<typeof stepScaleStructureSchema>;
+export type StepScaleValues = z.infer<typeof stepScaleValuesSchema>;
+export type ColorRampStructure = z.infer<typeof colorRampStructureSchema>;
+export type ColorRampValues = z.infer<typeof colorRampValuesSchema>;
+export type ColorFamilyStructure = z.infer<typeof colorFamilyStructureSchema>;
+export type ColorFamilyValues = z.infer<typeof colorFamilyValuesSchema>;
+export type ThemeStructure = z.infer<typeof themeStructureSchema>;
+export type VariantValues = z.infer<typeof variantValuesSchema>;
+export type ThemeVariant = z.infer<typeof themeVariantSchema>;
+export type Theme = z.infer<typeof themeSchema>;
+export type AppState = z.infer<typeof appStateSchema>;
 
 export type DefaultThemeOptions = {
 	name?: string;
@@ -221,6 +183,6 @@ export function syncThemeVariantValues(theme: Theme): Theme {
 	};
 }
 
-function generateId(): Id {
+export function generateId(): Id {
 	return nanoid();
 }

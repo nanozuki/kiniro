@@ -1,43 +1,47 @@
-import { page } from 'vitest/browser';
+import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '../model';
+import { createAppManager } from '../state/state.svelte';
+import { appManagerContextOption } from '../state/testAppContext';
 import ColorFamily from './ColorFamily.svelte';
 
 describe('ColorFamily', () => {
 	it('renders family actions and delegates them', async () => {
 		const theme = createDefaultTheme({ familyName: 'Neutrals' });
 		const family = theme.structure.families[0];
-		const onrename = vi.fn();
-		const ondelete = vi.fn();
-		const onaddramp = vi.fn();
+		const app = createAppManager({ data: { themes: [theme] } });
+		const previewFamilyName = vi.spyOn(app, 'previewFamilyName');
+		const renameFamily = vi.spyOn(app, 'renameFamily');
+		const deleteFamily = vi.spyOn(app, 'deleteFamily');
+		const addRamp = vi.spyOn(app, 'addRamp');
 		render(ColorFamily, {
-			family,
-			variant: theme.variants[0],
-			gamut: 'srgb',
-			onrename,
-			ondelete,
-			onaddramp
+			...appManagerContextOption(app),
+			props: { family, variant: theme.variants[0], gamut: 'srgb' }
 		});
 
 		await expect.element(page.getByText('100: 0.9500')).toBeInTheDocument();
 		await page.getByRole('button', { name: 'Rename family' }).click();
 		await page.getByLabelText('Family name').fill('Grays');
+		await userEvent.keyboard('{Enter}');
 		await page.getByRole('button', { name: 'Delete family' }).click();
 		await page.getByRole('button', { name: 'Add Color Ramp' }).click();
-		expect(onrename).toHaveBeenCalledWith(family.id, 'Grays');
-		expect(ondelete).toHaveBeenCalledWith(family.id);
-		expect(onaddramp).toHaveBeenCalledWith(family.id);
+		expect(previewFamilyName).toHaveBeenCalledWith(family.id, 'Grays');
+		expect(renameFamily).toHaveBeenCalledWith(family.id, 'Grays');
+		expect(deleteFamily).toHaveBeenCalledWith(family.id);
+		expect(addRamp).toHaveBeenCalledWith(
+			family.id,
+			expect.objectContaining({ serialized: expect.any(String) })
+		);
 	});
 
 	it('shows the shared-structure warning only when multiple variants exist', async () => {
 		const theme = createDefaultTheme();
 		const family = theme.structure.families[0];
+		const app = createAppManager({ data: { themes: [theme] } });
 		const { rerender } = render(ColorFamily, {
-			family,
-			variant: theme.variants[0],
-			gamut: 'srgb',
-			variantCount: 1
+			...appManagerContextOption(app),
+			props: { family, variant: theme.variants[0], gamut: 'srgb', variantCount: 1 }
 		});
 
 		await expect

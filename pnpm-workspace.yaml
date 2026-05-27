@@ -1,5 +1,11 @@
 packages:
   - '.'
 
-onlyBuiltDependencies:
-  - esbuild
+allowBuilds:
+  esbuild: true
+  sharp: true
+  workerd: true
+engineStrict: true
+packageConfigs:
+  kiniro:
+    engineStrict: true

@@ -1,4 +1,12 @@
 import { clone } from '../clone';
+import { normalizeCssPrefix } from '../cssVariables';
+import type { InlineEditSession, InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
+import {
+	applyThemeImport,
+	exportThemes as exportThemesJson,
+	type ImportThemeChoice,
+	type ThemeExportFile
+} from '../importExport';
 import {
 	cleanLightnessOverrides,
 	createIndexStyleStructure,
@@ -36,11 +44,21 @@ import {
 	defaultVariantName,
 	ensureUniqueName,
 	familyNames,
+	type NamedItem,
 	rampNames,
 	themeNames,
+	validateName,
 	variantNames
 } from '../naming';
-import { normalizeCssPrefix } from '../cssVariables';
+import {
+	createDefaultPersistedState,
+	loadState,
+	saveState,
+	STORAGE_KEY,
+	type PersistedState,
+	type PersistedUiState,
+	type StorageLike
+} from '../storage';
 
 export type SelectionState = {
 	themeId: Id | null;
@@ -57,29 +75,54 @@ export type AppManagerState = {
 	ui: UiState;
 };
 
+export type HistoryEntry = PersistedState['history']['past'][number];
+export type HistoryState = PersistedState['history'];
+
 export type AppManagerOptions = {
 	data?: AppState;
 	ui?: Partial<UiState>;
+	persistedState?: PersistedState;
+	storage?: StorageLike;
+	storageKey?: string;
 };
 
-// AppManager is the mutation boundary for app data and UI state. App data
-// contains only authored palette data; UI state contains navigation and preview
-// choices, and every data operation repairs selection enough to keep the screen valid.
+// AppManager owns Kiniro's persisted state. Components keep ephemeral interaction
+// state locally, but every durable change to app data, selection, workspace,
+// undo/redo, or storage goes through this module so repair and persistence stay
+// coordinated.
 export class AppManager {
 	data = $state<AppState>(createEmptyAppState());
 	ui = $state<UiState>({
 		selection: { themeId: null, variantId: null },
 		workspaceTab: 'palette'
 	});
+	history = $state<HistoryState>({ past: [], future: [] });
+	lastAction = $state<string | null>(null);
+	storageReset = $state(false);
+	storageError = $state<string | null>(null);
+
+	private storage?: StorageLike;
+	private storageKey: string;
+	private previewBase: { data: AppState; ui: PersistedUiState } | null = null;
+	private committedSnapshot: { data: AppState; ui: PersistedUiState } = {
+		data: createEmptyAppState(),
+		ui: {
+			selectedThemeId: null,
+			selectedVariantId: null,
+			workspaceTab: 'palette'
+		}
+	};
+
 	constructor(options: AppManagerOptions = {}) {
-		this.data = clone(options.data ?? createEmptyAppState());
-		const { selection, ...uiOptions } = options.ui ?? {};
-		this.ui = {
-			selection: { themeId: null, variantId: null, ...selection },
-			workspaceTab: 'palette',
-			...uiOptions
-		};
-		this.repairUiState();
+		this.storage = options.storage;
+		this.storageKey = options.storageKey ?? STORAGE_KEY;
+
+		const initial = this.loadInitialState(options);
+		this.restorePersistedState(initial.state);
+		this.storageReset = initial.reset;
+		this.storageError = initial.error;
+
+		if (initial.reconciled) this.persist();
 	}
 
 	get selectedTheme(): Theme | null {
@@ -93,240 +136,471 @@ export class AppManager {
 		);
 	}
 
+	get canUndo(): boolean {
+		return this.history.past.length > 0;
+	}
+
+	get canRedo(): boolean {
+		return this.history.future.length > 0;
+	}
+
 	selectTheme(themeId: Id): void {
-		const theme = this.data.themes.find((item) => item.id === themeId);
-		if (!theme) return;
-		this.ui.selection = { themeId: theme.id, variantId: theme.variants[0]?.id ?? null };
-		this.ui.workspaceTab = 'palette';
-		this.repairUiState();
+		this.updateUi(() => {
+			const theme = this.data.themes.find((item) => item.id === themeId);
+			if (!theme) return;
+			this.ui.selection = { themeId: theme.id, variantId: theme.variants[0]?.id ?? null };
+			this.ui.workspaceTab = 'palette';
+		});
 	}
 
 	selectVariant(variantId: Id): void {
-		const theme = this.selectedTheme;
-		if (!theme?.variants.some((variant) => variant.id === variantId)) return;
-		this.ui.selection.variantId = variantId;
-		this.ui.workspaceTab = 'palette';
+		this.updateUi(() => {
+			const theme = this.selectedTheme;
+			if (!theme?.variants.some((variant) => variant.id === variantId)) return;
+			this.ui.selection.variantId = variantId;
+			this.ui.workspaceTab = 'palette';
+		});
 	}
 
 	setWorkspaceTab(tab: WorkspaceTab): void {
-		this.ui.workspaceTab = tab;
-		this.repairUiState();
+		this.updateUi(() => {
+			this.ui.workspaceTab = tab;
+		});
 	}
 
 	setThemeTargetGamut(themeId: Id, gamut: Gamut): void {
-		const theme = this.data.themes.find((item) => item.id === themeId);
-		if (theme) theme.targetGamut = gamut;
+		this.commitMutation('Set theme gamut', () => {
+			const theme = this.data.themes.find((item) => item.id === themeId);
+			if (theme) theme.targetGamut = gamut;
+		});
 	}
 
 	addTheme(name = defaultThemeName(this.data.themes)): Theme {
-		const theme = createDefaultTheme({
-			name: ensureUniqueName(name, themeNames(this.data.themes), { fallbackBase: 'Theme' })
+		let created: Theme = createDefaultTheme();
+		this.commitMutation('Add theme', () => {
+			created = createDefaultTheme({
+				name: ensureUniqueName(name, themeNames(this.data.themes), { fallbackBase: 'Theme' })
+			});
+			this.data.themes.push(created);
+			this.ui.selection = { themeId: created.id, variantId: created.variants[0].id };
+			this.ui.workspaceTab = 'palette';
 		});
-		this.data.themes.push(theme);
-		this.ui.selection = { themeId: theme.id, variantId: theme.variants[0].id };
-		this.ui.workspaceTab = 'palette';
-		return theme;
+		return created;
+	}
+
+	previewThemeName(themeId: Id, name: string): void {
+		this.beginPreview();
+		const theme = this.data.themes.find((item) => item.id === themeId);
+		if (!theme) return;
+		theme.name = name;
 	}
 
 	renameTheme(themeId: Id, name: string): void {
+		this.commitMutation(
+			'Rename theme',
+			() => {
+				const theme = this.data.themes.find((item) => item.id === themeId);
+				if (!theme) return;
+				theme.name = ensureUniqueName(name, themeNames(this.data.themes), {
+					exclude: theme,
+					fallbackBase: 'Theme'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	editThemeName(themeId: Id): InlineEditSession {
 		const theme = this.data.themes.find((item) => item.id === themeId);
-		if (!theme) return;
-		theme.name = ensureUniqueName(name, themeNames(this.data.themes), {
-			exclude: theme,
-			fallbackBase: 'Theme'
-		});
+		const previous = theme?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewThemeName(themeId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.data.themes.find((item) => item.id === themeId);
+				const result = resolveEditedName(draft, previous, themeNames(this.data.themes), theme, {
+					fallbackBase: 'Theme',
+					label: 'Theme'
+				});
+				this.renameTheme(themeId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteTheme(themeId: Id): void {
-		const index = this.data.themes.findIndex((theme) => theme.id === themeId);
-		if (index < 0) return;
-		this.data.themes.splice(index, 1);
-		const neighbor = this.data.themes[index] ?? this.data.themes[index - 1] ?? null;
-		this.ui.selection = {
-			themeId: neighbor?.id ?? null,
-			variantId: neighbor?.variants[0]?.id ?? null
-		};
-		this.ui.workspaceTab = 'palette';
-		this.repairUiState();
+		this.commitMutation('Delete theme', () => {
+			const index = this.data.themes.findIndex((theme) => theme.id === themeId);
+			if (index < 0) return;
+			this.data.themes.splice(index, 1);
+			const neighbor = this.data.themes[index] ?? this.data.themes[index - 1] ?? null;
+			this.ui.selection = {
+				themeId: neighbor?.id ?? null,
+				variantId: neighbor?.variants[0]?.id ?? null
+			};
+			this.ui.workspaceTab = 'palette';
+		});
 	}
 
 	setThemeCssPrefix(themeId: Id, prefix: string): void {
-		const theme = this.data.themes.find((item) => item.id === themeId);
-		if (theme) theme.cssPrefix = normalizeCssPrefix(prefix);
+		this.commitMutation('Set CSS prefix', () => {
+			const theme = this.data.themes.find((item) => item.id === themeId);
+			if (theme) theme.cssPrefix = normalizeCssPrefix(prefix);
+		});
 	}
 
 	addVariant(name?: string): ThemeVariant | null {
-		const theme = this.selectedTheme;
-		const source = this.selectedVariant;
-		if (!theme || !source) return null;
-		const variant = createThemeVariant(theme.structure, {
-			name: ensureUniqueName(name ?? defaultVariantName(theme.variants), variantNames(theme), {
-				fallbackBase: 'Variant'
-			}),
-			values: clone(source.values)
+		let created: ThemeVariant | null = null;
+		this.commitMutation('Add variant', () => {
+			const theme = this.selectedTheme;
+			const source = this.selectedVariant;
+			if (!theme || !source) return;
+			created = createThemeVariant(theme.structure, {
+				name: ensureUniqueName(name ?? defaultVariantName(theme.variants), variantNames(theme), {
+					fallbackBase: 'Variant'
+				}),
+				values: clone(source.values)
+			});
+			theme.variants.push(created);
+			this.ui.selection.variantId = created.id;
+			this.ui.workspaceTab = 'palette';
 		});
-		theme.variants.push(variant);
-		this.ui.selection.variantId = variant.id;
-		this.ui.workspaceTab = 'palette';
-		return variant;
+		return created;
 	}
 
-	renameVariant(variantId: Id, name: string): void {
+	previewVariantName(variantId: Id, name: string): void {
+		this.beginPreview();
 		const theme = this.selectedTheme;
 		const variant = theme?.variants.find((item) => item.id === variantId);
 		if (!theme || !variant) return;
-		variant.name = ensureUniqueName(name, variantNames(theme), {
-			exclude: variant,
-			fallbackBase: 'Variant'
-		});
+		variant.name = name;
+	}
+
+	renameVariant(variantId: Id, name: string): void {
+		this.commitMutation(
+			'Rename variant',
+			() => {
+				const theme = this.selectedTheme;
+				const variant = theme?.variants.find((item) => item.id === variantId);
+				if (!theme || !variant) return;
+				variant.name = ensureUniqueName(name, variantNames(theme), {
+					exclude: variant,
+					fallbackBase: 'Variant'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	editVariantName(variantId: Id): InlineEditSession {
+		const theme = this.selectedTheme;
+		const variant = theme?.variants.find((item) => item.id === variantId);
+		const previous = variant?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewVariantName(variantId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const variant = theme?.variants.find((item) => item.id === variantId);
+				const result = resolveEditedName(
+					draft,
+					previous,
+					theme ? variantNames(theme) : [],
+					variant,
+					{
+						fallbackBase: 'Variant',
+						label: 'Variant'
+					}
+				);
+				this.renameVariant(variantId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteVariant(variantId: Id): void {
-		const theme = this.selectedTheme;
-		if (!theme || theme.variants.length <= 1) return;
-		const index = theme.variants.findIndex((variant) => variant.id === variantId);
-		if (index < 0) return;
-		theme.variants.splice(index, 1);
-		const neighbor = theme.variants[index] ?? theme.variants[index - 1];
-		this.ui.selection.variantId = neighbor.id;
-		this.ui.workspaceTab = 'palette';
+		this.commitMutation('Delete variant', () => {
+			const theme = this.selectedTheme;
+			if (!theme || theme.variants.length <= 1) return;
+			const index = theme.variants.findIndex((variant) => variant.id === variantId);
+			if (index < 0) return;
+			theme.variants.splice(index, 1);
+			const neighbor = theme.variants[index] ?? theme.variants[index - 1];
+			this.ui.selection.variantId = neighbor.id;
+			this.ui.workspaceTab = 'palette';
+		});
 	}
 
 	addFamily(name?: string): ColorFamilyStructure | null {
-		const theme = this.selectedTheme;
-		if (!theme) return null;
-		const family = createColorFamily({
-			name: ensureUniqueName(
-				name ?? defaultFamilyName(theme.structure.families),
-				familyNames(theme),
-				{ fallbackBase: 'Family' }
-			)
+		let created: ColorFamilyStructure | null = null;
+		this.commitMutation('Add family', () => {
+			const theme = this.selectedTheme;
+			if (!theme) return;
+			created = createColorFamily({
+				name: ensureUniqueName(
+					name ?? defaultFamilyName(theme.structure.families),
+					familyNames(theme),
+					{ fallbackBase: 'Family' }
+				)
+			});
+			theme.structure.families.push(created);
+			for (const variant of theme.variants)
+				variant.values.families[created.id] = createDefaultFamilyValues();
+			this.ui.workspaceTab = 'palette';
 		});
-		theme.structure.families.push(family);
-		for (const variant of theme.variants)
-			variant.values.families[family.id] = createDefaultFamilyValues();
-		this.ui.workspaceTab = 'palette';
-		return family;
+		return created;
 	}
 
 	renameFamily(familyId: Id, name: string): void {
+		this.commitMutation(
+			'Rename family',
+			() => {
+				const theme = this.selectedTheme;
+				const family = theme?.structure.families.find((item) => item.id === familyId);
+				if (!theme || !family) return;
+				family.name = ensureUniqueName(name, familyNames(theme), {
+					exclude: family,
+					fallbackBase: 'Family'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	previewFamilyName(familyId: Id, name: string): void {
+		this.beginPreview();
+		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+		if (family) family.name = name;
+	}
+
+	editFamilyName(familyId: Id): InlineEditSession {
 		const theme = this.selectedTheme;
 		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family) return;
-		family.name = ensureUniqueName(name, familyNames(theme), {
-			exclude: family,
-			fallbackBase: 'Family'
-		});
+		const previous = family?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewFamilyName(familyId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const family = theme?.structure.families.find((item) => item.id === familyId);
+				const result = resolveEditedName(draft, previous, theme ? familyNames(theme) : [], family, {
+					fallbackBase: 'Family',
+					label: 'Family'
+				});
+				this.renameFamily(familyId, result.value);
+				return result;
+			}
+		};
 	}
 
 	deleteFamily(familyId: Id): void {
-		const theme = this.selectedTheme;
-		if (!theme) return;
-		theme.structure.families = theme.structure.families.filter((family) => family.id !== familyId);
-		for (const variant of theme.variants) delete variant.values.families[familyId];
-		this.repairUiState();
+		this.commitMutation('Delete family', () => {
+			const theme = this.selectedTheme;
+			if (!theme) return;
+			theme.structure.families = theme.structure.families.filter(
+				(family) => family.id !== familyId
+			);
+			for (const variant of theme.variants) delete variant.values.families[familyId];
+		});
+	}
+
+	previewStepCount(familyId: Id, count: number): void {
+		this.beginPreview();
+		this.applyStepCount(familyId, count);
 	}
 
 	setStepCount(familyId: Id, count: number): void {
-		const theme = this.selectedTheme;
-		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family) return;
-		family.stepScale.stepCount = Math.min(9, Math.max(5, Math.trunc(count)));
-		this.cleanFamilyStepValues(theme, family);
+		this.commitMutation('Set step count', () => this.applyStepCount(familyId, count), {
+			includePreview: true
+		});
 	}
 
 	setIndexStyle(familyId: Id, indexStyle: StepIndexStyle): void {
-		const theme = this.selectedTheme;
-		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family) return;
-		const previous = family.stepScale;
-		family.stepScale = createIndexStyleStructure(family.stepScale, indexStyle);
-		for (const variant of theme.variants) {
-			const values = variant.values.families[family.id]?.stepScale;
-			if (values)
-				values.lightnessOverrides = mapLightnessOverridesForIndexStyle(
-					previous,
-					family.stepScale,
-					values.lightnessOverrides
-				);
-		}
+		this.commitMutation('Set index style', () => {
+			const theme = this.selectedTheme;
+			const family = theme?.structure.families.find((item) => item.id === familyId);
+			if (!theme || !family) return;
+			const previous = family.stepScale;
+			family.stepScale = createIndexStyleStructure(family.stepScale, indexStyle);
+			for (const variant of theme.variants) {
+				const values = variant.values.families[family.id]?.stepScale;
+				if (values)
+					values.lightnessOverrides = mapLightnessOverridesForIndexStyle(
+						previous,
+						family.stepScale,
+						values.lightnessOverrides
+					);
+			}
+		});
 	}
 
 	setHalfSteps(familyId: Id, halfStepStart: boolean, halfStepEnd: boolean): void {
-		const theme = this.selectedTheme;
-		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family || family.stepScale.indexStyle !== 'scale') return;
-		family.stepScale.halfStepStart = halfStepStart;
-		family.stepScale.halfStepEnd = halfStepEnd;
-		this.cleanFamilyStepValues(theme, family);
+		this.commitMutation('Set half steps', () => {
+			const theme = this.selectedTheme;
+			const family = theme?.structure.families.find((item) => item.id === familyId);
+			if (!theme || !family || family.stepScale.indexStyle !== 'scale') return;
+			family.stepScale.halfStepStart = halfStepStart;
+			family.stepScale.halfStepEnd = halfStepEnd;
+			this.cleanFamilyStepValues(theme, family);
+		});
+	}
+
+	previewLightnessRange(familyId: Id, start: number, end: number): void {
+		this.beginPreview();
+		this.applyLightnessRange(familyId, start, end);
 	}
 
 	setLightnessRange(familyId: Id, start: number, end: number): void {
-		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
-		if (!values) return;
-		values.lightnessStart = start;
-		values.lightnessEnd = end;
+		this.commitMutation(
+			'Set lightness range',
+			() => this.applyLightnessRange(familyId, start, end),
+			{
+				includePreview: true
+			}
+		);
+	}
+
+	previewLightness(familyId: Id, stepIndex: string, lightness: number): void {
+		this.beginPreview();
+		this.applyLightnessOverride(familyId, stepIndex, lightness);
 	}
 
 	overrideLightness(familyId: Id, stepIndex: string, lightness: number): void {
-		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
-		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
-		if (!family || !values) return;
-		if (getStepIndexes(family.stepScale).slice(1, -1).includes(stepIndex))
-			values.lightnessOverrides[stepIndex] = lightness;
+		this.commitMutation(
+			'Override lightness',
+			() => this.applyLightnessOverride(familyId, stepIndex, lightness),
+			{ includePreview: true }
+		);
 	}
 
 	resetLightness(familyId: Id, stepIndex: string): void {
-		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
-		if (values) delete values.lightnessOverrides[stepIndex];
+		this.commitMutation('Reset lightness', () => {
+			const values = this.selectedVariant?.values.families[familyId]?.stepScale;
+			if (values) delete values.lightnessOverrides[stepIndex];
+		});
 	}
 
 	reverseFamilyLightness(familyId: Id): void {
-		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
-		const familyValues = this.selectedVariant?.values.families[familyId];
-		if (!family || !familyValues) return;
-		familyValues.stepScale = reverseStepScaleValues(family.stepScale, familyValues.stepScale);
-		for (const ramp of Object.values(familyValues.ramps))
-			ramp.swatchOverrides = reverseSwatchOverrides(family.stepScale, ramp.swatchOverrides);
+		this.commitMutation('Reverse family lightness', () => {
+			const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+			const familyValues = this.selectedVariant?.values.families[familyId];
+			if (!family || !familyValues) return;
+			familyValues.stepScale = reverseStepScaleValues(family.stepScale, familyValues.stepScale);
+			for (const ramp of Object.values(familyValues.ramps))
+				ramp.swatchOverrides = reverseSwatchOverrides(family.stepScale, ramp.swatchOverrides);
+		});
 	}
 
 	addRamp(familyId: Id, sourceColor: SourceColor, name?: string): ColorRampStructure | null {
-		const theme = this.selectedTheme;
-		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family) return null;
-		const ramp = createColorRamp({
-			name: ensureUniqueName(name ?? defaultRampName(rampNames(theme)), rampNames(theme), {
-				fallbackBase: 'Ramp'
-			})
+		let created: ColorRampStructure | null = null;
+		this.commitMutation('Add ramp', () => {
+			const theme = this.selectedTheme;
+			const family = theme?.structure.families.find((item) => item.id === familyId);
+			if (!theme || !family) return;
+			created = createColorRamp({
+				name: ensureUniqueName(name ?? defaultRampName(rampNames(theme)), rampNames(theme), {
+					fallbackBase: 'Ramp'
+				})
+			});
+			family.ramps.push(created);
+			for (const variant of theme.variants)
+				variant.values.families[family.id].ramps[created.id] = createDefaultRampValues(sourceColor);
 		});
-		family.ramps.push(ramp);
-		for (const variant of theme.variants)
-			variant.values.families[family.id].ramps[ramp.id] = createDefaultRampValues(sourceColor);
-		this.repairUiState();
-		return ramp;
+		return created;
 	}
 
 	renameRamp(rampId: Id, name: string): void {
+		this.commitMutation(
+			'Rename ramp',
+			() => {
+				const theme = this.selectedTheme;
+				const ramp = theme?.structure.families
+					.flatMap((family) => family.ramps)
+					.find((item) => item.id === rampId);
+				if (!theme || !ramp) return;
+				ramp.name = ensureUniqueName(name, rampNames(theme), {
+					exclude: ramp,
+					fallbackBase: 'Ramp'
+				});
+			},
+			{ includePreview: true }
+		);
+	}
+
+	previewRampName(rampId: Id, name: string): void {
+		this.beginPreview();
+		const ramp = this.selectedTheme?.structure.families
+			.flatMap((family) => family.ramps)
+			.find((item) => item.id === rampId);
+		if (ramp) ramp.name = name;
+	}
+
+	editRampName(rampId: Id): InlineEditSession {
 		const theme = this.selectedTheme;
 		const ramp = theme?.structure.families
 			.flatMap((family) => family.ramps)
 			.find((item) => item.id === rampId);
-		if (!theme || !ramp) return;
-		ramp.name = ensureUniqueName(name, rampNames(theme), { exclude: ramp, fallbackBase: 'Ramp' });
+		const previous = ramp?.name ?? '';
+		return {
+			preview: (draft) => {
+				this.previewRampName(rampId, draft);
+			},
+			submit: (draft) => {
+				const theme = this.selectedTheme;
+				const ramp = theme?.structure.families
+					.flatMap((family) => family.ramps)
+					.find((item) => item.id === rampId);
+				const result = resolveEditedName(draft, previous, theme ? rampNames(theme) : [], ramp, {
+					fallbackBase: 'Ramp',
+					label: 'Ramp'
+				});
+				this.renameRamp(rampId, result.value);
+				return result;
+			}
+		};
+	}
+
+	moveRamp(familyId: Id, rampId: Id, direction: -1 | 1): void {
+		this.commitMutation('Move ramp', () => {
+			const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+			if (!family) return;
+			const index = family.ramps.findIndex((ramp) => ramp.id === rampId);
+			const nextIndex = index + direction;
+			if (index < 0 || nextIndex < 0 || nextIndex >= family.ramps.length) return;
+			const [ramp] = family.ramps.splice(index, 1);
+			family.ramps.splice(nextIndex, 0, ramp);
+		});
 	}
 
 	setRampSourceColor(familyId: Id, rampId: Id, sourceColor: SourceColor): void {
-		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
-		if (ramp) ramp.sourceColor = clone(sourceColor);
+		this.commitMutation('Set ramp source color', () => {
+			const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+			if (ramp) ramp.sourceColor = clone(sourceColor);
+		});
 	}
 
 	deleteRamp(familyId: Id, rampId: Id): void {
-		const theme = this.selectedTheme;
-		const family = theme?.structure.families.find((item) => item.id === familyId);
-		if (!theme || !family) return;
-		family.ramps = family.ramps.filter((ramp) => ramp.id !== rampId);
-		for (const variant of theme.variants) delete variant.values.families[familyId]?.ramps[rampId];
-		this.repairUiState();
+		this.commitMutation('Delete ramp', () => {
+			const theme = this.selectedTheme;
+			const family = theme?.structure.families.find((item) => item.id === familyId);
+			if (!theme || !family) return;
+			family.ramps = family.ramps.filter((ramp) => ramp.id !== rampId);
+			for (const variant of theme.variants) delete variant.values.families[familyId]?.ramps[rampId];
+		});
+	}
+
+	previewSwatchChannel(
+		familyId: Id,
+		rampId: Id,
+		stepIndex: string,
+		channel: OklchChannel,
+		value: number
+	): void {
+		this.beginPreview();
+		this.applySwatchChannelOverride(familyId, rampId, stepIndex, channel, value);
 	}
 
 	overrideSwatchChannel(
@@ -336,22 +610,71 @@ export class AppManager {
 		channel: OklchChannel,
 		value: number
 	): void {
-		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
-		if (!ramp) return;
-		ramp.swatchOverrides[stepIndex] = { ...ramp.swatchOverrides[stepIndex], [channel]: value };
+		this.commitMutation(
+			'Override swatch channel',
+			() => this.applySwatchChannelOverride(familyId, rampId, stepIndex, channel, value),
+			{ includePreview: true }
+		);
 	}
 
 	resetSwatchChannel(familyId: Id, rampId: Id, stepIndex: string, channel: OklchChannel): void {
-		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
-		if (!ramp?.swatchOverrides[stepIndex]) return;
-		delete ramp.swatchOverrides[stepIndex][channel];
-		if (Object.keys(ramp.swatchOverrides[stepIndex]).length === 0)
-			delete ramp.swatchOverrides[stepIndex];
+		this.commitMutation('Reset swatch channel', () => {
+			const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+			if (!ramp?.swatchOverrides[stepIndex]) return;
+			delete ramp.swatchOverrides[stepIndex][channel];
+			if (Object.keys(ramp.swatchOverrides[stepIndex]).length === 0)
+				delete ramp.swatchOverrides[stepIndex];
+		});
 	}
 
 	resetSwatchColor(familyId: Id, rampId: Id, stepIndex: string): void {
-		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
-		if (ramp) delete ramp.swatchOverrides[stepIndex];
+		this.commitMutation('Reset swatch color', () => {
+			const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+			if (ramp) delete ramp.swatchOverrides[stepIndex];
+		});
+	}
+
+	importThemes(file: ThemeExportFile, choices: readonly ImportThemeChoice[]): void {
+		this.commitMutation('Import themes', () => {
+			const result = applyThemeImport(this.data.themes, file.themes, choices);
+			this.data.themes = result.themes;
+			const importedTheme =
+				result.themes.find((theme) => theme.id === result.selectedThemeId) ??
+				result.themes[0] ??
+				null;
+			this.ui.selection.themeId = importedTheme?.id ?? null;
+			this.ui.selection.variantId = importedTheme?.variants[0]?.id ?? null;
+			this.ui.workspaceTab = 'palette';
+		});
+	}
+
+	exportThemes(themeIds?: readonly Id[]): string {
+		const themes = themeIds
+			? this.data.themes.filter((theme) => themeIds.includes(theme.id))
+			: this.data.themes;
+		return exportThemesJson(themes);
+	}
+
+	undo(): void {
+		const entry = this.history.past.pop();
+		if (!entry) return;
+		this.previewBase = null;
+		this.history.future.push({ label: entry.label, ...clone(this.committedSnapshot) });
+		this.restoreSnapshot(entry);
+		this.committedSnapshot = this.snapshot();
+		this.lastAction = `Undid ${entry.label}`;
+		this.persist();
+	}
+
+	redo(): void {
+		const entry = this.history.future.pop();
+		if (!entry) return;
+		this.previewBase = null;
+		this.history.past.push({ label: entry.label, ...clone(this.committedSnapshot) });
+		this.restoreSnapshot(entry);
+		this.committedSnapshot = this.snapshot();
+		this.lastAction = `Redid ${entry.label}`;
+		this.persist();
 	}
 
 	repairUiState(): void {
@@ -378,6 +701,165 @@ export class AppManager {
 			this.ui.workspaceTab = 'palette';
 		for (const existingTheme of this.data.themes)
 			Object.assign(existingTheme, syncThemeVariantValues(existingTheme));
+	}
+
+	private loadInitialState(options: AppManagerOptions): {
+		state: PersistedState;
+		reset: boolean;
+		error: string | null;
+		reconciled: boolean;
+	} {
+		if (options.persistedState) {
+			const state = clone(options.persistedState);
+			return {
+				state,
+				reset: false,
+				error: null,
+				reconciled: this.needsReconcile(state)
+			};
+		}
+
+		if (options.storage) {
+			const loaded = loadState(options.storage, this.storageKey);
+			return {
+				state: loaded.state,
+				reset: loaded.reset,
+				error: loaded.error,
+				reconciled: loaded.ok ? this.needsReconcile(loaded.state) : false
+			};
+		}
+
+		const state = createDefaultPersistedState();
+		state.data = clone(options.data ?? createEmptyAppState());
+		state.ui = toPersistedUi({
+			selection: { themeId: null, variantId: null, ...options.ui?.selection },
+			workspaceTab: options.ui?.workspaceTab ?? 'palette'
+		});
+		return {
+			state,
+			reset: false,
+			error: null,
+			reconciled: this.needsReconcile(state)
+		};
+	}
+
+	private restorePersistedState(state: PersistedState): void {
+		this.data = clone(state.data);
+		this.ui = fromPersistedUi(state.ui);
+		this.history = clone(state.history);
+		this.lastAction = null;
+		this.repairUiState();
+		this.previewBase = null;
+		this.committedSnapshot = this.snapshot();
+	}
+
+	private restoreSnapshot(snapshot: { data: AppState; ui: PersistedUiState }): void {
+		this.data = clone(snapshot.data);
+		this.ui = fromPersistedUi(snapshot.ui);
+		this.repairUiState();
+	}
+
+	private snapshot(): { data: AppState; ui: PersistedUiState } {
+		return {
+			data: clone(this.data),
+			ui: toPersistedUi(this.ui)
+		};
+	}
+
+	private commitMutation<T>(
+		label: string,
+		mutate: () => T,
+		options: { includePreview?: boolean } = {}
+	): T {
+		const before =
+			options.includePreview && this.previewBase ? clone(this.previewBase) : this.snapshot();
+		const result = mutate();
+		this.repairUiState();
+		const after = this.snapshot();
+		this.previewBase = null;
+		if (isSameSnapshot(before, after)) return result;
+		this.history.past.push({ label, ...before });
+		this.history.future = [];
+		this.committedSnapshot = clone(after);
+		this.lastAction = label;
+		this.persist();
+		return result;
+	}
+
+	private updateUi(mutate: () => void): void {
+		const before = this.snapshot();
+		mutate();
+		this.previewBase = null;
+		this.repairUiState();
+		if (isSameSnapshot(before, this.snapshot())) return;
+		this.persist();
+	}
+
+	private beginPreview(): void {
+		this.previewBase ??= this.snapshot();
+	}
+
+	private persist(): void {
+		if (!this.storage) return;
+		saveState(
+			this.storage,
+			{
+				version: createDefaultPersistedState().version,
+				data: this.data,
+				ui: toPersistedUi(this.ui),
+				history: this.history
+			},
+			this.storageKey
+		);
+	}
+
+	private needsReconcile(state: PersistedState): boolean {
+		const repairedData = clone(state.data);
+		const repairedUi = fromPersistedUi(state.ui);
+		const previousData = this.data;
+		const previousUi = this.ui;
+		this.data = repairedData;
+		this.ui = repairedUi;
+		this.repairUiState();
+		const reconciled = !isSameSnapshot({ data: state.data, ui: state.ui }, this.snapshot());
+		this.data = previousData;
+		this.ui = previousUi;
+		return reconciled;
+	}
+
+	private applyStepCount(familyId: Id, count: number): void {
+		const theme = this.selectedTheme;
+		const family = theme?.structure.families.find((item) => item.id === familyId);
+		if (!theme || !family) return;
+		family.stepScale.stepCount = Math.min(9, Math.max(5, Math.trunc(count)));
+		this.cleanFamilyStepValues(theme, family);
+	}
+
+	private applyLightnessRange(familyId: Id, start: number, end: number): void {
+		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
+		if (!values) return;
+		values.lightnessStart = start;
+		values.lightnessEnd = end;
+	}
+
+	private applyLightnessOverride(familyId: Id, stepIndex: string, lightness: number): void {
+		const family = this.selectedTheme?.structure.families.find((item) => item.id === familyId);
+		const values = this.selectedVariant?.values.families[familyId]?.stepScale;
+		if (!family || !values) return;
+		if (getStepIndexes(family.stepScale).slice(1, -1).includes(stepIndex))
+			values.lightnessOverrides[stepIndex] = lightness;
+	}
+
+	private applySwatchChannelOverride(
+		familyId: Id,
+		rampId: Id,
+		stepIndex: string,
+		channel: OklchChannel,
+		value: number
+	): void {
+		const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+		if (!ramp) return;
+		ramp.swatchOverrides[stepIndex] = { ...ramp.swatchOverrides[stepIndex], [channel]: value };
 	}
 
 	private cleanFamilyStepValues(theme: Theme, family: ColorFamilyStructure): void {
@@ -410,3 +892,66 @@ function themeHasRamps(theme: Theme): boolean {
 	return theme.structure.families.some((family) => family.ramps.length > 0);
 }
 
+function toPersistedUi(ui: UiState): PersistedUiState {
+	return {
+		selectedThemeId: ui.selection.themeId,
+		selectedVariantId: ui.selection.variantId,
+		workspaceTab: ui.workspaceTab
+	};
+}
+
+function fromPersistedUi(ui: PersistedUiState): UiState {
+	return {
+		selection: {
+			themeId: ui.selectedThemeId,
+			variantId: ui.selectedVariantId
+		},
+		workspaceTab: ui.workspaceTab
+	};
+}
+
+function isSameSnapshot(
+	left: { data: AppState; ui: PersistedUiState },
+	right: { data: AppState; ui: PersistedUiState }
+): boolean {
+	return JSON.stringify(left) === JSON.stringify(right);
+}
+
+function resolveEditedName(
+	draft: string,
+	previous: string,
+	existingNames: readonly NamedItem[],
+	exclude: NamedItem | undefined,
+	options: { fallbackBase: string; label: 'Theme' | 'Variant' | 'Family' | 'Ramp' }
+): InlineEditSubmitResult {
+	const validation = validateName(draft, existingNames, {
+		exclude,
+		fallbackBase: options.fallbackBase
+	});
+	const value =
+		validation.error === 'empty-display-name' || validation.error === 'empty-css-name'
+			? previous ||
+				ensureUniqueName(options.fallbackBase, existingNames, {
+					exclude,
+					fallbackBase: options.fallbackBase
+				})
+			: ensureUniqueName(draft, existingNames, {
+					exclude,
+					fallbackBase: options.fallbackBase
+				});
+
+	if (validation.valid && value === draft) return { value };
+
+	const error =
+		validation.error === 'empty-display-name'
+			? `${options.label} name cannot be empty; restored "${value}".`
+			: validation.error === 'empty-css-name'
+				? `${options.label} name must contain a letter or number; restored "${value}".`
+				: validation.error === 'duplicate-name'
+					? `${options.label} name already exists; using "${value}".`
+					: validation.error === 'duplicate-css-name'
+						? `${options.label} name would create the same CSS name as another ${options.label.toLowerCase()}; using "${value}".`
+						: `${options.label} name was adjusted to "${value}".`;
+
+	return { value, error };
+}

@@ -40,3 +40,55 @@ Read these files from the local snapshot based on the work being done:
 - `melt-ui/components/toggle.mdx`: Toggle primitive.
 - `melt-ui/components/tooltip.mdx`: Tooltip primitive.
 - `melt-ui/components/tree.mdx`: Tree primitive.
+
+## Runed
+
+- Source: <https://github.com/svecosystem/runed/tree/main/sites/docs/src/content>
+- Local path: `docs/third-party/runed`
+- Fetched on: 2026-05-26
+
+Use the local snapshot before reaching for network access when implementing or
+reviewing Runed utilities. Runed provides Svelte 5 rune-based utility classes
+and functions for shared state, observers, events, persistence, and reactive
+browser state.
+
+### Document map
+
+Read these files from the local snapshot based on the work being done:
+
+- `runed/index.md`: overview, principles, and project positioning.
+- `runed/getting-started.md`: installation and first-use guidance.
+- `runed/utilities/active-element.md`: `activeElement` utility.
+- `runed/utilities/animation-frames.md`: `AnimationFrames` utility.
+- `runed/utilities/bool-attr.md`: `boolAttr` utility.
+- `runed/utilities/context.md`: `Context` utility.
+- `runed/utilities/debounced.md`: `Debounced` utility.
+- `runed/utilities/element-rect.md`: `ElementRect` utility.
+- `runed/utilities/element-size.md`: `ElementSize` utility.
+- `runed/utilities/extract.md`: `extract` utility.
+- `runed/utilities/finite-state-machine.md`: `FiniteStateMachine` utility.
+- `runed/utilities/is-document-visible.md`: `IsDocumentVisible` utility.
+- `runed/utilities/is-focus-within.md`: `IsFocusWithin` utility.
+- `runed/utilities/is-idle.md`: `IsIdle` utility.
+- `runed/utilities/is-in-viewport.md`: `IsInViewport` utility.
+- `runed/utilities/is-mounted.md`: `IsMounted` utility.
+- `runed/utilities/on-cleanup.md`: `onCleanup` utility.
+- `runed/utilities/on-click-outside.md`: `onClickOutside` utility.
+- `runed/utilities/persisted-state.md`: `PersistedState` utility.
+- `runed/utilities/pressed-keys.md`: `PressedKeys` utility.
+- `runed/utilities/previous.md`: `Previous` utility.
+- `runed/utilities/resource.md`: `resource` utility.
+- `runed/utilities/scroll-state.md`: `ScrollState` utility.
+- `runed/utilities/state-history.md`: `StateHistory` utility.
+- `runed/utilities/textarea-autosize.md`: `TextareaAutosize` utility.
+- `runed/utilities/throttled.md`: `Throttled` utility.
+- `runed/utilities/use-debounce.md`: `useDebounce` utility.
+- `runed/utilities/use-event-listener.md`: `useEventListener` utility.
+- `runed/utilities/use-geolocation.md`: `useGeolocation` utility.
+- `runed/utilities/use-intersection-observer.md`: `useIntersectionObserver` utility.
+- `runed/utilities/use-interval.md`: `useInterval` utility.
+- `runed/utilities/use-mutation-observer.md`: `useMutationObserver` utility.
+- `runed/utilities/use-resize-observer.md`: `useResizeObserver` utility.
+- `runed/utilities/use-search-params.md`: `useSearchParams` utility.
+- `runed/utilities/use-throttle.md`: `useThrottle` utility.
+- `runed/utilities/watch.md`: `watch` utility.

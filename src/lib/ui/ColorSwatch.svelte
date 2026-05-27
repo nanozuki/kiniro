@@ -6,8 +6,9 @@
 -->
 
 <script lang="ts">
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import InlineInput from './InlineInput.svelte';
-	import type { InlineInputSubmitResult } from './InlineInput.svelte';
+	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
 	import {
 		formatChroma,
 		formatHue,
@@ -19,21 +20,15 @@
 	import type { GeneratedSwatch } from '../palette';
 
 	type ColorSwatchProps = {
+		familyId: string;
+		rampId: string;
 		swatch: GeneratedSwatch;
 		gamut: Gamut;
-		onoverride?: (stepIndex: string, channel: OklchChannel, value: number) => void;
-		onreset?: (stepIndex: string, channel: OklchChannel) => void;
-		onresetall?: (stepIndex: string) => void;
 	};
 
-	let {
-		swatch,
-		gamut,
-		onoverride = (_stepIndex: string, _channel: OklchChannel, _value: number) => {},
-		onreset = (_stepIndex: string, _channel: OklchChannel) => {},
-		onresetall = (_stepIndex: string) => {}
-	}: ColorSwatchProps = $props();
+	let { familyId, rampId, swatch, gamut }: ColorSwatchProps = $props();
 
+	const app = getAppManagerContext();
 	let editing = $state(false);
 	let preview = $derived(getPreviewColor(swatch.oklch, gamut));
 	let hasOverrides = $derived(Object.keys(swatch.overrides).length > 0);
@@ -60,7 +55,7 @@
 		channel: OklchChannel,
 		draft: string,
 		previous: string
-	): InlineInputSubmitResult {
+	): InlineEditSubmitResult {
 		const parsed = finiteNumber(draft);
 		const value = parsed ?? Number(previous);
 		const resolved = String(normalizeChannelValue(channel, value));
@@ -92,7 +87,14 @@
 
 	function setChannel(channel: OklchChannel, draft: string) {
 		const value = finiteNumber(draft);
-		if (value != null) onoverride(swatch.stepIndex, channel, normalizeChannelValue(channel, value));
+		if (value != null)
+			app.previewSwatchChannel(
+				familyId,
+				rampId,
+				swatch.stepIndex,
+				channel,
+				normalizeChannelValue(channel, value)
+			);
 	}
 
 	function formattedChannelName(channel: OklchChannel): string {
@@ -137,23 +139,38 @@
 						aria-label={channel.label}
 						inputmode="decimal"
 						value={String(swatch.oklch[channel.key])}
-						oninput={(draft) => setChannel(channel.key, draft)}
-						onsubmit={(draft, previous) => {
-							const result = resolveChannel(channel.key, draft, previous);
-							onoverride(swatch.stepIndex, channel.key, Number(result.value));
-							return result;
-						}}
+						session={createInlineEditSession({
+							preview: (draft) => setChannel(channel.key, draft),
+							submit: (draft) => {
+								const result = resolveChannel(
+									channel.key,
+									draft,
+									String(swatch.oklch[channel.key])
+								);
+								app.overrideSwatchChannel(
+									familyId,
+									rampId,
+									swatch.stepIndex,
+									channel.key,
+									Number(result.value)
+								);
+								return result;
+							}
+						})}
 					/>
 				</label>
 				<button
 					type="button"
 					disabled={swatch.overrides[channel.key] === undefined}
-					onclick={() => onreset(swatch.stepIndex, channel.key)}
+					onclick={() => app.resetSwatchChannel(familyId, rampId, swatch.stepIndex, channel.key)}
 				>
 					Reset {channel.label}
 				</button>
 			{/each}
-			<button type="button" disabled={!hasOverrides} onclick={() => onresetall(swatch.stepIndex)}
+			<button
+				type="button"
+				disabled={!hasOverrides}
+				onclick={() => app.resetSwatchColor(familyId, rampId, swatch.stepIndex)}
 				>Reset all channels</button
 			>
 		</div>

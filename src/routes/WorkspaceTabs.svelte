@@ -6,19 +6,16 @@
 -->
 
 <script lang="ts">
-	import type { ColorFamilyStructure, Theme, WorkspaceTab } from '$lib/model';
+	import type { ColorFamilyStructure } from '$lib/model';
+	import { getAppManagerContext } from '$lib/state/appContext';
 	import Tabs from '$lib/ui/Tabs.svelte';
 
-	type WorkspaceTabsProps = {
-		theme: Theme;
-		activeTab: WorkspaceTab;
-		onselect?: (tab: WorkspaceTab) => void;
-	};
-
-	let { theme, activeTab, onselect = (_tab: WorkspaceTab) => {} }: WorkspaceTabsProps = $props();
-
+	const app = getAppManagerContext();
+	let theme = $derived(app.selectedTheme);
+	let activeTab = $derived(app.ui.workspaceTab);
 	let hasRamps = $derived(
-		theme.structure.families.some((family: ColorFamilyStructure) => family.ramps.length > 0)
+		theme?.structure.families.some((family: ColorFamilyStructure) => family.ramps.length > 0) ??
+			false
 	);
 	const dependentTabTitle = 'A color ramp is required before this workspace is available.';
 	let workspaceTabs = $derived([
@@ -38,7 +35,8 @@
 	]);
 
 	function selectWorkspace(tab: string) {
-		if (tab === 'palette' || tab === 'cssVariables' || tab === 'contrastChecker') onselect(tab);
+		if (tab === 'palette' || tab === 'cssVariables' || tab === 'contrastChecker')
+			app.setWorkspaceTab(tab);
 	}
 </script>
 

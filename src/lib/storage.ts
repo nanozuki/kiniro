@@ -1,23 +1,13 @@
 import { clone } from './clone';
-import type { AppState, Id, WorkspaceTab } from './model';
-import type { HistoryState } from './history';
+import type { z } from 'zod';
+import { STORAGE_STATE_VERSION, savedStateSchema, type uiStateSchema } from './schemas';
 
 export const STORAGE_KEY = 'kiniro';
-export const STORAGE_VERSION = 1;
+export const STORAGE_VERSION = STORAGE_STATE_VERSION;
 export const PERSISTED_HISTORY_LIMIT = 100;
 
-export type PersistedUiState = {
-	selectedThemeId: Id | null;
-	selectedVariantId: Id | null;
-	workspaceTab: WorkspaceTab;
-};
-
-export type PersistedState = {
-	version: 1;
-	data: AppState;
-	ui: PersistedUiState;
-	history: HistoryState;
-};
+export type PersistedUiState = z.infer<typeof uiStateSchema>;
+export type PersistedState = z.infer<typeof savedStateSchema>;
 
 export type StorageLike = Pick<Storage, 'getItem' | 'setItem' | 'removeItem'>;
 
@@ -52,8 +42,8 @@ export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageR
 
 	try {
 		const parsed: unknown = JSON.parse(raw);
-		if (!isPersistedState(parsed)) throw new Error('Stored Kiniro state has an invalid schema.');
-		return { ok: true, state: capHistory(parsed), reset: false, error: null };
+		const state = savedStateSchema.parse(parsed);
+		return { ok: true, state: capHistory(state), reset: false, error: null };
 	} catch (error) {
 		storage.removeItem(key);
 		return {
@@ -76,35 +66,3 @@ export function capHistory(state: PersistedState, limit = PERSISTED_HISTORY_LIMI
 		}
 	};
 }
-
-function isPersistedState(value: unknown): value is PersistedState {
-	if (!isRecord(value) || value.version !== STORAGE_VERSION) return false;
-	if (!isAppState(value.data)) return false;
-	if (!isRecord(value.ui)) return false;
-	if (!['palette', 'cssVariables', 'contrastChecker'].includes(String(value.ui.workspaceTab)))
-		return false;
-	if (!(value.ui.selectedThemeId == null || typeof value.ui.selectedThemeId === 'string'))
-		return false;
-	if (!(value.ui.selectedVariantId == null || typeof value.ui.selectedVariantId === 'string'))
-		return false;
-	if (
-		!isRecord(value.history) ||
-		!Array.isArray(value.history.past) ||
-		!Array.isArray(value.history.future)
-	)
-		return false;
-	return value.history.past.every(isHistoryEntry) && value.history.future.every(isHistoryEntry);
-}
-
-function isHistoryEntry(value: unknown): boolean {
-	return isRecord(value) && typeof value.label === 'string' && isAppState(value.data);
-}
-
-function isAppState(value: unknown): value is AppState {
-	return isRecord(value) && Array.isArray(value.themes);
-}
-
-function isRecord(value: unknown): value is Record<string, unknown> {
-	return typeof value === 'object' && value !== null;
-}
-

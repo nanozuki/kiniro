@@ -1,29 +1,32 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
+import { createInlineEditSession } from './InlineInput.svelte';
 import InlineInput from './InlineInput.svelte';
 import Toaster from './Toaster.svelte';
 
 describe('InlineInput', () => {
 	it('emits live draft changes and submits resolved values with Enter', async () => {
-		const oninput = vi.fn();
+		const preview = vi.fn();
 		const onsubmit = vi.fn();
 		render(InlineInput, {
 			value: 'Theme',
 			'aria-label': 'Name',
-			oninput,
-			onsubmit: (draft, previous) => {
-				const resolved = draft.trim() || previous;
-				onsubmit(resolved);
-				return { value: resolved };
-			}
+			session: createInlineEditSession({
+				preview,
+				submit: (draft) => {
+					const resolved = draft.trim() || 'Theme';
+					onsubmit(resolved);
+					return { value: resolved };
+				}
+			})
 		});
 
 		const input = page.getByLabelText('Name');
 		await input.fill('  Dawn  ');
 		await userEvent.keyboard('{Enter}');
 
-		expect(oninput).toHaveBeenCalledWith('  Dawn  ');
+		expect(preview).toHaveBeenCalledWith('  Dawn  ');
 		expect(onsubmit).toHaveBeenCalledWith('Dawn');
 	});
 
@@ -32,11 +35,13 @@ describe('InlineInput', () => {
 		render(InlineInput, {
 			value: 'Theme',
 			'aria-label': 'Name',
-			onsubmit: (draft, previous) => {
-				const resolved = draft.trim() || previous;
-				onsubmit(resolved);
-				return { value: resolved };
-			}
+			session: createInlineEditSession({
+				submit: (draft) => {
+					const resolved = draft.trim() || 'Theme';
+					onsubmit(resolved);
+					return { value: resolved };
+				}
+			})
 		});
 
 		const input = page.getByLabelText('Name');
@@ -51,11 +56,13 @@ describe('InlineInput', () => {
 		render(InlineInput, {
 			value: 'Theme',
 			'aria-label': 'Name',
-			onsubmit: (draft, previous) => {
-				const resolved = draft.trim() || previous;
-				onsubmit(resolved);
-				return { value: resolved };
-			}
+			session: createInlineEditSession({
+				submit: (draft) => {
+					const resolved = draft.trim() || 'Theme';
+					onsubmit(resolved);
+					return { value: resolved };
+				}
+			})
 		});
 
 		const input = page.getByLabelText('Name');
@@ -65,9 +72,30 @@ describe('InlineInput', () => {
 		expect(onsubmit).toHaveBeenCalledWith('Theme');
 	});
 
+	it('submits the current draft once when Enter also blurs the input', async () => {
+		const onsubmit = vi.fn((draft: string) => ({ value: draft }));
+		render(InlineInput, {
+			value: 'Theme',
+			'aria-label': 'Name',
+			session: createInlineEditSession({ submit: onsubmit })
+		});
+
+		const input = page.getByLabelText('Name');
+		await input.fill('Dawn');
+		await userEvent.keyboard('{Enter}');
+		input.element().blur();
+
+		expect(onsubmit).toHaveBeenCalledTimes(1);
+		expect(onsubmit).toHaveBeenCalledWith('Dawn');
+	});
+
 	it('ignores Enter while composing text', async () => {
 		const onsubmit = vi.fn(() => ({ value: 'Theme' }));
-		render(InlineInput, { value: 'Theme', 'aria-label': 'Name', onsubmit });
+		render(InlineInput, {
+			value: 'Theme',
+			'aria-label': 'Name',
+			session: createInlineEditSession({ submit: onsubmit })
+		});
 
 		const input = page.getByLabelText('Name');
 		await input.click();
@@ -87,9 +115,11 @@ describe('InlineInput', () => {
 		render(InlineInput, {
 			value: '0.5',
 			'aria-label': 'Lightness',
-			onsubmit: () => ({
-				value: '1',
-				error: 'Lightness must be between 0 and 1; adjusted to 1.'
+			session: createInlineEditSession({
+				submit: () => ({
+					value: '1',
+					error: 'Lightness must be between 0 and 1; adjusted to 1.'
+				})
 			})
 		});
 
