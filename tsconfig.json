@@ -11,6 +11,7 @@
 		"sourceMap": true,
 		"strict": true,
 		"moduleResolution": "bundler",
+		"plugins": [{ "name": "typescript-svelte-plugin" }],
 		"types": ["./worker-configuration.d.ts"]
 	}
 }

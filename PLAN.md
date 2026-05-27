@@ -23,6 +23,9 @@ modules or classes.
 - Inline edit preview may show unresolved temporary values. Preview must not
   write localStorage or create undo/redo entries. Submit/finalization resolves
   and commits once.
+- Inline edit session types and helpers are exported from `InlineInput.svelte`
+  via `<script module>` to keep the component API simple. Editor support for
+  named Svelte module exports comes from `typescript-svelte-plugin`.
 - Export files are public DTOs and must not contain internal IDs.
 - Import files are public ID-free DTOs. Import regenerates internal IDs and
   remaps family/ramp values into the internal model.
@@ -30,6 +33,8 @@ modules or classes.
   if it keeps implementation simple; regenerating IDs is acceptable.
 - localStorage is internal persisted state and may keep IDs, but it must be
   fully validated before constructing AppManager state.
+- The project is pinned to `pnpm@11.3.0`; use the Nix development environment's
+  pnpm rather than an older global pnpm shim.
 
 ## Phase 1: Schemas And DTO Boundaries
 

@@ -1,6 +1,6 @@
 import { clone } from '../clone';
 import { normalizeCssPrefix } from '../cssVariables';
-import type { InlineEditSession, InlineEditSubmitResult } from '../ui/InlineInput.svelte';
+import type { InlineEditSession, InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
 import {
 	applyThemeImport,
 	exportThemes as exportThemesJson,
