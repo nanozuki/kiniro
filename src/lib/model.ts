@@ -61,8 +61,10 @@ const DEFAULT_SOURCE_COLOR: SourceColor = {
 	serialized: 'oklch(0.7 0.1 0)'
 };
 
-// The app model stores user-authored data only. Shared structure lives on the
-// theme, while each variant owns only color and lightness values for that structure.
+// The app model stores user-authored data only. Shared family/ramp structure
+// lives on the theme, while each variant owns only color and lightness values
+// for that structure. Generated palettes, CSS output, clamped preview colors,
+// sanitized names, and contrast results are derived outside the persisted model.
 export function createEmptyAppState(): AppState {
 	return { themes: [] };
 }

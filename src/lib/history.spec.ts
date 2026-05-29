@@ -1,58 +1,49 @@
 import { describe, expect, it } from 'vitest';
-import { createDefaultTheme } from './model';
-import { createSnapshotHistory } from './history';
+import { createHistoryState, History, INITIAL_HISTORY_LABEL, capHistoryState } from './history';
 
-const initialUi = {
-	selectedThemeId: null,
-	selectedVariantId: null,
-	workspaceTab: 'palette' as const
-};
+describe('History', () => {
+	it('moves through a linear timeline and clears redo entries on push', () => {
+		const state = createHistoryState(0);
+		const history = new History(state);
 
-describe('SnapshotHistory', () => {
-	it('creates undo entries only for changed snapshots and clears redo on commit', () => {
-		const history = createSnapshotHistory();
-		const data = { themes: [createDefaultTheme()] };
+		expect(history.entries[0]).toEqual({ label: INITIAL_HISTORY_LABEL, value: 0 });
+		history.push('Set one', 1);
+		history.push('Set two', 2);
 
-		expect(history.commit('Add theme', { data: { themes: [] }, ui: initialUi })).toBe(false);
-		expect(history.commit('Add theme', { data, ui: initialUi })).toBe(true);
 		expect(history.canUndo).toBe(true);
-		history.undo();
+		expect(history.undo()).toEqual({ label: 'Set one', value: 1 });
 		expect(history.canRedo).toBe(true);
-		history.commit('Add again', { data, ui: initialUi });
+
+		history.push('Set three', 3);
+
 		expect(history.canRedo).toBe(false);
+		expect(history.entries.map((entry) => entry.value)).toEqual([0, 1, 3]);
+		expect(history.current).toBe(2);
 	});
 
-	it('undoes and redoes app data and durable UI snapshots with labels', () => {
-		const first = { themes: [createDefaultTheme({ name: 'One' })] };
-		const second = { themes: [createDefaultTheme({ name: 'Two' })] };
-		const history = createSnapshotHistory({
-			initialData: first,
-			initialUi: initialUi
-		});
-		history.commit('Replace theme', {
-			data: second,
-			ui: { ...initialUi, workspaceTab: 'cssVariables' }
-		});
+	it('replaces the current baseline without creating an undo entry', () => {
+		const state = createHistoryState({ name: 'One' });
+		const history = new History(state);
 
-		expect(history.undo()).toMatchObject({ data: first, ui: initialUi });
-		expect(history.lastAction).toBe('Undid Replace theme');
-		expect(history.redo()).toMatchObject({
-			data: second,
-			ui: { ...initialUi, workspaceTab: 'cssVariables' }
+		history.replaceCurrent({ name: 'Preview baseline' });
+		history.push('Rename', { name: 'Two' });
+
+		expect(history.undo()).toEqual({
+			label: INITIAL_HISTORY_LABEL,
+			value: { name: 'Preview baseline' }
 		});
-		expect(history.lastAction).toBe('Redid Replace theme');
 	});
 
-	it('caps persisted history snapshots without capping in-memory history', () => {
-		const history = createSnapshotHistory();
-		for (let index = 0; index < 105; index++) {
-			history.commit(`Change ${index}`, {
-				data: { themes: [createDefaultTheme()] },
-				ui: initialUi
-			});
-		}
+	it('caps persisted history while preserving the current entry', () => {
+		const state = createHistoryState(0);
+		const history = new History(state);
+		for (let index = 1; index <= 105; index++) history.push(`Set ${index}`, index);
 
-		expect(history.history.past).toHaveLength(105);
-		expect(history.snapshot(100).history.past).toHaveLength(100);
+		history.undo();
+		history.undo();
+		const capped = capHistoryState(state, 100);
+
+		expect(capped.entries).toHaveLength(100);
+		expect(capped.entries[capped.current].value).toBe(103);
 	});
 });

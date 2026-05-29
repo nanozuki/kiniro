@@ -29,15 +29,18 @@ describe('storage', () => {
 			selectedVariantId: theme.variants[0].id,
 			workspaceTab: 'cssVariables'
 		};
-		state.history.past = Array.from({ length: 105 }, (_, index) => ({
+		state.history.entries = Array.from({ length: 105 }, (_, index) => ({
 			label: `Action ${index}`,
-			data: { themes: [] },
-			ui: {
-				selectedThemeId: null,
-				selectedVariantId: null,
-				workspaceTab: 'palette'
+			value: {
+				data: { themes: [] },
+				ui: {
+					selectedThemeId: null,
+					selectedVariantId: null,
+					workspaceTab: 'palette'
+				}
 			}
 		}));
+		state.history.current = 104;
 
 		saveState(storage, state);
 		const loaded = loadState(storage);
@@ -46,8 +49,9 @@ describe('storage', () => {
 		expect(loaded.state.data.themes).toHaveLength(1);
 		expect(loaded.state.ui.workspaceTab).toBe('cssVariables');
 		expect(loaded.state.data.themes[0].targetGamut).toBe('p3');
-		expect(loaded.state.history.past).toHaveLength(100);
-		expect(loaded.state.history.past[0].label).toBe('Action 5');
+		expect(loaded.state.history.entries).toHaveLength(100);
+		expect(loaded.state.history.entries[0].label).toBe('Action 5');
+		expect(loaded.state.history.current).toBe(99);
 	});
 
 	it('rejects invalid nested theme, variant, family, and ramp data', () => {

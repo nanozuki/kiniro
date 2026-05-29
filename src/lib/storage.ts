@@ -1,4 +1,5 @@
 import { clone } from './clone';
+import { createHistoryState, capHistoryState } from './history';
 import type { z } from 'zod';
 import { STORAGE_STATE_VERSION, savedStateSchema, type uiStateSchema } from './schemas';
 
@@ -19,15 +20,17 @@ export type LoadStorageResult =
 // CSS, previews, dialog drafts, focus, scroll, edit mode, and transient warnings
 // are intentionally excluded from the schema.
 export function createDefaultPersistedState(): PersistedState {
+	const data = { themes: [] };
+	const ui = {
+		selectedThemeId: null,
+		selectedVariantId: null,
+		workspaceTab: 'palette' as const
+	};
 	return {
 		version: STORAGE_VERSION,
-		data: { themes: [] },
-		ui: {
-			selectedThemeId: null,
-			selectedVariantId: null,
-			workspaceTab: 'palette'
-		},
-		history: { past: [], future: [] }
+		data,
+		ui,
+		history: createHistoryState({ data, ui })
 	};
 }
 
@@ -60,9 +63,6 @@ export function capHistory(state: PersistedState, limit = PERSISTED_HISTORY_LIMI
 		version: STORAGE_VERSION,
 		data: clone(state.data),
 		ui: { ...state.ui },
-		history: {
-			past: clone(state.history.past.slice(-limit)),
-			future: clone(state.history.future.slice(-limit))
-		}
+		history: capHistoryState(state.history, limit)
 	};
 }

@@ -1,110 +1,90 @@
 import { clone } from './clone';
-import type { AppState, WorkspaceTab } from './model';
 
-export type HistoryUiState = {
-	selectedThemeId: string | null;
-	selectedVariantId: string | null;
-	workspaceTab: WorkspaceTab;
-};
+export const INITIAL_HISTORY_LABEL = 'Initial state';
 
-export type HistoryEntry = {
+export type HistoryEntry<T> = {
 	label: string;
-	data: AppState;
-	ui: HistoryUiState;
+	value: T;
 };
 
-export type HistoryState = {
-	past: HistoryEntry[];
-	future: HistoryEntry[];
+// Serializable state for a committed timeline. `current` points at the snapshot
+// the app has restored, and entries after it are redo states that are discarded
+// by the next push.
+export type HistoryState<T> = {
+	entries: HistoryEntry<T>[];
+	current: number;
 };
 
-export type HistorySnapshot = {
-	data: AppState;
-	ui: HistoryUiState;
-	history: HistoryState;
-	lastAction: string | null;
-};
+// History tracks committed snapshots without owning the app's live state. The
+// caller decides what each value contains and restores returned entries after
+// undo or redo. Stored and returned values are cloned so timeline entries do not
+// share mutable state with the caller.
+export class History<T> {
+	constructor(private readonly state: HistoryState<T>) {}
 
-export type HistoryOptions = {
-	initialData?: AppState;
-	initialUi?: HistoryUiState;
-};
+	get entries(): HistoryEntry<T>[] {
+		return this.state.entries;
+	}
 
-// SnapshotHistory tracks undoable app snapshots, including durable UI choices
-// that should be restored alongside authored data.
-export class SnapshotHistory {
-	data: AppState;
-	ui: HistoryUiState;
-	history: HistoryState = { past: [], future: [] };
-	lastAction: string | null = null;
-
-	constructor(options: HistoryOptions = {}) {
-		this.data = clone(options.initialData ?? { themes: [] });
-		this.ui = clone(
-			options.initialUi ?? {
-				selectedThemeId: null,
-				selectedVariantId: null,
-				workspaceTab: 'palette'
-			}
-		);
+	get current(): number {
+		return this.state.current;
 	}
 
 	get canUndo(): boolean {
-		return this.history.past.length > 0;
+		return this.state.current > 0;
 	}
 
 	get canRedo(): boolean {
-		return this.history.future.length > 0;
+		return this.state.current < this.state.entries.length - 1;
 	}
 
-	commit(label: string, next: { data: AppState; ui: HistoryUiState }): boolean {
-		if (isSameSnapshot({ data: this.data, ui: this.ui }, next)) return false;
-		this.history.past.push({ label, data: clone(this.data), ui: clone(this.ui) });
-		this.history.future = [];
-		this.data = clone(next.data);
-		this.ui = clone(next.ui);
-		this.lastAction = label;
-		return true;
+	push(label: string, value: T): void {
+		this.state.entries = this.state.entries.slice(0, this.state.current + 1);
+		this.state.entries.push({ label, value: clone(value) });
+		this.state.current = this.state.entries.length - 1;
 	}
 
-	undo(): HistorySnapshot | null {
-		const entry = this.history.past.pop();
-		if (!entry) return null;
-		this.history.future.push({ label: entry.label, data: clone(this.data), ui: clone(this.ui) });
-		this.data = clone(entry.data);
-		this.ui = clone(entry.ui);
-		this.lastAction = `Undid ${entry.label}`;
-		return this.snapshot();
+	replaceCurrent(value: T): void {
+		const entry = this.state.entries[this.state.current];
+		if (!entry) return;
+		entry.value = clone(value);
 	}
 
-	redo(): HistorySnapshot | null {
-		const entry = this.history.future.pop();
-		if (!entry) return null;
-		this.history.past.push({ label: entry.label, data: clone(this.data), ui: clone(this.ui) });
-		this.data = clone(entry.data);
-		this.ui = clone(entry.ui);
-		this.lastAction = `Redid ${entry.label}`;
-		return this.snapshot();
+	undo(): HistoryEntry<T> | null {
+		if (!this.canUndo) return null;
+		this.state.current -= 1;
+		return clone(this.state.entries[this.state.current]);
 	}
 
-	snapshot(limit?: number): HistorySnapshot {
-		const cap = (entries: HistoryEntry[]) => (limit == null ? entries : entries.slice(-limit));
-		return {
-			data: clone(this.data),
-			ui: clone(this.ui),
-			history: { past: clone(cap(this.history.past)), future: clone(cap(this.history.future)) },
-			lastAction: this.lastAction
-		};
+	redo(): HistoryEntry<T> | null {
+		if (!this.canRedo) return null;
+		this.state.current += 1;
+		return clone(this.state.entries[this.state.current]);
+	}
+
+	restore(state: HistoryState<T>): void {
+		this.state.entries = clone(state.entries);
+		this.state.current = state.current;
+	}
+
+	snapshot(limit?: number): HistoryState<T> {
+		return clone(limit == null ? this.state : capHistoryState(this.state, limit));
 	}
 }
 
-export function createSnapshotHistory(options: HistoryOptions = {}): SnapshotHistory {
-	return new SnapshotHistory(options);
+export function createHistoryState<T>(value: T, label = INITIAL_HISTORY_LABEL): HistoryState<T> {
+	return {
+		entries: [{ label, value: clone(value) }],
+		current: 0
+	};
 }
 
-function isSameSnapshot(
-	left: { data: AppState; ui: HistoryUiState },
-	right: { data: AppState; ui: HistoryUiState }
-): boolean {
-	return JSON.stringify(left) === JSON.stringify(right);
+export function capHistoryState<T>(state: HistoryState<T>, limit: number): HistoryState<T> {
+	if (state.entries.length <= limit) return clone(state);
+	const start = Math.max(0, Math.min(state.current - limit + 1, state.entries.length - limit));
+	const entries = state.entries.slice(start, start + limit);
+	return {
+		entries: clone(entries),
+		current: state.current - start
+	};
 }

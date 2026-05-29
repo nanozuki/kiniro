@@ -58,6 +58,17 @@ describe('AppManager selection and persistence', () => {
 		expect(manager.ui.workspaceTab).toBe('palette');
 		expect(saved.ui.selectedThemeId).toBe(theme.id);
 		expect(saved.ui.selectedVariantId).toBe(manager.selectedVariant?.id);
+		expect(saved.history.entries[saved.history.current].value.ui.selectedThemeId).toBe(theme.id);
+	});
+
+	it('starts history from constructor data instead of the empty fallback', () => {
+		const theme = createDefaultTheme({ name: 'Existing' });
+		const manager = createAppManager({ data: { themes: [theme] } });
+
+		manager.addTheme('New');
+		manager.undo();
+
+		expect(manager.data.themes.map((item) => item.name)).toEqual(['Existing']);
 	});
 
 	it('writes localStorage after commit mutations but not during preview mutations', () => {
@@ -78,7 +89,7 @@ describe('AppManager selection and persistence', () => {
 		manager.renameTheme(theme.id, 'Preview');
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(saved.data.themes[0].name).toBe('Preview');
 	});
 
@@ -98,7 +109,7 @@ describe('AppManager selection and persistence', () => {
 
 		edit.preview('Existing');
 		expect(manager.data.themes[0].name).toBe('Existing');
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
 
 		const result = edit.submit('Existing');
@@ -109,7 +120,7 @@ describe('AppManager selection and persistence', () => {
 			error: 'Theme name already exists; using "Existing 2".'
 		});
 		expect(manager.data.themes[0].name).toBe('Existing 2');
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(saved.data.themes[0].name).toBe('Existing 2');
 		expect(storage.writes).toBe(1);
 	});
@@ -128,7 +139,7 @@ describe('AppManager selection and persistence', () => {
 			error: 'Variant name cannot be empty; restored "Default".'
 		});
 		expect(manager.selectedVariant?.name).toBe('Default');
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 	});
 
 	it('previews inline family and ramp names without persistence or history until submit', () => {
@@ -145,7 +156,7 @@ describe('AppManager selection and persistence', () => {
 		const manager = createAppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Accent');
 		manager.addRamp(familyId, source, 'Existing');
-		const initialHistoryLength = manager.history.past.length;
+		const initialHistoryLength = manager.history.current;
 		const familyEdit = manager.editFamilyName(familyId);
 		const rampEdit = manager.editRampName(ramp!.id);
 
@@ -153,14 +164,14 @@ describe('AppManager selection and persistence', () => {
 		rampEdit.preview('Existing');
 		expect(manager.selectedTheme?.structure.families[0].name).toBe('Accent');
 		expect(manager.selectedTheme?.structure.families[0].ramps[0].name).toBe('Existing');
-		expect(manager.history.past).toHaveLength(initialHistoryLength);
+		expect(manager.history.current).toBe(initialHistoryLength);
 
 		expect(familyEdit.submit('Accent')).toMatchObject({ value: 'Accent' });
 		expect(rampEdit.submit('Existing')).toMatchObject({
 			value: 'Existing 2',
 			error: 'Ramp name already exists; using "Existing 2".'
 		});
-		expect(manager.history.past).toHaveLength(initialHistoryLength + 2);
+		expect(manager.history.current).toBe(initialHistoryLength + 2);
 		expect(storage.writes).toBe(4);
 	});
 
@@ -179,22 +190,22 @@ describe('AppManager selection and persistence', () => {
 
 		manager.previewStepCount(familyId, 7);
 		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(7);
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
 
 		manager.setStepCount(familyId, 7);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(1);
 		manager.undo();
 		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(9);
 
 		manager.previewLightnessRange(familyId, 0.8, 0.2);
 		expect(manager.selectedVariant?.values.families[familyId].stepScale.lightnessStart).toBe(0.8);
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.writes).toBe(2);
 
 		manager.setLightnessRange(familyId, 0.8, 0.2);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(3);
 
 		manager.previewLightness(familyId, '500', 0.45);
@@ -203,11 +214,11 @@ describe('AppManager selection and persistence', () => {
 				'500': 0.45
 			}
 		);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(3);
 
 		manager.overrideLightness(familyId, '500', 0.45);
-		expect(manager.history.past).toHaveLength(2);
+		expect(manager.history.current).toBe(2);
 		expect(storage.writes).toBe(4);
 	});
 
@@ -258,7 +269,7 @@ describe('AppManager selection and persistence', () => {
 		manager.importThemes(validated.file, [{ importKey: '0' }]);
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
-		expect(manager.history.past.at(-1)?.label).toBe('Import themes');
+		expect(manager.history.entries[manager.history.current]?.label).toBe('Import themes');
 		expect(manager.selectedTheme?.name).toBe('Imported');
 		expect(saved.data.themes.map((theme: { name: string }) => theme.name)).toContain('Imported');
 	});
@@ -474,7 +485,7 @@ describe('AppManager ramp and swatch operations', () => {
 		const manager = createAppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Ramp');
 		const rampId = ramp!.id;
-		const initialHistoryLength = manager.history.past.length;
+		const initialHistoryLength = manager.history.current;
 		const initialWrites = storage.writes;
 
 		manager.previewSwatchChannel(familyId, rampId, '300', 'hue', 120);
@@ -483,11 +494,11 @@ describe('AppManager ramp and swatch operations', () => {
 		).toEqual({
 			'300': { hue: 120 }
 		});
-		expect(manager.history.past).toHaveLength(initialHistoryLength);
+		expect(manager.history.current).toBe(initialHistoryLength);
 		expect(storage.writes).toBe(initialWrites);
 
 		manager.overrideSwatchChannel(familyId, rampId, '300', 'hue', 120);
-		expect(manager.history.past).toHaveLength(initialHistoryLength + 1);
+		expect(manager.history.current).toBe(initialHistoryLength + 1);
 		expect(storage.writes).toBe(initialWrites + 1);
 	});
 });

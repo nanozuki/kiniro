@@ -1,6 +1,6 @@
 import { z } from 'zod';
 
-export const STORAGE_STATE_VERSION = 1;
+export const STORAGE_STATE_VERSION = 2;
 export const EXPORT_FILE_VERSION = 1;
 
 export const idSchema = z.string().min(1);
@@ -103,22 +103,28 @@ export const uiStateSchema = z.strictObject({
 	workspaceTab: workspaceTabSchema
 });
 
-export const undoEntrySchema = z.strictObject({
-	label: z.string(),
+export const historySnapshotSchema = z.strictObject({
 	data: appStateSchema,
 	ui: uiStateSchema
 });
 
-export const undoStackSchema = z.strictObject({
-	past: z.array(undoEntrySchema),
-	future: z.array(undoEntrySchema)
+export const historyEntrySchema = z.strictObject({
+	label: z.string(),
+	value: historySnapshotSchema
 });
+
+export const historyStateSchema = z
+	.strictObject({
+		entries: z.array(historyEntrySchema).min(1),
+		current: z.number().int().nonnegative()
+	})
+	.refine((value) => value.current < value.entries.length);
 
 export const savedStateSchema = z.strictObject({
 	version: z.literal(STORAGE_STATE_VERSION),
 	data: appStateSchema,
 	ui: uiStateSchema,
-	history: undoStackSchema
+	history: historyStateSchema
 });
 
 export const exportRampSchema = colorRampStructureSchema.omit({ id: true });

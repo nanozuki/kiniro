@@ -21,7 +21,10 @@ export type UniqueNameOptions = {
 };
 
 // Naming helpers centralize the display-name and CSS-name rules shared by dialogs,
-// inline editors, default-name generation, and future import conflict handling.
+// inline editors, default-name generation, and import conflict handling. Display
+// names are user-authored; CSS names are derived by trimming, lowercasing,
+// converting spaces/underscores to hyphens, removing unsupported characters,
+// collapsing repeated hyphens, and requiring at least one alphanumeric character.
 export function normalizeDisplayName(name: string): string {
 	return name.trim();
 }

@@ -45,8 +45,9 @@ export type GeneratedVariantPalette = {
 	families: GeneratedColorFamily[];
 };
 
-// Generated palette values are derived at read time from shared structure and the
-// selected variant's authored values. Callers should render or export these
+// Generated palette values are derived at read time from shared structure, the
+// selected variant's authored values, and the theme target gamut. Relative
+// chroma is resolved against that gamut. Callers should render or export these
 // objects, not persist them back into App data.
 export function generateVariantPalette(
 	theme: Theme,
