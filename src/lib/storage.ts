@@ -1,11 +1,8 @@
-import { clone } from './clone';
-import { createHistoryState, capHistoryState } from './history';
 import type { z } from 'zod';
 import { STORAGE_STATE_VERSION, savedStateSchema, type uiStateSchema } from './schemas';
 
 export const STORAGE_KEY = 'kiniro';
 export const STORAGE_VERSION = STORAGE_STATE_VERSION;
-export const PERSISTED_HISTORY_LIMIT = 100;
 
 export type PersistedUiState = z.infer<typeof uiStateSchema>;
 export type PersistedState = z.infer<typeof savedStateSchema>;
@@ -30,12 +27,23 @@ export function createDefaultPersistedState(): PersistedState {
 		version: STORAGE_VERSION,
 		data,
 		ui,
-		history: createHistoryState({ data, ui })
+		history: {
+			entries: [{ label: 'Initial state', value: { data, ui } }],
+			current: 0
+		}
 	};
 }
 
 export function saveState(storage: StorageLike, state: PersistedState, key = STORAGE_KEY): void {
-	storage.setItem(key, JSON.stringify(capHistory(state)));
+	storage.setItem(
+		key,
+		JSON.stringify({
+			version: STORAGE_VERSION,
+			data: state.data,
+			ui: state.ui,
+			history: state.history
+		})
+	);
 }
 
 export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageResult {
@@ -46,7 +54,7 @@ export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageR
 	try {
 		const parsed: unknown = JSON.parse(raw);
 		const state = savedStateSchema.parse(parsed);
-		return { ok: true, state: capHistory(state), reset: false, error: null };
+		return { ok: true, state, reset: false, error: null };
 	} catch (error) {
 		storage.removeItem(key);
 		return {
@@ -56,13 +64,4 @@ export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageR
 			error: error instanceof Error ? error.message : 'Invalid stored state.'
 		};
 	}
-}
-
-export function capHistory(state: PersistedState, limit = PERSISTED_HISTORY_LIMIT): PersistedState {
-	return {
-		version: STORAGE_VERSION,
-		data: clone(state.data),
-		ui: { ...state.ui },
-		history: capHistoryState(state.history, limit)
-	};
 }

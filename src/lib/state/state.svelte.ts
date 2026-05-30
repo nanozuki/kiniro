@@ -1,11 +1,10 @@
 import { clone } from '../clone';
 import { normalizeCssPrefix } from '../cssVariables';
 import {
-	createHistoryState,
 	History,
 	type HistoryEntry as TimelineHistoryEntry,
 	type HistoryState as TimelineHistoryState
-} from '../history';
+} from './history.svelte';
 import type { InlineEditSession, InlineEditSubmitResult } from '$lib/ui/InlineInput.svelte';
 import {
 	applyThemeImport,
@@ -86,6 +85,8 @@ type AppSnapshot = {
 	ui: PersistedUiState;
 };
 
+const INITIAL_HISTORY_LABEL = 'Initial state';
+
 export type HistoryEntry = TimelineHistoryEntry<AppSnapshot>;
 export type HistoryState = TimelineHistoryState<AppSnapshot>;
 
@@ -107,17 +108,22 @@ export class AppManager {
 		selection: { themeId: null, variantId: null },
 		workspaceTab: 'palette'
 	});
-	private historyState = $state<HistoryState>(
-		createHistoryState({
-			data: createEmptyAppState(),
-			ui: {
-				selectedThemeId: null,
-				selectedVariantId: null,
-				workspaceTab: 'palette'
+	history = new History<AppSnapshot>({
+		entries: [
+			{
+				label: INITIAL_HISTORY_LABEL,
+				value: {
+					data: createEmptyAppState(),
+					ui: {
+						selectedThemeId: null,
+						selectedVariantId: null,
+						workspaceTab: 'palette'
+					}
+				}
 			}
-		})
-	);
-	history = new History(this.historyState);
+		],
+		current: 0
+	});
 	lastAction = $state<string | null>(null);
 	storageReset = $state(false);
 	storageError = $state<string | null>(null);
@@ -745,7 +751,10 @@ export class AppManager {
 			selection: { themeId: null, variantId: null, ...options.ui?.selection },
 			workspaceTab: options.ui?.workspaceTab ?? 'palette'
 		});
-		state.history = createHistoryState({ data: state.data, ui: state.ui });
+		state.history = {
+			entries: [{ label: INITIAL_HISTORY_LABEL, value: { data: state.data, ui: state.ui } }],
+			current: 0
+		};
 		return {
 			state,
 			reset: false,
@@ -757,10 +766,11 @@ export class AppManager {
 	private restorePersistedState(state: PersistedState): void {
 		this.data = clone(state.data);
 		this.ui = fromPersistedUi(state.ui);
-		this.history.restore(state.history);
+		this.history.entries = clone(state.history.entries);
+		this.history.current = state.history.current;
 		this.lastAction = null;
 		this.repairUiState();
-		this.history.replaceCurrent(this.snapshot());
+		this.syncCurrentHistoryEntry(this.snapshot());
 		this.previewBase = null;
 	}
 
@@ -789,7 +799,7 @@ export class AppManager {
 		const after = this.snapshot();
 		this.previewBase = null;
 		if (isSameSnapshot(before, after)) return result;
-		this.history.replaceCurrent(before);
+		this.syncCurrentHistoryEntry(before);
 		this.history.push(label, after);
 		this.lastAction = label;
 		this.persist();
@@ -817,10 +827,19 @@ export class AppManager {
 				version: createDefaultPersistedState().version,
 				data: this.data,
 				ui: toPersistedUi(this.ui),
-				history: this.history.snapshot()
+				history: {
+					entries: clone(this.history.entries),
+					current: this.history.current
+				}
 			},
 			this.storageKey
 		);
+	}
+
+	private syncCurrentHistoryEntry(value: AppSnapshot): void {
+		const entry = this.history.entries[this.history.current];
+		if (!entry) return;
+		entry.value = clone(value);
 	}
 
 	private needsReconcile(state: PersistedState): boolean {
