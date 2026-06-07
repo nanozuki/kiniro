@@ -1,4 +1,4 @@
-import { formatChroma, formatHue, formatLightness } from './color';
+import { formatChannelValue } from './color';
 import { sanitizeCssName } from './naming';
 import {
 	generateVariantPalette,
@@ -75,7 +75,7 @@ function buildGroup(
 				const name = `--${prefix}-${variantName}-${rampName}-${swatch.stepIndex}`;
 				return {
 					name,
-					value: `${formatLightness(swatch.oklch.lightness)} ${formatChroma(swatch.oklch.chroma)} ${formatHue(swatch.oklch.hue)}`,
+					value: `${formatChannelValue('lightness', swatch.oklch.lightness)} ${formatChannelValue('chroma', swatch.oklch.chroma)} ${formatChannelValue('hue', swatch.oklch.hue)}`,
 					familyId: family.id,
 					rampId: ramp.id,
 					stepIndex: swatch.stepIndex

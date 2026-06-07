@@ -105,6 +105,27 @@ describe('generateVariantPalette', () => {
 		expect(swatch.overrides).toEqual({ chroma: 0.05, hue: 120 });
 	});
 
+	it('ignores swatch channel overrides that match generated values after normalization', () => {
+		const theme = createDefaultTheme();
+		const family = theme.structure.families[0];
+		family.ramps.push({ id: 'gold', name: 'gold' });
+		const variant = theme.variants[0];
+		variant.values.families[family.id].ramps.gold = createDefaultRampValues({
+			format: 'oklch',
+			serialized: 'oklch(0.7 0.2 40)',
+			oklch: { lightness: 0.7, chroma: 0.2, hue: 40 }
+		});
+		variant.values.families[family.id].ramps.gold.swatchOverrides['200'] = {
+			hue: 40.009
+		};
+
+		const swatch = generateVariantPalette(theme, variant).families[0].ramps[0].swatches[1];
+
+		expect(swatch.generated.hue).toBe(40);
+		expect(swatch.oklch.hue).toBe(40);
+		expect(swatch.overrides).toEqual({});
+	});
+
 	it('does not mutate or add generated values to theme data', () => {
 		const theme = createDefaultTheme();
 		const before = structuredClone(theme);

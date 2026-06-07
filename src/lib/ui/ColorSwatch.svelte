@@ -7,16 +7,9 @@
 
 <script lang="ts">
 	import { getAppManagerContext } from '$lib/state/appContext';
-	import InlineInput from './InlineInput.svelte';
-	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
-	import {
-		formatChroma,
-		formatHue,
-		formatLightness,
-		getPreviewColor,
-		normalizeChannelValue
-	} from '../color';
-	import type { Gamut, OklchChannel } from '../model';
+	import Dialog from './Dialog.svelte';
+	import { formatChannelValue, getPreviewColor, normalizeChannelValue } from '../color';
+	import type { Gamut, OklchChannel, OklchColor, SwatchChannelOverrides } from '../model';
 	import type { GeneratedSwatch } from '../palette';
 
 	type ColorSwatchProps = {
@@ -29,20 +22,45 @@
 	let { familyId, rampId, swatch, gamut }: ColorSwatchProps = $props();
 
 	const app = getAppManagerContext();
-	let editing = $state(false);
-	let preview = $derived(getPreviewColor(swatch.oklch, gamut));
-	let hasOverrides = $derived(Object.keys(swatch.overrides).length > 0);
-
 	const channels: { key: OklchChannel; label: string; step: string }[] = [
 		{ key: 'lightness', label: 'Lightness', step: '0.01' },
 		{ key: 'chroma', label: 'Chroma', step: '0.01' },
 		{ key: 'hue', label: 'Hue', step: '1' }
 	];
 
-	function formatted(channel: OklchChannel, value: number) {
-		if (channel === 'lightness') return formatLightness(value);
-		if (channel === 'chroma') return formatChroma(value);
-		return formatHue(value);
+	let editing = $state(false);
+	let drafts = $state<Record<OklchChannel, string>>(
+		draftsFrom({ lightness: 0, chroma: 0, hue: 0 })
+	);
+	let preview = $derived(getPreviewColor(swatch.oklch, gamut));
+	let hasOverrides = $derived(Object.keys(swatch.overrides).length > 0);
+	let draftColor = $derived(draftOklch());
+	let draftPreview = $derived(getPreviewColor(draftColor, gamut));
+	let hasDraftErrors = $derived(channels.some((channel) => channelError(channel.key) != null));
+	let draftOverrides = $derived({
+		lightness:
+			normalizedDraftValue('lightness', drafts.lightness, swatch.oklch.lightness) !==
+			normalizedGenerated('lightness'),
+		chroma:
+			normalizedDraftValue('chroma', drafts.chroma, swatch.oklch.chroma) !==
+			normalizedGenerated('chroma'),
+		hue: normalizedDraftValue('hue', drafts.hue, swatch.oklch.hue) !== normalizedGenerated('hue')
+	});
+	let hasDraftChanges = $derived(
+		normalizedDraftValue('lightness', drafts.lightness, swatch.oklch.lightness) !==
+			normalizedCurrent('lightness') ||
+			normalizedDraftValue('chroma', drafts.chroma, swatch.oklch.chroma) !==
+				normalizedCurrent('chroma') ||
+			normalizedDraftValue('hue', drafts.hue, swatch.oklch.hue) !== normalizedCurrent('hue')
+	);
+	let hasDraftOverrides = $derived(Object.values(draftOverrides).some(Boolean));
+
+	function draftsFrom(oklch: OklchColor): Record<OklchChannel, string> {
+		return {
+			lightness: formatChannelValue('lightness', oklch.lightness),
+			chroma: formatChannelValue('chroma', oklch.chroma),
+			hue: formatChannelValue('hue', oklch.hue)
+		};
 	}
 
 	function finiteNumber(draft: string): number | null {
@@ -51,14 +69,34 @@
 		return Number.isFinite(value) ? value : null;
 	}
 
-	function resolveChannel(
-		channel: OklchChannel,
-		draft: string,
-		previous: string
-	): InlineEditSubmitResult {
+	function normalizeDraft(channel: OklchChannel): number {
+		const parsed = finiteNumber(drafts[channel]);
+		return normalizeChannelValue(channel, parsed ?? swatch.oklch[channel]);
+	}
+
+	function normalizedDraftValue(channel: OklchChannel, draft: string, fallback: number): string {
 		const parsed = finiteNumber(draft);
-		const value = parsed ?? Number(previous);
-		const resolved = String(normalizeChannelValue(channel, value));
+		return formatChannelValue(channel, normalizeChannelValue(channel, parsed ?? fallback));
+	}
+
+	function normalizedCurrent(channel: OklchChannel): string {
+		return formatChannelValue(channel, swatch.oklch[channel]);
+	}
+
+	function normalizedGenerated(channel: OklchChannel): string {
+		return formatChannelValue(channel, swatch.generated[channel]);
+	}
+
+	function draftOklch(): OklchColor {
+		return {
+			lightness: normalizeDraft('lightness'),
+			chroma: normalizeDraft('chroma'),
+			hue: normalizeDraft('hue')
+		};
+	}
+
+	function channelError(channel: OklchChannel): string | null {
+		const parsed = finiteNumber(drafts[channel]);
 		const limits = {
 			lightness: '0 to 1',
 			chroma: '0 to 0.37',
@@ -70,31 +108,56 @@
 			hue: { min: 0, max: 360 }
 		} satisfies Record<OklchChannel, { min: number; max: number }>;
 
-		if (parsed == null) {
-			return {
-				value: resolved,
-				error: `${formattedChannelName(channel)} must be a number from ${limits[channel]}; restored the previous value.`
-			};
-		}
-		if (parsed < ranges[channel].min || parsed > ranges[channel].max) {
-			return {
-				value: resolved,
-				error: `${formattedChannelName(channel)} must be between ${limits[channel]}; adjusted to ${resolved}.`
-			};
-		}
-		return { value: resolved };
+		if (parsed == null)
+			return `${formattedChannelName(channel)} must be a number from ${limits[channel]}.`;
+		if (parsed < ranges[channel].min || parsed > ranges[channel].max)
+			return `${formattedChannelName(channel)} must be between ${limits[channel]}.`;
+		return null;
 	}
 
-	function setChannel(channel: OklchChannel, draft: string) {
-		const value = finiteNumber(draft);
-		if (value != null)
-			app.previewSwatchChannel(
-				familyId,
-				rampId,
-				swatch.stepIndex,
-				channel,
-				normalizeChannelValue(channel, value)
-			);
+	function openEditor() {
+		drafts = draftsFrom(swatch.oklch);
+		editing = true;
+	}
+
+	function closeEditor() {
+		drafts = draftsFrom(swatch.oklch);
+		editing = false;
+	}
+
+	function syncDialogOpen(open: boolean) {
+		if (!open) closeEditor();
+	}
+
+	function setDraft(channel: OklchChannel, draft: string) {
+		drafts = { ...drafts, [channel]: draft };
+	}
+
+	function resetDraftChannel(channel: OklchChannel) {
+		setDraft(channel, formatChannelValue(channel, swatch.generated[channel]));
+	}
+
+	function resetDraftColor() {
+		drafts = draftsFrom(swatch.generated);
+	}
+
+	function draftOverrideFor(channel: OklchChannel): boolean {
+		if (channel === 'lightness') return draftOverrides.lightness;
+		if (channel === 'chroma') return draftOverrides.chroma;
+		return draftOverrides.hue;
+	}
+
+	function applyDraft() {
+		if (hasDraftErrors) return;
+		const nextOverrides: SwatchChannelOverrides = {};
+		for (const channel of channels) {
+			const value = normalizeDraft(channel.key);
+			if (formatChannelValue(channel.key, value) !== normalizedGenerated(channel.key)) {
+				nextOverrides[channel.key] = value;
+			}
+		}
+		app.setSwatchOverrides(familyId, rampId, swatch.stepIndex, nextOverrides);
+		editing = false;
 	}
 
 	function formattedChannelName(channel: OklchChannel): string {
@@ -104,11 +167,12 @@
 
 <button
 	type="button"
+	class="swatch-button"
 	class:warning={preview.outOfSelectedGamut}
 	class:overridden={hasOverrides}
 	style={`background: ${preview.css}`}
 	aria-label={`${swatch.name} ${preview.hex}${hasOverrides ? ' overridden' : ''}${preview.warning ? ` ${preview.warning}` : ''}`}
-	onclick={() => (editing = true)}
+	onclick={openEditor}
 >
 	<strong>{swatch.stepIndex}</strong>
 	<span>{preview.hex}</span>
@@ -116,69 +180,57 @@
 	{#if preview.warning}<span aria-label={preview.warning}>⚠</span>{/if}
 </button>
 
-{#if editing}
-	<div class="backdrop" role="presentation">
-		<div
-			role="dialog"
-			aria-modal="true"
-			aria-label={`Edit ${swatch.name}`}
-			tabindex="-1"
-			class="modal"
-		>
-			<header>
-				<h3>{swatch.name}</h3>
-				<button type="button" aria-label="Close swatch editor" onclick={() => (editing = false)}
-					>×</button
-				>
-			</header>
-			<p>{preview.hex}{preview.warning ? ` — ${preview.warning}` : ''}</p>
-			{#each channels as channel}
-				<label>
-					<span>{channel.label} ({formatted(channel.key, swatch.oklch[channel.key])})</span>
-					<InlineInput
-						aria-label={channel.label}
-						inputmode="decimal"
-						value={String(swatch.oklch[channel.key])}
-						session={createInlineEditSession({
-							preview: (draft) => setChannel(channel.key, draft),
-							submit: (draft) => {
-								const result = resolveChannel(
-									channel.key,
-									draft,
-									String(swatch.oklch[channel.key])
-								);
-								app.overrideSwatchChannel(
-									familyId,
-									rampId,
-									swatch.stepIndex,
-									channel.key,
-									Number(result.value)
-								);
-								return result;
-							}
-						})}
-					/>
-				</label>
-				<button
-					type="button"
-					disabled={swatch.overrides[channel.key] === undefined}
-					onclick={() => app.resetSwatchChannel(familyId, rampId, swatch.stepIndex, channel.key)}
-				>
-					Reset {channel.label}
-				</button>
-			{/each}
-			<button
-				type="button"
-				disabled={!hasOverrides}
-				onclick={() => app.resetSwatchColor(familyId, rampId, swatch.stepIndex)}
-				>Reset all channels</button
-			>
-		</div>
+<Dialog
+	bind:open={editing}
+	title={swatch.name}
+	closeLabel="Close swatch editor"
+	onopenchange={syncDialogOpen}
+>
+	<div class="editor-preview">
+		<span
+			class:warning={draftPreview.outOfSelectedGamut}
+			class="preview-chip"
+			style={`background: ${draftPreview.css}`}
+		></span>
+		<p>{draftPreview.hex}{draftPreview.warning ? ` — ${draftPreview.warning}` : ''}</p>
 	</div>
-{/if}
+	{#each channels as channel}
+		<label>
+			<span>{channel.label} ({formatChannelValue(channel.key, swatch.generated[channel.key])})</span
+			>
+			<input
+				type="text"
+				aria-label={channel.label}
+				inputmode="decimal"
+				aria-invalid={channelError(channel.key) ? 'true' : undefined}
+				value={drafts[channel.key]}
+				oninput={(event) => setDraft(channel.key, event.currentTarget.value)}
+			/>
+			{#if channelError(channel.key)}
+				<span class="error">{channelError(channel.key)}</span>
+			{/if}
+		</label>
+		<button
+			type="button"
+			disabled={!draftOverrideFor(channel.key)}
+			onclick={() => resetDraftChannel(channel.key)}
+		>
+			Reset {channel.label}
+		</button>
+	{/each}
+	{#snippet actions()}
+		<button type="button" disabled={!hasDraftOverrides} onclick={resetDraftColor}
+			>Reset all channels</button
+		>
+		<button type="button" onclick={closeEditor}>Cancel</button>
+		<button type="button" disabled={hasDraftErrors || !hasDraftChanges} onclick={applyDraft}
+			>Apply changes</button
+		>
+	{/snippet}
+</Dialog>
 
 <style>
-	button {
+	.swatch-button {
 		border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
 		border-radius: 0.25rem;
 		padding: 0.5rem;
@@ -195,32 +247,30 @@
 	.warning {
 		box-shadow: inset 0 0 0 3px orange;
 	}
-	.backdrop {
-		position: fixed;
-		inset: 0;
-		display: grid;
-		place-items: center;
-		background: rgb(0 0 0 / 0.35);
-		padding: 1rem;
-	}
-	.modal {
-		background: Canvas;
-		color: CanvasText;
-		border: 1px solid currentColor;
-		border-radius: 0.5rem;
-		padding: 1rem;
-		display: grid;
-		gap: 0.75rem;
-		min-inline-size: min(26rem, 100%);
-	}
-	header {
+	.editor-preview {
 		display: flex;
-		justify-content: space-between;
-		gap: 1rem;
 		align-items: center;
+		gap: 0.75rem;
+	}
+	.preview-chip {
+		inline-size: 4rem;
+		block-size: 4rem;
+		border: 1px solid color-mix(in srgb, currentColor 40%, transparent);
+		border-radius: 0.25rem;
+		flex: none;
+	}
+	.editor-preview p {
+		margin: 0;
 	}
 	label {
 		display: grid;
 		gap: 0.25rem;
+	}
+	input {
+		inline-size: 100%;
+	}
+	.error {
+		color: LinkText;
+		font-size: 0.9rem;
 	}
 </style>

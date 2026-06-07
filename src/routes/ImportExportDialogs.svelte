@@ -7,6 +7,7 @@
 
 <script lang="ts">
 	import { getAppManagerContext } from '$lib/state/appContext';
+	import Dialog from '$lib/ui/Dialog.svelte';
 	import {
 		validateThemeImport,
 		type ImportConflictChoice,
@@ -104,15 +105,14 @@
 	<button type="button" onclick={() => (importOpen = true)}>Import themes</button>
 </div>
 
-{#if exportOpen}
-	<div class="dialog" role="dialog" aria-modal="true" aria-label="Export themes" tabindex="-1">
-		<h2>Export themes</h2>
-		<label
-			>Filename <input
-				value={filename}
-				oninput={(event) => (filename = event.currentTarget.value)}
-			/></label
-		>
+<Dialog bind:open={exportOpen} title="Export themes">
+	<label
+		>Filename <input
+			value={filename}
+			oninput={(event) => (filename = event.currentTarget.value)}
+		/></label
+	>
+	<div class="theme-list">
 		{#each themes as theme}
 			<label
 				><input
@@ -123,61 +123,58 @@
 				{theme.name}</label
 			>
 		{/each}
+	</div>
+	{#snippet actions()}
 		<button type="button" onclick={confirmExport} disabled={exportSelection.length === 0}
 			>Confirm export</button
 		>
 		<button type="button" onclick={() => (exportOpen = false)}>Cancel export</button>
-	</div>
-{/if}
+	{/snippet}
+</Dialog>
 
-{#if importOpen}
-	<div class="dialog" role="dialog" aria-modal="true" aria-label="Import themes" tabindex="-1">
-		<h2>Import themes</h2>
-		<label
-			>Import file <input
-				type="file"
-				accept="application/json,.json"
-				onchange={readImport}
-			/></label
-		>
-		{#if importSummary}<p role="status">{importSummary}</p>{/if}
-		{#if importFile}
-			{#each importFile.themes as theme, index}
-				<div class="choice">
+<Dialog bind:open={importOpen} title="Import themes">
+	<label
+		>Import file <input type="file" accept="application/json,.json" onchange={readImport} /></label
+	>
+	{#if importSummary}<p role="status">{importSummary}</p>{/if}
+	{#if importFile}
+		{#each importFile.themes as theme, index}
+			<div class="choice">
+				<label
+					><input
+						type="checkbox"
+						checked={importChoices.some((choice) => choice.importKey === String(index))}
+						onchange={(event) => choose(String(index), event.currentTarget.checked)}
+					/>
+					{theme.name}</label
+				>
+				{#if hasConflict(theme)}
 					<label
-						><input
-							type="checkbox"
-							checked={importChoices.some((choice) => choice.importKey === String(index))}
-							onchange={(event) => choose(String(index), event.currentTarget.checked)}
-						/>
-						{theme.name}</label
-					>
-					{#if hasConflict(theme)}
-						<label
-							>Conflict
-							<select
-								aria-label={`Conflict choice for ${theme.name}`}
-								value={importChoices.find((choice) => choice.importKey === String(index))
-									?.conflict ?? 'rename'}
-								onchange={(event) =>
-									setConflict(String(index), event.currentTarget.value as ImportConflictChoice)}
-							>
-								<option value="rename">Rename imported theme</option>
-								<option value="overwrite">Overwrite existing theme</option>
-							</select>
-						</label>
-					{/if}
-				</div>
-			{/each}
-		{/if}
+						>Conflict
+						<select
+							aria-label={`Conflict choice for ${theme.name}`}
+							value={importChoices.find((choice) => choice.importKey === String(index))?.conflict ??
+								'rename'}
+							onchange={(event) =>
+								setConflict(String(index), event.currentTarget.value as ImportConflictChoice)}
+						>
+							<option value="rename">Rename imported theme</option>
+							<option value="overwrite">Overwrite existing theme</option>
+						</select>
+					</label>
+				{/if}
+			</div>
+		{/each}
+	{/if}
+	{#snippet actions()}
 		<button
 			type="button"
 			onclick={confirmImport}
 			disabled={!importFile || importChoices.length === 0}>Confirm import</button
 		>
 		<button type="button" onclick={() => (importOpen = false)}>Cancel import</button>
-	</div>
-{/if}
+	{/snippet}
+</Dialog>
 
 <style>
 	.entry-points {
@@ -185,13 +182,9 @@
 		gap: 0.5rem;
 		flex-wrap: wrap;
 	}
-	.dialog {
+	.theme-list {
 		display: grid;
 		gap: 0.75rem;
-		border: 1px solid currentColor;
-		border-radius: 0.5rem;
-		padding: 1rem;
-		margin-block-start: 1rem;
 	}
 	.choice {
 		display: grid;

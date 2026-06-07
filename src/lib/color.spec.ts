@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import {
 	createSourceColor,
+	formatChannelValue,
 	formatChroma,
 	formatHue,
 	formatLightness,
@@ -111,6 +112,17 @@ describe('numeric formatting', () => {
 		expect(formatLightness(0.12349)).toBe('0.1234');
 		expect(formatChroma(0.98765)).toBe('0.9876');
 		expect(formatHue(291.139)).toBe('291.13');
+	});
+
+	it('formats all OKLCH channels through the shared channel formatter', () => {
+		expect(formatChannelValue('lightness', 0.8374999999999999)).toBe('0.8375');
+		expect(formatChannelValue('chroma', 0.98765)).toBe('0.9876');
+		expect(formatChannelValue('hue', 291.139)).toBe('291.13');
+	});
+
+	it('keeps already-rounded decimal channel values stable', () => {
+		expect(normalizeChannelValue('hue', Number('74.60'))).toBe(74.6);
+		expect(formatHue(Number('74.60'))).toBe('74.60');
 	});
 
 	it('normalizes input values by clamping to channel ranges before flooring', () => {

@@ -25,7 +25,10 @@ export type PreviewColor = GamutStatus & {
 	color: Color;
 };
 
-const CHANNEL_FORMATS: Record<OklchChannel, { min: number; max: number; digits: number }> = {
+export const OKLCH_CHANNEL_FORMATS: Record<
+	OklchChannel,
+	{ min: number; max: number; digits: number }
+> = {
 	lightness: { min: 0, max: 1, digits: 4 },
 	chroma: { min: 0, max: 0.37, digits: 4 },
 	hue: { min: 0, max: 360, digits: 2 }
@@ -125,7 +128,7 @@ export function getMaxChroma(lightness: number, hue: number, gamut: Gamut): numb
 	const normalizedLightness = normalizeChannelValue('lightness', lightness);
 	const normalizedHue = normalizeChannelValue('hue', hue);
 	let low = 0;
-	let high = CHANNEL_FORMATS.chroma.max;
+	let high = OKLCH_CHANNEL_FORMATS.chroma.max;
 
 	for (let iteration = 0; iteration < 24; iteration += 1) {
 		const chroma = (low + high) / 2;
@@ -160,19 +163,24 @@ export function toHex(color: Color, gamut: GamutPreview | 'srgb' = 'srgb'): stri
 }
 
 export function formatLightness(value: number): string {
-	return formatChannel('lightness', value);
+	return formatChannelValue('lightness', value);
 }
 
 export function formatChroma(value: number): string {
-	return formatChannel('chroma', value);
+	return formatChannelValue('chroma', value);
 }
 
 export function formatHue(value: number): string {
-	return formatChannel('hue', value);
+	return formatChannelValue('hue', value);
+}
+
+export function formatChannelValue(channel: OklchChannel, value: number): string {
+	const { digits } = OKLCH_CHANNEL_FORMATS[channel];
+	return floorTo(finiteOrZero(value), digits).toFixed(digits);
 }
 
 export function normalizeChannelValue(channel: OklchChannel, value: number): number {
-	const { min, max, digits } = CHANNEL_FORMATS[channel];
+	const { min, max, digits } = OKLCH_CHANNEL_FORMATS[channel];
 	return floorTo(clamp(finiteOrZero(value), min, max), digits);
 }
 
@@ -213,11 +221,6 @@ function serializeP3(color: Color): string {
 	return `color(display-p3 ${red} ${green} ${blue})`;
 }
 
-function formatChannel(channel: OklchChannel, value: number): string {
-	const { digits } = CHANNEL_FORMATS[channel];
-	return floorTo(finiteOrZero(value), digits).toFixed(digits);
-}
-
 function formatPercent(value: number | undefined | null): string {
 	return `${floorTo(clamp(finiteOrZero(value), 0, 100), 2).toFixed(2)}%`;
 }
@@ -228,7 +231,7 @@ function formatUnit(value: number): string {
 
 function floorTo(value: number, digits: number): number {
 	const scale = 10 ** digits;
-	return Math.floor((value + Number.EPSILON) * scale) / scale;
+	return Math.floor(value * scale + 1e-10) / scale;
 }
 
 function finiteOrZero(value: number | undefined | null): number {

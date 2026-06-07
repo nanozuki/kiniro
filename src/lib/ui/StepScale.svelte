@@ -9,7 +9,7 @@
 	import { getAppManagerContext } from '$lib/state/appContext';
 	import InlineInput from './InlineInput.svelte';
 	import { createInlineEditSession, type InlineEditSubmitResult } from './InlineInput.svelte';
-	import { formatLightness, normalizeChannelValue } from '../color';
+	import { formatChannelValue, normalizeChannelValue } from '../color';
 	import { buildSteps } from '../lightness';
 	import type { StepIndexStyle, StepScaleStructure, StepScaleValues } from '../model';
 
@@ -54,7 +54,7 @@
 	function resolveLightness(draft: string, previous: string): InlineEditSubmitResult {
 		const parsed = finiteNumber(draft);
 		const value = parsed ?? Number(previous);
-		const resolved = String(normalizeChannelValue('lightness', value));
+		const resolved = formatChannelValue('lightness', normalizeChannelValue('lightness', value));
 
 		if (parsed == null) {
 			return {
@@ -81,7 +81,7 @@
 >
 	<div aria-label="Step scale summary" class="summary">
 		{#each steps as step}
-			<span>{step.index}: {formatLightness(step.lightness)}</span>
+			<span>{step.index}: {formatChannelValue('lightness', step.lightness)}</span>
 		{/each}
 	</div>
 	<button type="button" onclick={() => (editing = true)}>Edit step scale</button>
@@ -153,14 +153,17 @@
 				>Start lightness <InlineInput
 					aria-label="Start lightness"
 					inputmode="decimal"
-					value={String(values.lightnessStart)}
+					value={formatChannelValue('lightness', values.lightnessStart)}
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
 							if (value != null) app.previewLightnessRange(familyId, value, values.lightnessEnd);
 						},
 						submit: (draft) => {
-							const result = resolveLightness(draft, String(values.lightnessStart));
+							const result = resolveLightness(
+								draft,
+								formatChannelValue('lightness', values.lightnessStart)
+							);
 							app.setLightnessRange(familyId, Number(result.value), values.lightnessEnd);
 							return result;
 						}
@@ -171,14 +174,17 @@
 				>End lightness <InlineInput
 					aria-label="End lightness"
 					inputmode="decimal"
-					value={String(values.lightnessEnd)}
+					value={formatChannelValue('lightness', values.lightnessEnd)}
 					session={createInlineEditSession({
 						preview: (draft) => {
 							const value = finiteNumber(draft);
 							if (value != null) app.previewLightnessRange(familyId, values.lightnessStart, value);
 						},
 						submit: (draft) => {
-							const result = resolveLightness(draft, String(values.lightnessEnd));
+							const result = resolveLightness(
+								draft,
+								formatChannelValue('lightness', values.lightnessEnd)
+							);
 							app.setLightnessRange(familyId, values.lightnessStart, Number(result.value));
 							return result;
 						}
@@ -197,7 +203,7 @@
 							<InlineInput
 								aria-label={`${step.index} lightness`}
 								inputmode="decimal"
-								value={String(step.lightness)}
+								value={formatChannelValue('lightness', step.lightness)}
 								disabled={!steps.slice(1, -1).includes(step)}
 								session={createInlineEditSession({
 									preview: (draft) => {
@@ -205,7 +211,10 @@
 										if (value != null) app.previewLightness(familyId, step.index, value);
 									},
 									submit: (draft) => {
-										const result = resolveLightness(draft, String(step.lightness));
+										const result = resolveLightness(
+											draft,
+											formatChannelValue('lightness', step.lightness)
+										);
 										app.overrideLightness(familyId, step.index, Number(result.value));
 										return result;
 									}

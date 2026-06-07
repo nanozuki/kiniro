@@ -1,4 +1,4 @@
-import { getRelativeChroma, getRelativeChromaRatio } from './color';
+import { getRelativeChroma, getRelativeChromaRatio, normalizeChannelValue } from './color';
 import { buildSteps } from './lightness';
 import type {
 	ColorFamilyStructure,
@@ -119,16 +119,33 @@ export function generateSwatch(
 		chroma: getRelativeChroma(step.lightness, sourceColor.hue, chromaRatio, gamut),
 		hue: sourceColor.hue
 	};
+	const effectiveOverrides = normalizeOverrides(overrides, generated);
 
 	return {
 		stepIndex: step.index,
 		name: `${rampName}-${step.index}`,
 		generated,
-		overrides: { ...overrides },
+		overrides: effectiveOverrides,
 		oklch: {
-			lightness: overrides.lightness ?? generated.lightness,
-			chroma: overrides.chroma ?? generated.chroma,
-			hue: overrides.hue ?? generated.hue
+			lightness: effectiveOverrides.lightness ?? generated.lightness,
+			chroma: effectiveOverrides.chroma ?? generated.chroma,
+			hue: effectiveOverrides.hue ?? generated.hue
 		}
 	};
+}
+
+function normalizeOverrides(
+	overrides: SwatchChannelOverrides,
+	generated: OklchColor
+): SwatchChannelOverrides {
+	const effectiveOverrides: SwatchChannelOverrides = {};
+	for (const channel of ['lightness', 'chroma', 'hue'] as const) {
+		const value = overrides[channel];
+		if (value == null) continue;
+		const normalizedValue = normalizeChannelValue(channel, value);
+		if (normalizedValue !== normalizeChannelValue(channel, generated[channel])) {
+			effectiveOverrides[channel] = normalizedValue;
+		}
+	}
+	return effectiveOverrides;
 }

@@ -23,6 +23,8 @@ describe('StepScale', () => {
 
 		await expect.element(page.getByText('100: 0.9500')).toBeInTheDocument();
 		await page.getByRole('button', { name: 'Edit step scale' }).click();
+		await expect.element(page.getByLabelText('200 lightness')).toHaveValue('0.8375');
+		await expect.element(page.getByLabelText('600 lightness')).toHaveValue('0.3875');
 		await page.getByLabelText('Step count').fill('7');
 		await page.getByLabelText('Index style').selectOptions('ordinal');
 		await page.getByLabelText('Half step start').click();
