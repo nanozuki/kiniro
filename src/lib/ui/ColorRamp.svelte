@@ -97,7 +97,7 @@
 	}
 
 	function setSourceFormat(format: SourceColorFormat) {
-		const sourceColor = parseSourceColor(sourceValue) ?? draftSourceColor;
+		const sourceColor = draftSourceColor ?? parseSourceColor(sourceValue);
 		if (!sourceColor) return;
 		if (sourceFormat === format) return;
 		sourceDraft = serializeSourceColor(sourceColor.oklch, format);

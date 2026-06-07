@@ -125,6 +125,9 @@ describe('ColorRamp', () => {
 
 		await page.getByRole('tab', { name: 'RGB' }).click();
 		expect(inputValue()).toMatch(/^rgb\(/);
+		await sourceInput.fill('#ff0066');
+		await page.getByRole('tab', { name: 'RGB' }).click();
+		expect(inputValue()).toBe('rgb(255 0 102)');
 		await page.getByRole('tab', { name: 'HSL' }).click();
 		expect(inputValue()).toMatch(/^hsl\(/);
 		await page.getByRole('tab', { name: 'OKLCH' }).click();
