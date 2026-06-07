@@ -132,26 +132,32 @@ describe('storage', () => {
 		const storage = memoryStorage({
 			[STORAGE_KEY]: JSON.stringify({
 				...createDefaultPersistedState(),
-				version: 2,
-				ui: { workspaceTab: 'bad' }
+				version: 1,
+				history: {
+					entries: [
+						{
+							label: 'Invalid',
+							value: {
+								data: { themes: [] },
+								ui: { selectedThemeId: null, selectedVariantId: null, workspaceTab: 'bad' }
+							}
+						}
+					],
+					current: 0
+				}
 			})
 		});
 
 		expect(loadState(storage).ok).toBe(false);
 	});
 
-	it('omits derived data by only saving the explicit persisted shape', () => {
+	it('saves the passed persisted state as the serialized shape', () => {
 		const storage = memoryStorage();
-		const state = createDefaultPersistedState() as ReturnType<
-			typeof createDefaultPersistedState
-		> & { generated?: unknown; dialogDraft?: unknown };
-		state.generated = { css: ':root {}' };
-		state.dialogDraft = { name: 'Draft' };
+		const state = createDefaultPersistedState();
 
 		saveState(storage, state);
 		const raw = storage.getItem(STORAGE_KEY) ?? '';
 
-		expect(raw).not.toContain('generated');
-		expect(raw).not.toContain('dialogDraft');
+		expect(JSON.parse(raw)).toEqual(state);
 	});
 });

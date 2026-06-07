@@ -34,13 +34,7 @@ export function createDefaultPersistedState(): PersistedState {
 }
 
 export function saveState(storage: StorageLike, state: PersistedState, key = STORAGE_KEY): void {
-	storage.setItem(
-		key,
-		JSON.stringify({
-			version: STORAGE_VERSION,
-			history: state.history
-		})
-	);
+	storage.setItem(key, JSON.stringify(state));
 }
 
 export function loadState(storage: StorageLike, key = STORAGE_KEY): LoadStorageResult {
