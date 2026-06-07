@@ -8,13 +8,7 @@
 <script lang="ts">
 	import { getAppManagerContext } from '$lib/state/appContext';
 	import Dialog from './Dialog.svelte';
-	import {
-		formatChroma,
-		formatHue,
-		formatLightness,
-		getPreviewColor,
-		normalizeChannelValue
-	} from '../color';
+	import { formatChannelValue, getPreviewColor, normalizeChannelValue } from '../color';
 	import type { Gamut, OklchChannel, OklchColor, SwatchChannelOverrides } from '../model';
 	import type { GeneratedSwatch } from '../palette';
 
@@ -61,17 +55,11 @@
 	);
 	let hasDraftOverrides = $derived(Object.values(draftOverrides).some(Boolean));
 
-	function formatted(channel: OklchChannel, value: number) {
-		if (channel === 'lightness') return formatLightness(value);
-		if (channel === 'chroma') return formatChroma(value);
-		return formatHue(value);
-	}
-
 	function draftsFrom(oklch: OklchColor): Record<OklchChannel, string> {
 		return {
-			lightness: formatted('lightness', oklch.lightness),
-			chroma: formatted('chroma', oklch.chroma),
-			hue: formatted('hue', oklch.hue)
+			lightness: formatChannelValue('lightness', oklch.lightness),
+			chroma: formatChannelValue('chroma', oklch.chroma),
+			hue: formatChannelValue('hue', oklch.hue)
 		};
 	}
 
@@ -88,15 +76,15 @@
 
 	function normalizedDraftValue(channel: OklchChannel, draft: string, fallback: number): string {
 		const parsed = finiteNumber(draft);
-		return formatted(channel, normalizeChannelValue(channel, parsed ?? fallback));
+		return formatChannelValue(channel, normalizeChannelValue(channel, parsed ?? fallback));
 	}
 
 	function normalizedCurrent(channel: OklchChannel): string {
-		return formatted(channel, swatch.oklch[channel]);
+		return formatChannelValue(channel, swatch.oklch[channel]);
 	}
 
 	function normalizedGenerated(channel: OklchChannel): string {
-		return formatted(channel, swatch.generated[channel]);
+		return formatChannelValue(channel, swatch.generated[channel]);
 	}
 
 	function draftOklch(): OklchColor {
@@ -146,7 +134,7 @@
 	}
 
 	function resetDraftChannel(channel: OklchChannel) {
-		setDraft(channel, formatted(channel, swatch.generated[channel]));
+		setDraft(channel, formatChannelValue(channel, swatch.generated[channel]));
 	}
 
 	function resetDraftColor() {
@@ -164,7 +152,7 @@
 		const nextOverrides: SwatchChannelOverrides = {};
 		for (const channel of channels) {
 			const value = normalizeDraft(channel.key);
-			if (formatted(channel.key, value) !== normalizedGenerated(channel.key)) {
+			if (formatChannelValue(channel.key, value) !== normalizedGenerated(channel.key)) {
 				nextOverrides[channel.key] = value;
 			}
 		}
@@ -208,7 +196,8 @@
 	</div>
 	{#each channels as channel}
 		<label>
-			<span>{channel.label} ({formatted(channel.key, swatch.generated[channel.key])})</span>
+			<span>{channel.label} ({formatChannelValue(channel.key, swatch.generated[channel.key])})</span
+			>
 			<input
 				type="text"
 				aria-label={channel.label}

@@ -15,9 +15,7 @@
 	import Tabs from './Tabs.svelte';
 	import { createInlineEditSession, type InlineEditSession } from './InlineInput.svelte';
 	import {
-		formatChroma,
-		formatHue,
-		formatLightness,
+		formatChannelValue,
 		getPreviewColor,
 		parseSourceColor,
 		serializeSourceColor
@@ -137,8 +135,9 @@
 			{/if}
 			<p>{sourceValue}</p>
 			<p>
-				L {formatLightness(ramp.sourceColor.lightness)} C {formatChroma(ramp.sourceColor.chroma)} H
-				{formatHue(ramp.sourceColor.hue)}
+				L {formatChannelValue('lightness', ramp.sourceColor.lightness)} C
+				{formatChannelValue('chroma', ramp.sourceColor.chroma)} H
+				{formatChannelValue('hue', ramp.sourceColor.hue)}
 			</p>
 		</div>
 	</div>
