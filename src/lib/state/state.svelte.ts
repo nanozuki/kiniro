@@ -910,10 +910,6 @@ export class AppManager {
 	}
 }
 
-export function createAppManager(options: AppManagerOptions = {}): AppManager {
-	return new AppManager(options);
-}
-
 function createDefaultFamilyValues(): ColorFamilyValues {
 	return { stepScale: createDefaultStepScaleValues(), ramps: {} };
 }

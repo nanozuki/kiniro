@@ -3,7 +3,7 @@ import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme, createThemeVariant } from '$lib/model';
 import { getAppManagerContext } from '$lib/state/appContext';
-import { createAppManager } from '$lib/state/state.svelte';
+import { AppManager } from '$lib/state/state.svelte';
 import { appManagerContextOption } from '$lib/state/testAppContext';
 import Toaster from '$lib/ui/Toaster.svelte';
 import ThemeManager from './ThemeManager.svelte';
@@ -22,7 +22,7 @@ function themes() {
 }
 
 function manager() {
-	return createAppManager({ data: { themes: themes() } });
+	return new AppManager({ data: { themes: themes() } });
 }
 
 describe('ThemeManager', () => {

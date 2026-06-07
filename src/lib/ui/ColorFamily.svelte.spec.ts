@@ -2,7 +2,7 @@ import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '../model';
-import { createAppManager } from '../state/state.svelte';
+import { AppManager } from '../state/state.svelte';
 import { appManagerContextOption } from '../state/testAppContext';
 import ColorFamily from './ColorFamily.svelte';
 
@@ -10,7 +10,7 @@ describe('ColorFamily', () => {
 	it('renders family actions and delegates them', async () => {
 		const theme = createDefaultTheme({ familyName: 'Neutrals' });
 		const family = theme.structure.families[0];
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		const previewFamilyName = vi.spyOn(app, 'previewFamilyName');
 		const renameFamily = vi.spyOn(app, 'renameFamily');
 		const deleteFamily = vi.spyOn(app, 'deleteFamily');
@@ -38,7 +38,7 @@ describe('ColorFamily', () => {
 	it('shows the shared-structure warning only when multiple variants exist', async () => {
 		const theme = createDefaultTheme();
 		const family = theme.structure.families[0];
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		const { rerender } = render(ColorFamily, {
 			...appManagerContextOption(app),
 			props: { family, variant: theme.variants[0], gamut: 'srgb', variantCount: 1 }

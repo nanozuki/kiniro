@@ -8,7 +8,7 @@ import {
 	type StorageLike
 } from '../storage';
 import { createDefaultTheme } from '../model';
-import { createAppManager } from './state.svelte';
+import { AppManager } from './state.svelte';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
 
@@ -41,7 +41,7 @@ describe('AppManager selection and persistence', () => {
 	it('repairs invalid selection to a valid screen', () => {
 		const theme = createDefaultTheme();
 		const variant = theme.variants[0];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] },
 			ui: { selection: { themeId: 'missing', variantId: 'missing' }, workspaceTab: 'cssVariables' }
 		});
@@ -63,7 +63,7 @@ describe('AppManager selection and persistence', () => {
 		});
 		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(state) });
 
-		const manager = createAppManager({ storage });
+		const manager = new AppManager({ storage });
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
 		expect(manager.selectedTheme?.id).toBe(theme.id);
@@ -77,7 +77,7 @@ describe('AppManager selection and persistence', () => {
 
 	it('starts history from constructor data instead of the empty fallback', () => {
 		const theme = createDefaultTheme({ name: 'Existing' });
-		const manager = createAppManager({ data: { themes: [theme] } });
+		const manager = new AppManager({ data: { themes: [theme] } });
 
 		manager.addTheme('New');
 		manager.undo();
@@ -97,7 +97,7 @@ describe('AppManager selection and persistence', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 
 		manager.previewThemeName(theme.id, 'Preview');
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
@@ -121,7 +121,7 @@ describe('AppManager selection and persistence', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 		manager.addRamp(theme.structure.families[0].id, source, 'Ramp');
 
 		manager.setWorkspaceTab('cssVariables');
@@ -145,7 +145,7 @@ describe('AppManager selection and persistence', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 		const edit = manager.editThemeName(theme.id);
 
 		edit.preview('Existing');
@@ -170,7 +170,7 @@ describe('AppManager selection and persistence', () => {
 
 	it('uses the captured previous variant name when submitting an invalid draft', () => {
 		const theme = createDefaultTheme({ variantName: 'Default' });
-		const manager = createAppManager({ data: { themes: [theme] } });
+		const manager = new AppManager({ data: { themes: [theme] } });
 		const variant = theme.variants[0];
 		const edit = manager.editVariantName(variant.id);
 
@@ -198,7 +198,7 @@ describe('AppManager selection and persistence', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Accent');
 		manager.addRamp(familyId, source, 'Existing');
 		const initialHistoryLength = manager.history.current;
@@ -233,7 +233,7 @@ describe('AppManager selection and persistence', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 
 		manager.previewStepCount(familyId, 7);
 		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(7);
@@ -272,7 +272,7 @@ describe('AppManager selection and persistence', () => {
 	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {
 		const first = createDefaultTheme({ name: 'One' });
 		const second = createDefaultTheme({ name: 'Two' });
-		const manager = createAppManager({ data: { themes: [first, second] } });
+		const manager = new AppManager({ data: { themes: [first, second] } });
 
 		manager.selectTheme(second.id);
 		manager.addRamp(second.structure.families[0].id, source, 'Ramp');
@@ -296,7 +296,7 @@ describe('AppManager selection and persistence', () => {
 
 	it('clears redo history after a new commit', () => {
 		const theme = createDefaultTheme();
-		const manager = createAppManager({ data: { themes: [theme] } });
+		const manager = new AppManager({ data: { themes: [theme] } });
 
 		manager.renameTheme(theme.id, 'One');
 		manager.undo();
@@ -309,7 +309,7 @@ describe('AppManager selection and persistence', () => {
 		const existing = createDefaultTheme({ name: 'Existing' });
 		const imported = createDefaultTheme({ name: 'Imported' });
 		const storage = memoryStorage();
-		const manager = createAppManager({ data: { themes: [existing] }, storage });
+		const manager = new AppManager({ data: { themes: [existing] }, storage });
 		const validated = validateThemeImport(exportThemes([imported]));
 		if (!validated.ok) throw new Error('expected valid import');
 
@@ -328,7 +328,7 @@ describe('AppManager selection and persistence', () => {
 
 describe('AppManager theme and variant operations', () => {
 	it('adds, renames, and deletes themes with selection repair', () => {
-		const manager = createAppManager();
+		const manager = new AppManager();
 
 		const first = manager.addTheme('Theme');
 		const second = manager.addTheme('Theme');
@@ -345,7 +345,7 @@ describe('AppManager theme and variant operations', () => {
 
 	it('generates IDs that do not reuse restored theme IDs', () => {
 		const restoredThemes = [createDefaultTheme(), createDefaultTheme()];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: restoredThemes }
 		});
 
@@ -360,7 +360,7 @@ describe('AppManager theme and variant operations', () => {
 	it('copies variant values and keeps shared structure', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const familyId = manager.selectedTheme!.structure.families[0].id;
@@ -383,7 +383,7 @@ describe('AppManager family and step operations', () => {
 	it('adds and deletes shared families across variants', () => {
 		const theme = createDefaultTheme();
 		const firstFamilyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		manager.addVariant('Dawn');
@@ -411,7 +411,7 @@ describe('AppManager family and step operations', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const variant = manager.addVariant('Dawn');
@@ -441,7 +441,7 @@ describe('AppManager ramp and swatch operations', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		manager.addVariant('Dawn');
@@ -473,7 +473,7 @@ describe('AppManager ramp and swatch operations', () => {
 	it('moves ramps within their shared family order', () => {
 		const theme = createDefaultTheme();
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const first = manager.addRamp(familyId, source, 'First');
@@ -495,7 +495,7 @@ describe('AppManager ramp and swatch operations', () => {
 	it('sets and resets swatch overrides and reverses selected variant overrides only', () => {
 		const theme = createDefaultTheme();
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const ramp = manager.addRamp(familyId, source, 'Ramp');
@@ -535,7 +535,7 @@ describe('AppManager ramp and swatch operations', () => {
 				workspaceTab: 'palette'
 			}
 		});
-		const manager = createAppManager({ persistedState: state, storage });
+		const manager = new AppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Ramp');
 		const rampId = ramp!.id;
 		const initialHistoryLength = manager.history.current;

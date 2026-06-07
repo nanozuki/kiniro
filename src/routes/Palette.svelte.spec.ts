@@ -2,7 +2,7 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '$lib/model';
-import { createAppManager } from '$lib/state/state.svelte';
+import { AppManager } from '$lib/state/state.svelte';
 import { appManagerContextOption } from '$lib/state/testAppContext';
 import Palette from './Palette.svelte';
 
@@ -11,7 +11,7 @@ describe('Palette', () => {
 		const theme = createDefaultTheme();
 		theme.structure.families = [];
 		theme.variants[0].values.families = {};
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		const addFamily = vi.spyOn(app, 'addFamily');
 		render(Palette, appManagerContextOption(app));
 
@@ -22,7 +22,7 @@ describe('Palette', () => {
 
 	it('renders the current family list', async () => {
 		const theme = createDefaultTheme({ familyName: 'Neutrals' });
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(Palette, appManagerContextOption(app));
 
 		await expect.element(page.getByRole('heading', { name: 'Neutrals' })).toBeInTheDocument();

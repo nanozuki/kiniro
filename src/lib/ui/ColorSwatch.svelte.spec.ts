@@ -3,7 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import ColorSwatch from './ColorSwatch.svelte';
 import type { GeneratedSwatch } from '../palette';
-import { createAppManager } from '../state/state.svelte';
+import { AppManager } from '../state/state.svelte';
 import { appManagerContextOption } from '../state/testAppContext';
 
 function swatch(overrides = {}): GeneratedSwatch {
@@ -18,7 +18,7 @@ function swatch(overrides = {}): GeneratedSwatch {
 
 describe('ColorSwatch', () => {
 	function context() {
-		return appManagerContextOption(createAppManager());
+		return appManagerContextOption(new AppManager());
 	}
 
 	it('renders displayed values and override indicators', async () => {
@@ -39,7 +39,7 @@ describe('ColorSwatch', () => {
 	});
 
 	it('delegates channel overrides and resets from the modal', async () => {
-		const app = createAppManager();
+		const app = new AppManager();
 		const overrideSwatchChannel = vi.spyOn(app, 'overrideSwatchChannel');
 		const resetSwatchChannel = vi.spyOn(app, 'resetSwatchChannel');
 		const resetSwatchColor = vi.spyOn(app, 'resetSwatchColor');
