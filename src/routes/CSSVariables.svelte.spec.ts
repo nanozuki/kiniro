@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import CSSVariables from './CSSVariables.svelte';
 import { createSourceColor } from '$lib/color';
 import { createDefaultTheme } from '$lib/model';
-import { createAppManager } from '$lib/state/state.svelte';
+import { AppManager } from '$lib/state/state.svelte';
 import { appManagerContextOption } from '$lib/state/testAppContext';
 
 function fixture() {
@@ -22,7 +22,7 @@ function fixture() {
 describe('CSSVariables', () => {
 	it('renders generated output and usage example', async () => {
 		const { theme } = fixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(CSSVariables, appManagerContextOption(app));
 
 		await expect
@@ -35,7 +35,7 @@ describe('CSSVariables', () => {
 
 	it('normalizes the prefix on submit and calls onprefix with the resolved value', async () => {
 		const { theme } = fixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(CSSVariables, appManagerContextOption(app));
 
 		await page.getByLabelText('Variable prefix').fill('');
@@ -49,7 +49,7 @@ describe('CSSVariables', () => {
 	it('reports copy success', async () => {
 		const success = vi.fn().mockResolvedValue(undefined);
 		const { theme } = fixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(CSSVariables, { ...appManagerContextOption(app), props: { copyText: success } });
 		await page.getByRole('button', { name: 'Copy CSS' }).click();
 		await expect.element(page.getByRole('status')).toHaveTextContent('CSS copied.');
@@ -58,7 +58,7 @@ describe('CSSVariables', () => {
 
 	it('reports copy failure', async () => {
 		const { theme } = fixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(CSSVariables, {
 			...appManagerContextOption(app),
 			props: { copyText: vi.fn().mockRejectedValue(new Error('denied')) }

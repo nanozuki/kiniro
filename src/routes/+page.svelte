@@ -15,10 +15,10 @@
 	import WorkspaceTabs from './WorkspaceTabs.svelte';
 	import { generateVariantPalette } from '$lib/palette';
 	import { setAppManagerContext } from '$lib/state/appContext';
-	import { createAppManager } from '$lib/state/state.svelte';
+	import { AppManager } from '$lib/state/state.svelte';
 	import { addToast } from '$lib/ui/Toaster.svelte';
 
-	const app = createAppManager({ storage: browser ? localStorage : undefined });
+	const app = new AppManager({ storage: browser ? localStorage : undefined });
 	setAppManagerContext(app);
 
 	let selectedTheme = $derived(app.selectedTheme);

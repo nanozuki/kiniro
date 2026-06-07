@@ -18,36 +18,44 @@ function memoryStorage(initial: Record<string, string> = {}): StorageLike {
 }
 
 describe('storage', () => {
-	it('round trips app data, durable UI state, and capped history', () => {
+	it('round trips history containing app data and durable UI state', () => {
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [createDefaultTheme()];
-		const theme = state.data.themes[0];
+		const snapshot = state.history.entries[state.history.current].value;
+		snapshot.data.themes = [createDefaultTheme()];
+		const theme = snapshot.data.themes[0];
 		theme.targetGamut = 'p3';
-		state.ui = {
+		snapshot.ui = {
 			selectedThemeId: theme.id,
 			selectedVariantId: theme.variants[0].id,
 			workspaceTab: 'cssVariables'
 		};
-		state.history.past = Array.from({ length: 105 }, (_, index) => ({
+		state.history.entries = Array.from({ length: 205 }, (_, index) => ({
 			label: `Action ${index}`,
-			data: { themes: [] },
-			ui: {
-				selectedThemeId: null,
-				selectedVariantId: null,
-				workspaceTab: 'palette'
+			value: {
+				data: index === 204 ? snapshot.data : { themes: [] },
+				ui:
+					index === 204
+						? snapshot.ui
+						: {
+								selectedThemeId: null,
+								selectedVariantId: null,
+								workspaceTab: 'palette'
+							}
 			}
 		}));
+		state.history.current = 204;
 
 		saveState(storage, state);
 		const loaded = loadState(storage);
 
 		expect(loaded.ok).toBe(true);
-		expect(loaded.state.data.themes).toHaveLength(1);
-		expect(loaded.state.ui.workspaceTab).toBe('cssVariables');
-		expect(loaded.state.data.themes[0].targetGamut).toBe('p3');
-		expect(loaded.state.history.past).toHaveLength(100);
-		expect(loaded.state.history.past[0].label).toBe('Action 5');
+		expect(loaded.state.history.entries[204].value.data.themes).toHaveLength(1);
+		expect(loaded.state.history.entries[204].value.ui.workspaceTab).toBe('cssVariables');
+		expect(loaded.state.history.entries[204].value.data.themes[0].targetGamut).toBe('p3');
+		expect(loaded.state.history.entries).toHaveLength(205);
+		expect(loaded.state.history.entries[0].label).toBe('Action 0');
+		expect(loaded.state.history.current).toBe(204);
 	});
 
 	it('rejects invalid nested theme, variant, family, and ramp data', () => {
@@ -55,45 +63,50 @@ describe('storage', () => {
 		const theme = createDefaultTheme();
 		const family = theme.structure.families[0];
 		const variant = theme.variants[0];
-		state.data.themes = [theme];
 		const invalidState = {
 			...state,
-			data: {
-				themes: [
+			history: {
+				entries: [
 					{
-						...theme,
-						structure: {
-							families: [
-								{
-									...family,
-									ramps: [{ id: 'ramp-id' }]
-								}
-							]
-						},
-						variants: [
-							{
-								...variant,
-								values: {
-									families: {
-										[family.id]: {
-											stepScale: { ...variant.values.families[family.id].stepScale },
-											ramps: {
-												'ramp-id': {
-													sourceColor: {
-														format: 'bad',
-														oklch: { lightness: 0.5, chroma: 0.1, hue: 0 },
-														serialized: 'bad'
-													},
-													swatchOverrides: {}
+						label: 'Invalid',
+						value: {
+							data: {
+								themes: [
+									{
+										...theme,
+										structure: {
+											families: [{ ...family, ramps: [{ id: 'ramp-id' }] }]
+										},
+										variants: [
+											{
+												...variant,
+												values: {
+													families: {
+														[family.id]: {
+															stepScale: { ...variant.values.families[family.id].stepScale },
+															ramps: {
+																'ramp-id': {
+																	sourceColor: {
+																		format: 'bad',
+																		oklch: { lightness: 0.5, chroma: 0.1, hue: 0 },
+																		serialized: 'bad'
+																	},
+																	swatchOverrides: {}
+																}
+															}
+														}
+													}
 												}
 											}
-										}
+										]
 									}
-								}
-							}
-						]
+								]
+							},
+							ui: state.history.entries[state.history.current].value.ui
+						}
 					}
-				]
+				],
+				current: 0
 			}
 		};
 		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(invalidState) });
@@ -119,26 +132,32 @@ describe('storage', () => {
 		const storage = memoryStorage({
 			[STORAGE_KEY]: JSON.stringify({
 				...createDefaultPersistedState(),
-				version: 2,
-				ui: { workspaceTab: 'bad' }
+				version: 1,
+				history: {
+					entries: [
+						{
+							label: 'Invalid',
+							value: {
+								data: { themes: [] },
+								ui: { selectedThemeId: null, selectedVariantId: null, workspaceTab: 'bad' }
+							}
+						}
+					],
+					current: 0
+				}
 			})
 		});
 
 		expect(loadState(storage).ok).toBe(false);
 	});
 
-	it('omits derived data by only saving the explicit persisted shape', () => {
+	it('saves the passed persisted state as the serialized shape', () => {
 		const storage = memoryStorage();
-		const state = createDefaultPersistedState() as ReturnType<
-			typeof createDefaultPersistedState
-		> & { generated?: unknown; dialogDraft?: unknown };
-		state.generated = { css: ':root {}' };
-		state.dialogDraft = { name: 'Draft' };
+		const state = createDefaultPersistedState();
 
 		saveState(storage, state);
 		const raw = storage.getItem(STORAGE_KEY) ?? '';
 
-		expect(raw).not.toContain('generated');
-		expect(raw).not.toContain('dialogDraft');
+		expect(JSON.parse(raw)).toEqual(state);
 	});
 });

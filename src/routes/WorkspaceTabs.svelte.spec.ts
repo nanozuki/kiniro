@@ -2,13 +2,13 @@ import { page } from 'vitest/browser';
 import { describe, expect, it } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '$lib/model';
-import { createAppManager } from '$lib/state/state.svelte';
+import { AppManager } from '$lib/state/state.svelte';
 import { appManagerContextOption } from '$lib/state/testAppContext';
 import WorkspaceTabs from './WorkspaceTabs.svelte';
 
 describe('WorkspaceTabs', () => {
 	it('disables dependent tabs when the theme has no ramps', async () => {
-		const app = createAppManager({ data: { themes: [createDefaultTheme()] } });
+		const app = new AppManager({ data: { themes: [createDefaultTheme()] } });
 		render(WorkspaceTabs, appManagerContextOption(app));
 
 		await expect
@@ -23,7 +23,7 @@ describe('WorkspaceTabs', () => {
 	it('enables all tabs after a ramp exists', async () => {
 		const theme = createDefaultTheme();
 		theme.structure.families[0].ramps.push({ id: 'ramp-1', name: 'Accent' });
-		const app = createAppManager({
+		const app = new AppManager({
 			data: { themes: [theme] },
 			ui: { workspaceTab: 'cssVariables' }
 		});

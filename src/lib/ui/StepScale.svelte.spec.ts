@@ -2,13 +2,13 @@ import { page } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
 import { createDefaultStepScaleStructure, createDefaultStepScaleValues } from '../model';
-import { createAppManager } from '../state/state.svelte';
+import { AppManager } from '../state/state.svelte';
 import { appManagerContextOption } from '../state/testAppContext';
 import StepScale from './StepScale.svelte';
 
 describe('StepScale', () => {
 	it('renders compact summary and delegates structure settings', async () => {
-		const app = createAppManager();
+		const app = new AppManager();
 		const setStepCount = vi.spyOn(app, 'setStepCount');
 		const setIndexStyle = vi.spyOn(app, 'setIndexStyle');
 		const setHalfSteps = vi.spyOn(app, 'setHalfSteps');
@@ -32,7 +32,7 @@ describe('StepScale', () => {
 	});
 
 	it('delegates lightness value changes, reset, and reverse', async () => {
-		const app = createAppManager();
+		const app = new AppManager();
 		const setLightnessRange = vi.spyOn(app, 'setLightnessRange');
 		const overrideLightness = vi.spyOn(app, 'overrideLightness');
 		const resetLightness = vi.spyOn(app, 'resetLightness');

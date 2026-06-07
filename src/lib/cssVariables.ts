@@ -29,8 +29,9 @@ export type CssExport = {
 };
 
 // CSS export renders only the selected variant and keeps names/value text derived
-// from generated palette data. It never writes sanitized names or CSS text back
-// into persisted theme data.
+// from generated palette data. It emits authored OKLCH channel values, not
+// preview-clamped colors, and never writes sanitized names or CSS text back into
+// persisted theme data.
 export function exportCssVariables(theme: Theme, variant: ThemeVariant): CssExport {
 	return exportGeneratedCssVariables(generateVariantPalette(theme, variant), {
 		prefix: theme.cssPrefix,

@@ -1,9 +1,14 @@
 import { describe, expect, it } from 'vitest';
 import { createSourceColor } from '../color';
 import { exportThemes, validateThemeImport } from '../importExport';
-import { createDefaultPersistedState, STORAGE_KEY, type StorageLike } from '../storage';
+import {
+	createDefaultPersistedState,
+	STORAGE_KEY,
+	type PersistedState,
+	type StorageLike
+} from '../storage';
 import { createDefaultTheme } from '../model';
-import { createAppManager } from './state.svelte';
+import { AppManager } from './state.svelte';
 
 const source = createSourceColor({ lightness: 0.7, chroma: 0.1, hue: 40 }, 'oklch');
 
@@ -25,11 +30,18 @@ function memoryStorage(
 	};
 }
 
+function setCurrentSnapshot(
+	state: PersistedState,
+	snapshot: PersistedState['history']['entries'][number]['value']
+): void {
+	state.history.entries[state.history.current].value = snapshot;
+}
+
 describe('AppManager selection and persistence', () => {
 	it('repairs invalid selection to a valid screen', () => {
 		const theme = createDefaultTheme();
 		const variant = theme.variants[0];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] },
 			ui: { selection: { themeId: 'missing', variantId: 'missing' }, workspaceTab: 'cssVariables' }
 		});
@@ -41,36 +53,51 @@ describe('AppManager selection and persistence', () => {
 	it('rejects invalid loaded state before components read it', () => {
 		const state = createDefaultPersistedState();
 		const theme = createDefaultTheme();
-		theme.variants = [];
-		state.data.themes = [theme];
-		state.ui = {
-			selectedThemeId: 'missing',
-			selectedVariantId: 'missing',
-			workspaceTab: 'cssVariables'
-		};
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: 'missing',
+				selectedVariantId: 'missing',
+				workspaceTab: 'cssVariables'
+			}
+		});
 		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(state) });
 
-		const manager = createAppManager({ storage });
+		const manager = new AppManager({ storage });
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
 		expect(manager.selectedTheme?.id).toBe(theme.id);
 		expect(manager.selectedVariant).not.toBeNull();
 		expect(manager.ui.workspaceTab).toBe('palette');
-		expect(saved.ui.selectedThemeId).toBe(theme.id);
-		expect(saved.ui.selectedVariantId).toBe(manager.selectedVariant?.id);
+		expect(saved.history.entries[saved.history.current].value.ui.selectedThemeId).toBe(theme.id);
+		expect(saved.history.entries[saved.history.current].value.ui.selectedVariantId).toBe(
+			manager.selectedVariant?.id
+		);
+	});
+
+	it('starts history from constructor data instead of the empty fallback', () => {
+		const theme = createDefaultTheme({ name: 'Existing' });
+		const manager = new AppManager({ data: { themes: [theme] } });
+
+		manager.addTheme('New');
+		manager.undo();
+
+		expect(manager.data.themes.map((item) => item.name)).toEqual(['Existing']);
 	});
 
 	it('writes localStorage after commit mutations but not during preview mutations', () => {
 		const theme = createDefaultTheme();
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [theme];
-		state.ui = {
-			selectedThemeId: theme.id,
-			selectedVariantId: theme.variants[0].id,
-			workspaceTab: 'palette'
-		};
-		const manager = createAppManager({ persistedState: state, storage });
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
 
 		manager.previewThemeName(theme.id, 'Preview');
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
@@ -78,8 +105,31 @@ describe('AppManager selection and persistence', () => {
 		manager.renameTheme(theme.id, 'Preview');
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
-		expect(manager.history.past).toHaveLength(1);
-		expect(saved.data.themes[0].name).toBe('Preview');
+		expect(manager.history.current).toBe(1);
+		expect(saved.history.entries[saved.history.current].value.data.themes[0].name).toBe('Preview');
+	});
+
+	it('persists UI-only changes through the current history entry', () => {
+		const theme = createDefaultTheme();
+		const storage = memoryStorage();
+		const state = createDefaultPersistedState();
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
+		manager.addRamp(theme.structure.families[0].id, source, 'Ramp');
+
+		manager.setWorkspaceTab('cssVariables');
+		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
+
+		expect(saved.data).toBeUndefined();
+		expect(saved.ui).toBeUndefined();
+		expect(saved.history.entries[saved.history.current].value.ui.workspaceTab).toBe('cssVariables');
 	});
 
 	it('previews inline theme names without persistence or history until submit', () => {
@@ -87,18 +137,20 @@ describe('AppManager selection and persistence', () => {
 		const other = createDefaultTheme({ name: 'Existing' });
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [theme, other];
-		state.ui = {
-			selectedThemeId: theme.id,
-			selectedVariantId: theme.variants[0].id,
-			workspaceTab: 'palette'
-		};
-		const manager = createAppManager({ persistedState: state, storage });
+		setCurrentSnapshot(state, {
+			data: { themes: [theme, other] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
 		const edit = manager.editThemeName(theme.id);
 
 		edit.preview('Existing');
 		expect(manager.data.themes[0].name).toBe('Existing');
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
 
 		const result = edit.submit('Existing');
@@ -109,14 +161,16 @@ describe('AppManager selection and persistence', () => {
 			error: 'Theme name already exists; using "Existing 2".'
 		});
 		expect(manager.data.themes[0].name).toBe('Existing 2');
-		expect(manager.history.past).toHaveLength(1);
-		expect(saved.data.themes[0].name).toBe('Existing 2');
+		expect(manager.history.current).toBe(1);
+		expect(saved.history.entries[saved.history.current].value.data.themes[0].name).toBe(
+			'Existing 2'
+		);
 		expect(storage.writes).toBe(1);
 	});
 
 	it('uses the captured previous variant name when submitting an invalid draft', () => {
 		const theme = createDefaultTheme({ variantName: 'Default' });
-		const manager = createAppManager({ data: { themes: [theme] } });
+		const manager = new AppManager({ data: { themes: [theme] } });
 		const variant = theme.variants[0];
 		const edit = manager.editVariantName(variant.id);
 
@@ -128,7 +182,7 @@ describe('AppManager selection and persistence', () => {
 			error: 'Variant name cannot be empty; restored "Default".'
 		});
 		expect(manager.selectedVariant?.name).toBe('Default');
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 	});
 
 	it('previews inline family and ramp names without persistence or history until submit', () => {
@@ -136,16 +190,18 @@ describe('AppManager selection and persistence', () => {
 		const familyId = theme.structure.families[0].id;
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [theme];
-		state.ui = {
-			selectedThemeId: theme.id,
-			selectedVariantId: theme.variants[0].id,
-			workspaceTab: 'palette'
-		};
-		const manager = createAppManager({ persistedState: state, storage });
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Accent');
 		manager.addRamp(familyId, source, 'Existing');
-		const initialHistoryLength = manager.history.past.length;
+		const initialHistoryLength = manager.history.current;
 		const familyEdit = manager.editFamilyName(familyId);
 		const rampEdit = manager.editRampName(ramp!.id);
 
@@ -153,14 +209,14 @@ describe('AppManager selection and persistence', () => {
 		rampEdit.preview('Existing');
 		expect(manager.selectedTheme?.structure.families[0].name).toBe('Accent');
 		expect(manager.selectedTheme?.structure.families[0].ramps[0].name).toBe('Existing');
-		expect(manager.history.past).toHaveLength(initialHistoryLength);
+		expect(manager.history.current).toBe(initialHistoryLength);
 
 		expect(familyEdit.submit('Accent')).toMatchObject({ value: 'Accent' });
 		expect(rampEdit.submit('Existing')).toMatchObject({
 			value: 'Existing 2',
 			error: 'Ramp name already exists; using "Existing 2".'
 		});
-		expect(manager.history.past).toHaveLength(initialHistoryLength + 2);
+		expect(manager.history.current).toBe(initialHistoryLength + 2);
 		expect(storage.writes).toBe(4);
 	});
 
@@ -169,32 +225,34 @@ describe('AppManager selection and persistence', () => {
 		const familyId = theme.structure.families[0].id;
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [theme];
-		state.ui = {
-			selectedThemeId: theme.id,
-			selectedVariantId: theme.variants[0].id,
-			workspaceTab: 'palette'
-		};
-		const manager = createAppManager({ persistedState: state, storage });
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
 
 		manager.previewStepCount(familyId, 7);
 		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(7);
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.getItem(STORAGE_KEY)).toBeNull();
 
 		manager.setStepCount(familyId, 7);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(1);
 		manager.undo();
 		expect(manager.selectedTheme?.structure.families[0].stepScale.stepCount).toBe(9);
 
 		manager.previewLightnessRange(familyId, 0.8, 0.2);
 		expect(manager.selectedVariant?.values.families[familyId].stepScale.lightnessStart).toBe(0.8);
-		expect(manager.history.past).toHaveLength(0);
+		expect(manager.history.current).toBe(0);
 		expect(storage.writes).toBe(2);
 
 		manager.setLightnessRange(familyId, 0.8, 0.2);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(3);
 
 		manager.previewLightness(familyId, '500', 0.45);
@@ -203,18 +261,18 @@ describe('AppManager selection and persistence', () => {
 				'500': 0.45
 			}
 		);
-		expect(manager.history.past).toHaveLength(1);
+		expect(manager.history.current).toBe(1);
 		expect(storage.writes).toBe(3);
 
 		manager.overrideLightness(familyId, '500', 0.45);
-		expect(manager.history.past).toHaveLength(2);
+		expect(manager.history.current).toBe(2);
 		expect(storage.writes).toBe(4);
 	});
 
 	it('undoes and redoes names while restoring selected theme, variant, and workspace tab', () => {
 		const first = createDefaultTheme({ name: 'One' });
 		const second = createDefaultTheme({ name: 'Two' });
-		const manager = createAppManager({ data: { themes: [first, second] } });
+		const manager = new AppManager({ data: { themes: [first, second] } });
 
 		manager.selectTheme(second.id);
 		manager.addRamp(second.structure.families[0].id, source, 'Ramp');
@@ -238,7 +296,7 @@ describe('AppManager selection and persistence', () => {
 
 	it('clears redo history after a new commit', () => {
 		const theme = createDefaultTheme();
-		const manager = createAppManager({ data: { themes: [theme] } });
+		const manager = new AppManager({ data: { themes: [theme] } });
 
 		manager.renameTheme(theme.id, 'One');
 		manager.undo();
@@ -251,22 +309,26 @@ describe('AppManager selection and persistence', () => {
 		const existing = createDefaultTheme({ name: 'Existing' });
 		const imported = createDefaultTheme({ name: 'Imported' });
 		const storage = memoryStorage();
-		const manager = createAppManager({ data: { themes: [existing] }, storage });
+		const manager = new AppManager({ data: { themes: [existing] }, storage });
 		const validated = validateThemeImport(exportThemes([imported]));
 		if (!validated.ok) throw new Error('expected valid import');
 
 		manager.importThemes(validated.file, [{ importKey: '0' }]);
 		const saved = JSON.parse(storage.getItem(STORAGE_KEY) ?? 'null');
 
-		expect(manager.history.past.at(-1)?.label).toBe('Import themes');
+		expect(manager.history.entries[manager.history.current]?.label).toBe('Import themes');
 		expect(manager.selectedTheme?.name).toBe('Imported');
-		expect(saved.data.themes.map((theme: { name: string }) => theme.name)).toContain('Imported');
+		expect(
+			saved.history.entries[saved.history.current].value.data.themes.map(
+				(theme: { name: string }) => theme.name
+			)
+		).toContain('Imported');
 	});
 });
 
 describe('AppManager theme and variant operations', () => {
 	it('adds, renames, and deletes themes with selection repair', () => {
-		const manager = createAppManager();
+		const manager = new AppManager();
 
 		const first = manager.addTheme('Theme');
 		const second = manager.addTheme('Theme');
@@ -283,7 +345,7 @@ describe('AppManager theme and variant operations', () => {
 
 	it('generates IDs that do not reuse restored theme IDs', () => {
 		const restoredThemes = [createDefaultTheme(), createDefaultTheme()];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: restoredThemes }
 		});
 
@@ -298,7 +360,7 @@ describe('AppManager theme and variant operations', () => {
 	it('copies variant values and keeps shared structure', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const familyId = manager.selectedTheme!.structure.families[0].id;
@@ -321,7 +383,7 @@ describe('AppManager family and step operations', () => {
 	it('adds and deletes shared families across variants', () => {
 		const theme = createDefaultTheme();
 		const firstFamilyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		manager.addVariant('Dawn');
@@ -349,7 +411,7 @@ describe('AppManager family and step operations', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const variant = manager.addVariant('Dawn');
@@ -379,7 +441,7 @@ describe('AppManager ramp and swatch operations', () => {
 		const theme = createDefaultTheme();
 		const initialVariant = theme.variants[0];
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		manager.addVariant('Dawn');
@@ -411,7 +473,7 @@ describe('AppManager ramp and swatch operations', () => {
 	it('moves ramps within their shared family order', () => {
 		const theme = createDefaultTheme();
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const first = manager.addRamp(familyId, source, 'First');
@@ -433,7 +495,7 @@ describe('AppManager ramp and swatch operations', () => {
 	it('sets and resets swatch overrides and reverses selected variant overrides only', () => {
 		const theme = createDefaultTheme();
 		const familyId = theme.structure.families[0].id;
-		const manager = createAppManager({
+		const manager = new AppManager({
 			data: { themes: [theme] }
 		});
 		const ramp = manager.addRamp(familyId, source, 'Ramp');
@@ -465,16 +527,18 @@ describe('AppManager ramp and swatch operations', () => {
 		const familyId = theme.structure.families[0].id;
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [theme];
-		state.ui = {
-			selectedThemeId: theme.id,
-			selectedVariantId: theme.variants[0].id,
-			workspaceTab: 'palette'
-		};
-		const manager = createAppManager({ persistedState: state, storage });
+		setCurrentSnapshot(state, {
+			data: { themes: [theme] },
+			ui: {
+				selectedThemeId: theme.id,
+				selectedVariantId: theme.variants[0].id,
+				workspaceTab: 'palette'
+			}
+		});
+		const manager = new AppManager({ persistedState: state, storage });
 		const ramp = manager.addRamp(familyId, source, 'Ramp');
 		const rampId = ramp!.id;
-		const initialHistoryLength = manager.history.past.length;
+		const initialHistoryLength = manager.history.current;
 		const initialWrites = storage.writes;
 
 		manager.previewSwatchChannel(familyId, rampId, '300', 'hue', 120);
@@ -483,11 +547,11 @@ describe('AppManager ramp and swatch operations', () => {
 		).toEqual({
 			'300': { hue: 120 }
 		});
-		expect(manager.history.past).toHaveLength(initialHistoryLength);
+		expect(manager.history.current).toBe(initialHistoryLength);
 		expect(storage.writes).toBe(initialWrites);
 
 		manager.overrideSwatchChannel(familyId, rampId, '300', 'hue', 120);
-		expect(manager.history.past).toHaveLength(initialHistoryLength + 1);
+		expect(manager.history.current).toBe(initialHistoryLength + 1);
 		expect(storage.writes).toBe(initialWrites + 1);
 	});
 });

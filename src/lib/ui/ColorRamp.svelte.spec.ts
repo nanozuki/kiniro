@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import { createDefaultTheme } from '../model';
 import { createSourceColor } from '../color';
 import { generateFamily } from '../palette';
-import { createAppManager } from '../state/state.svelte';
+import { AppManager } from '../state/state.svelte';
 import { appManagerContextOption } from '../state/testAppContext';
 import ColorRamp from './ColorRamp.svelte';
 
@@ -31,7 +31,7 @@ describe('ColorRamp', () => {
 
 	it('renders the source cell and generated swatches', async () => {
 		const { theme, family, ramp } = rampFixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		render(ColorRamp, {
 			...appManagerContextOption(app),
 			props: {
@@ -51,7 +51,7 @@ describe('ColorRamp', () => {
 
 	it('deletes the ramp through context', async () => {
 		const { theme, family, ramp } = rampFixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		const deleteRamp = vi.spyOn(app, 'deleteRamp');
 		render(ColorRamp, {
 			...appManagerContextOption(app),
@@ -71,7 +71,7 @@ describe('ColorRamp', () => {
 
 	it('renames and moves the ramp through context', async () => {
 		const { theme, family, ramp } = rampFixture();
-		const app = createAppManager({ data: { themes: [theme] } });
+		const app = new AppManager({ data: { themes: [theme] } });
 		const previewRampName = vi.spyOn(app, 'previewRampName');
 		const renameRamp = vi.spyOn(app, 'renameRamp');
 		const moveRamp = vi.spyOn(app, 'moveRamp');

@@ -42,6 +42,8 @@ export type ImportApplyResult = {
 
 // JSON import/export is a public, ID-free theme format. Generated palette values,
 // history, UI state, and internal model IDs stay outside this file format.
+// Imports regenerate IDs, remap nested family/ramp values onto those IDs, and
+// match conflicts by theme name because exported files intentionally omit IDs.
 export function exportThemes(themes: readonly Theme[]): string {
 	return JSON.stringify({ version: EXPORT_VERSION, themes: themes.map(themeToExportDto) });
 }

@@ -4,7 +4,7 @@ import { render } from 'vitest-browser-svelte';
 import ImportExportDialogs from './ImportExportDialogs.svelte';
 import { exportThemes } from '$lib/importExport';
 import { createDefaultTheme } from '$lib/model';
-import { createAppManager } from '$lib/state/state.svelte';
+import { AppManager } from '$lib/state/state.svelte';
 import { appManagerContextOption } from '$lib/state/testAppContext';
 
 function themes() {
@@ -23,7 +23,7 @@ async function uploadJson(name: string, json: string) {
 describe('ImportExportDialogs', () => {
 	it('keeps export confirm disabled until a theme is selected and exports filename payload', async () => {
 		const onexport = vi.fn();
-		const app = createAppManager({ data: { themes: themes() } });
+		const app = new AppManager({ data: { themes: themes() } });
 		render(ImportExportDialogs, { ...appManagerContextOption(app), props: { onexport } });
 
 		await page.getByRole('button', { name: 'Export themes' }).click();
@@ -36,7 +36,7 @@ describe('ImportExportDialogs', () => {
 	});
 
 	it('shows import validation summary and disables confirm for invalid files', async () => {
-		const app = createAppManager({ data: { themes: themes() } });
+		const app = new AppManager({ data: { themes: themes() } });
 		render(ImportExportDialogs, appManagerContextOption(app));
 
 		await page.getByRole('button', { name: 'Import themes' }).click();
@@ -46,7 +46,7 @@ describe('ImportExportDialogs', () => {
 	});
 
 	it('supports conflict choices and successful import callback', async () => {
-		const app = createAppManager({ data: { themes: themes() } });
+		const app = new AppManager({ data: { themes: themes() } });
 		render(ImportExportDialogs, appManagerContextOption(app));
 		const imported = createDefaultTheme({ name: 'Theme 1' });
 
