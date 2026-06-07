@@ -43,9 +43,23 @@
 	let draftColor = $derived(draftOklch());
 	let draftPreview = $derived(getPreviewColor(draftColor, gamut));
 	let hasDraftErrors = $derived(channels.some((channel) => channelError(channel.key) != null));
+	let draftOverrides = $derived({
+		lightness:
+			normalizedDraftValue('lightness', drafts.lightness, swatch.oklch.lightness) !==
+			normalizedGenerated('lightness'),
+		chroma:
+			normalizedDraftValue('chroma', drafts.chroma, swatch.oklch.chroma) !==
+			normalizedGenerated('chroma'),
+		hue: normalizedDraftValue('hue', drafts.hue, swatch.oklch.hue) !== normalizedGenerated('hue')
+	});
 	let hasDraftChanges = $derived(
-		channels.some((channel) => normalizeDraft(channel.key) !== normalizedCurrent(channel.key))
+		normalizedDraftValue('lightness', drafts.lightness, swatch.oklch.lightness) !==
+			normalizedCurrent('lightness') ||
+			normalizedDraftValue('chroma', drafts.chroma, swatch.oklch.chroma) !==
+				normalizedCurrent('chroma') ||
+			normalizedDraftValue('hue', drafts.hue, swatch.oklch.hue) !== normalizedCurrent('hue')
 	);
+	let hasDraftOverrides = $derived(Object.values(draftOverrides).some(Boolean));
 
 	function formatted(channel: OklchChannel, value: number) {
 		if (channel === 'lightness') return formatLightness(value);
@@ -72,12 +86,17 @@
 		return normalizeChannelValue(channel, parsed ?? swatch.oklch[channel]);
 	}
 
-	function normalizedCurrent(channel: OklchChannel): number {
-		return normalizeChannelValue(channel, swatch.oklch[channel]);
+	function normalizedDraftValue(channel: OklchChannel, draft: string, fallback: number): string {
+		const parsed = finiteNumber(draft);
+		return formatted(channel, normalizeChannelValue(channel, parsed ?? fallback));
 	}
 
-	function normalizedGenerated(channel: OklchChannel): number {
-		return normalizeChannelValue(channel, swatch.generated[channel]);
+	function normalizedCurrent(channel: OklchChannel): string {
+		return formatted(channel, swatch.oklch[channel]);
+	}
+
+	function normalizedGenerated(channel: OklchChannel): string {
+		return formatted(channel, swatch.generated[channel]);
 	}
 
 	function draftOklch(): OklchColor {
@@ -134,8 +153,10 @@
 		drafts = draftsFrom(swatch.generated);
 	}
 
-	function draftHasOverride(channel: OklchChannel): boolean {
-		return normalizeDraft(channel) !== normalizedGenerated(channel);
+	function draftOverrideFor(channel: OklchChannel): boolean {
+		if (channel === 'lightness') return draftOverrides.lightness;
+		if (channel === 'chroma') return draftOverrides.chroma;
+		return draftOverrides.hue;
 	}
 
 	function applyDraft() {
@@ -143,7 +164,9 @@
 		const nextOverrides: SwatchChannelOverrides = {};
 		for (const channel of channels) {
 			const value = normalizeDraft(channel.key);
-			if (value !== normalizedGenerated(channel.key)) nextOverrides[channel.key] = value;
+			if (formatted(channel.key, value) !== normalizedGenerated(channel.key)) {
+				nextOverrides[channel.key] = value;
+			}
 		}
 		app.setSwatchOverrides(familyId, rampId, swatch.stepIndex, nextOverrides);
 		editing = false;
@@ -200,17 +223,15 @@
 		</label>
 		<button
 			type="button"
-			disabled={!draftHasOverride(channel.key)}
+			disabled={!draftOverrideFor(channel.key)}
 			onclick={() => resetDraftChannel(channel.key)}
 		>
 			Reset {channel.label}
 		</button>
 	{/each}
 	{#snippet actions()}
-		<button
-			type="button"
-			disabled={!channels.some((channel) => draftHasOverride(channel.key))}
-			onclick={resetDraftColor}>Reset all channels</button
+		<button type="button" disabled={!hasDraftOverrides} onclick={resetDraftColor}
+			>Reset all channels</button
 		>
 		<button type="button" onclick={closeEditor}>Cancel</button>
 		<button type="button" disabled={hasDraftErrors || !hasDraftChanges} onclick={applyDraft}

@@ -113,6 +113,11 @@ describe('numeric formatting', () => {
 		expect(formatHue(291.139)).toBe('291.13');
 	});
 
+	it('keeps already-rounded decimal channel values stable', () => {
+		expect(normalizeChannelValue('hue', Number('74.60'))).toBe(74.6);
+		expect(formatHue(Number('74.60'))).toBe('74.60');
+	});
+
 	it('normalizes input values by clamping to channel ranges before flooring', () => {
 		expect(normalizeChannelValue('lightness', 1.2)).toBe(1);
 		expect(normalizeChannelValue('chroma', 0.37999)).toBe(0.37);

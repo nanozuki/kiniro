@@ -88,6 +88,31 @@ describe('ColorSwatch', () => {
 		await expect.element(page.getByRole('button', { name: 'Apply changes' })).toBeDisabled();
 	});
 
+	it('keeps reset and apply disabled for equivalent imported override values', async () => {
+		render(ColorSwatch, {
+			...context(),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: {
+					stepIndex: '200',
+					name: 'Gold-200',
+					generated: { lightness: 0.8375, chroma: 0.1142, hue: 74.60185343028667 },
+					overrides: { hue: 74.609 },
+					oklch: { lightness: 0.8375, chroma: 0.1142, hue: 74.609 }
+				},
+				gamut: 'srgb'
+			}
+		});
+
+		await page.getByRole('button', { name: /Gold-200/ }).click();
+
+		await expect.element(page.getByLabelText('Hue')).toHaveValue('74.60');
+		await expect.element(page.getByRole('button', { name: 'Reset Hue' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Reset all channels' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Apply changes' })).toBeDisabled();
+	});
+
 	it('resets and cancels modal drafts without committing app state', async () => {
 		const app = new AppManager();
 		const setSwatchOverrides = vi.spyOn(app, 'setSwatchOverrides');

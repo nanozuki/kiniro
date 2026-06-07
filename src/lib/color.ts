@@ -228,7 +228,7 @@ function formatUnit(value: number): string {
 
 function floorTo(value: number, digits: number): number {
 	const scale = 10 ** digits;
-	return Math.floor((value + Number.EPSILON) * scale) / scale;
+	return Math.floor(value * scale + 1e-10) / scale;
 }
 
 function finiteOrZero(value: number | undefined | null): number {
