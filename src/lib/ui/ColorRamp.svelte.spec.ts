@@ -1,7 +1,7 @@
 import { page, userEvent } from 'vitest/browser';
 import { describe, expect, it, vi } from 'vitest';
 import { render } from 'vitest-browser-svelte';
-import { createDefaultTheme } from '../model';
+import { createDefaultTheme, type SourceColorFormat } from '../model';
 import { createSourceColor } from '../color';
 import { generateFamily } from '../palette';
 import { AppManager } from '../state/state.svelte';
@@ -67,6 +67,96 @@ describe('ColorRamp', () => {
 
 		await page.getByRole('button', { name: 'Delete Color Ramp' }).click();
 		expect(deleteRamp).toHaveBeenCalledWith(family.id, 'ramp-1');
+	});
+
+	it.each([
+		{ input: '#ff0066', format: 'hex' },
+		{ input: 'rgb(255 0 102)', format: 'rgb' },
+		{ input: 'hsl(336 100% 50%)', format: 'hsl' },
+		{ input: 'oklch(0.7 0.12 210)', format: 'oklch' }
+	] satisfies { input: string; format: SourceColorFormat }[])(
+		'edits the ramp source color from $format input',
+		async ({ input, format }) => {
+			const { theme, family, ramp } = rampFixture();
+			const app = new AppManager({ data: { themes: [theme] } });
+			const setRampSourceColor = vi.spyOn(app, 'setRampSourceColor');
+			render(ColorRamp, {
+				...appManagerContextOption(app),
+				props: {
+					familyId: family.id,
+					ramp,
+					sourceValue: 'oklch(0.7000 0.1200 210.00)',
+					gamut: 'srgb',
+					rampIndex: 0,
+					rampCount: 2
+				}
+			});
+
+			await page.getByRole('button', { name: 'Change Accent source color' }).click();
+			await page.getByRole('textbox', { name: 'Source color' }).fill(input);
+			await page.getByRole('button', { name: 'Apply changes' }).click();
+
+			expect(setRampSourceColor).toHaveBeenCalledWith(
+				family.id,
+				'ramp-1',
+				expect.objectContaining({ format })
+			);
+		}
+	);
+
+	it('shows source color format controls that rewrite the input', async () => {
+		const { theme, family, ramp } = rampFixture();
+		const app = new AppManager({ data: { themes: [theme] } });
+		render(ColorRamp, {
+			...appManagerContextOption(app),
+			props: {
+				familyId: family.id,
+				ramp,
+				sourceValue: 'oklch(0.7000 0.1200 210.00)',
+				gamut: 'srgb',
+				rampIndex: 0,
+				rampCount: 2
+			}
+		});
+
+		await page.getByRole('button', { name: 'Change Accent source color' }).click();
+		const sourceInput = page.getByRole('textbox', { name: 'Source color' });
+		const inputValue = () => (sourceInput.element() as HTMLInputElement).value;
+
+		await page.getByRole('tab', { name: 'RGB' }).click();
+		expect(inputValue()).toMatch(/^rgb\(/);
+		await page.getByRole('tab', { name: 'HSL' }).click();
+		expect(inputValue()).toMatch(/^hsl\(/);
+		await page.getByRole('tab', { name: 'OKLCH' }).click();
+		expect(inputValue()).toMatch(/^oklch\(/);
+		await page.getByRole('tab', { name: 'Hex' }).click();
+		expect(inputValue()).toMatch(/^#[0-9a-f]{6}$/);
+	});
+
+	it('keeps the source color value stable when reselecting the active format tab', async () => {
+		const { theme, family, ramp } = rampFixture();
+		const app = new AppManager({ data: { themes: [theme] } });
+		render(ColorRamp, {
+			...appManagerContextOption(app),
+			props: {
+				familyId: family.id,
+				ramp,
+				sourceValue: 'hsl(342.79 74.33% 67.49%)',
+				gamut: 'srgb',
+				rampIndex: 0,
+				rampCount: 2
+			}
+		});
+
+		await page.getByRole('button', { name: 'Change Accent source color' }).click();
+		const sourceInput = page.getByRole('textbox', { name: 'Source color' });
+		const inputValue = () => (sourceInput.element() as HTMLInputElement).value;
+		const initialValue = inputValue();
+
+		await page.getByRole('tab', { name: 'HSL' }).click();
+		await page.getByRole('tab', { name: 'HSL' }).click();
+
+		expect(inputValue()).toBe(initialValue);
 	});
 
 	it('renames and moves the ramp through context', async () => {
