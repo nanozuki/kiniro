@@ -13,9 +13,10 @@ export type LoadStorageResult =
 	| { ok: true; state: PersistedState; reset: false; error: null }
 	| { ok: false; state: PersistedState; reset: true; error: string };
 
-// Storage persists authored App data plus durable UI choices. Derived palette,
-// CSS, previews, dialog drafts, focus, scroll, edit mode, and transient warnings
-// are intentionally excluded from the schema.
+// Storage persists the undo/redo timeline. The current history entry is the
+// reload source of truth for authored App data and durable UI choices. Derived
+// palette, CSS, previews, dialog drafts, focus, scroll, edit mode, and transient
+// warnings are intentionally excluded from the schema.
 export function createDefaultPersistedState(): PersistedState {
 	const data = { themes: [] };
 	const ui = {
@@ -25,8 +26,6 @@ export function createDefaultPersistedState(): PersistedState {
 	};
 	return {
 		version: STORAGE_VERSION,
-		data,
-		ui,
 		history: {
 			entries: [{ label: 'Initial state', value: { data, ui } }],
 			current: 0
@@ -39,8 +38,6 @@ export function saveState(storage: StorageLike, state: PersistedState, key = STO
 		key,
 		JSON.stringify({
 			version: STORAGE_VERSION,
-			data: state.data,
-			ui: state.ui,
 			history: state.history
 		})
 	);

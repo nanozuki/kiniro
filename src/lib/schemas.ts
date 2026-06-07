@@ -122,8 +122,6 @@ export const historyStateSchema = z
 
 export const savedStateSchema = z.strictObject({
 	version: z.literal(STORAGE_STATE_VERSION),
-	data: appStateSchema,
-	ui: uiStateSchema,
 	history: historyStateSchema
 });
 

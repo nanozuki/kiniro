@@ -18,13 +18,14 @@ function memoryStorage(initial: Record<string, string> = {}): StorageLike {
 }
 
 describe('storage', () => {
-	it('round trips app data, durable UI state, and history', () => {
+	it('round trips history containing app data and durable UI state', () => {
 		const storage = memoryStorage();
 		const state = createDefaultPersistedState();
-		state.data.themes = [createDefaultTheme()];
-		const theme = state.data.themes[0];
+		const snapshot = state.history.entries[state.history.current].value;
+		snapshot.data.themes = [createDefaultTheme()];
+		const theme = snapshot.data.themes[0];
 		theme.targetGamut = 'p3';
-		state.ui = {
+		snapshot.ui = {
 			selectedThemeId: theme.id,
 			selectedVariantId: theme.variants[0].id,
 			workspaceTab: 'cssVariables'
@@ -32,12 +33,15 @@ describe('storage', () => {
 		state.history.entries = Array.from({ length: 205 }, (_, index) => ({
 			label: `Action ${index}`,
 			value: {
-				data: { themes: [] },
-				ui: {
-					selectedThemeId: null,
-					selectedVariantId: null,
-					workspaceTab: 'palette'
-				}
+				data: index === 204 ? snapshot.data : { themes: [] },
+				ui:
+					index === 204
+						? snapshot.ui
+						: {
+								selectedThemeId: null,
+								selectedVariantId: null,
+								workspaceTab: 'palette'
+							}
 			}
 		}));
 		state.history.current = 204;
@@ -46,9 +50,9 @@ describe('storage', () => {
 		const loaded = loadState(storage);
 
 		expect(loaded.ok).toBe(true);
-		expect(loaded.state.data.themes).toHaveLength(1);
-		expect(loaded.state.ui.workspaceTab).toBe('cssVariables');
-		expect(loaded.state.data.themes[0].targetGamut).toBe('p3');
+		expect(loaded.state.history.entries[204].value.data.themes).toHaveLength(1);
+		expect(loaded.state.history.entries[204].value.ui.workspaceTab).toBe('cssVariables');
+		expect(loaded.state.history.entries[204].value.data.themes[0].targetGamut).toBe('p3');
 		expect(loaded.state.history.entries).toHaveLength(205);
 		expect(loaded.state.history.entries[0].label).toBe('Action 0');
 		expect(loaded.state.history.current).toBe(204);
@@ -59,45 +63,50 @@ describe('storage', () => {
 		const theme = createDefaultTheme();
 		const family = theme.structure.families[0];
 		const variant = theme.variants[0];
-		state.data.themes = [theme];
 		const invalidState = {
 			...state,
-			data: {
-				themes: [
+			history: {
+				entries: [
 					{
-						...theme,
-						structure: {
-							families: [
-								{
-									...family,
-									ramps: [{ id: 'ramp-id' }]
-								}
-							]
-						},
-						variants: [
-							{
-								...variant,
-								values: {
-									families: {
-										[family.id]: {
-											stepScale: { ...variant.values.families[family.id].stepScale },
-											ramps: {
-												'ramp-id': {
-													sourceColor: {
-														format: 'bad',
-														oklch: { lightness: 0.5, chroma: 0.1, hue: 0 },
-														serialized: 'bad'
-													},
-													swatchOverrides: {}
+						label: 'Invalid',
+						value: {
+							data: {
+								themes: [
+									{
+										...theme,
+										structure: {
+											families: [{ ...family, ramps: [{ id: 'ramp-id' }] }]
+										},
+										variants: [
+											{
+												...variant,
+												values: {
+													families: {
+														[family.id]: {
+															stepScale: { ...variant.values.families[family.id].stepScale },
+															ramps: {
+																'ramp-id': {
+																	sourceColor: {
+																		format: 'bad',
+																		oklch: { lightness: 0.5, chroma: 0.1, hue: 0 },
+																		serialized: 'bad'
+																	},
+																	swatchOverrides: {}
+																}
+															}
+														}
+													}
 												}
 											}
-										}
+										]
 									}
-								}
-							}
-						]
+								]
+							},
+							ui: state.history.entries[state.history.current].value.ui
+						}
 					}
-				]
+				],
+				current: 0
 			}
 		};
 		const storage = memoryStorage({ [STORAGE_KEY]: JSON.stringify(invalidState) });

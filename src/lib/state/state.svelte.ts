@@ -746,13 +746,13 @@ export class AppManager {
 		}
 
 		const state = createDefaultPersistedState();
-		state.data = clone(options.data ?? createEmptyAppState());
-		state.ui = toPersistedUi({
+		const data = clone(options.data ?? createEmptyAppState());
+		const ui = toPersistedUi({
 			selection: { themeId: null, variantId: null, ...options.ui?.selection },
 			workspaceTab: options.ui?.workspaceTab ?? 'palette'
 		});
 		state.history = {
-			entries: [{ label: INITIAL_HISTORY_LABEL, value: { data: state.data, ui: state.ui } }],
+			entries: [{ label: INITIAL_HISTORY_LABEL, value: { data, ui } }],
 			current: 0
 		};
 		return {
@@ -764,8 +764,9 @@ export class AppManager {
 	}
 
 	private restorePersistedState(state: PersistedState): void {
-		this.data = clone(state.data);
-		this.ui = fromPersistedUi(state.ui);
+		const snapshot = state.history.entries[state.history.current].value;
+		this.data = clone(snapshot.data);
+		this.ui = fromPersistedUi(snapshot.ui);
 		this.history.entries = clone(state.history.entries);
 		this.history.current = state.history.current;
 		this.lastAction = null;
@@ -821,12 +822,11 @@ export class AppManager {
 
 	private persist(): void {
 		if (!this.storage) return;
+		this.syncCurrentHistoryEntry(this.snapshot());
 		saveState(
 			this.storage,
 			{
 				version: createDefaultPersistedState().version,
-				data: this.data,
-				ui: toPersistedUi(this.ui),
 				history: {
 					entries: clone(this.history.entries),
 					current: this.history.current
@@ -843,14 +843,15 @@ export class AppManager {
 	}
 
 	private needsReconcile(state: PersistedState): boolean {
-		const repairedData = clone(state.data);
-		const repairedUi = fromPersistedUi(state.ui);
+		const snapshot = state.history.entries[state.history.current].value;
+		const repairedData = clone(snapshot.data);
+		const repairedUi = fromPersistedUi(snapshot.ui);
 		const previousData = this.data;
 		const previousUi = this.ui;
 		this.data = repairedData;
 		this.ui = repairedUi;
 		this.repairUiState();
-		const reconciled = !isSameSnapshot({ data: state.data, ui: state.ui }, this.snapshot());
+		const reconciled = !isSameSnapshot(snapshot, this.snapshot());
 		this.data = previousData;
 		this.ui = previousUi;
 		return reconciled;

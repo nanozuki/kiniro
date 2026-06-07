@@ -44,8 +44,9 @@ ramp, or step IDs, and resolve the rest through the manager.
 
 ## Persistence
 
-Local storage persists authored app data, durable UI choices, and undo/redo
-history. The local-storage shape is internal and may include generated IDs.
+Local storage persists the undo/redo history. The current history entry contains
+authored app data and durable UI choices, and is the reload source of truth. The
+local-storage shape is internal and may include generated IDs.
 
 If stored data fails validation, Kiniro discards it, rebuilds an empty state,
 and notifies the user that local data was reset.
