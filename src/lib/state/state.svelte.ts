@@ -38,6 +38,7 @@ import {
 	type OklchChannel,
 	type SourceColor,
 	type StepIndexStyle,
+	type SwatchChannelOverrides,
 	type Theme,
 	type ThemeVariant,
 	type WorkspaceTab
@@ -634,6 +635,20 @@ export class AppManager {
 			() => this.applySwatchChannelOverride(familyId, rampId, stepIndex, channel, value),
 			{ includePreview: true }
 		);
+	}
+
+	setSwatchOverrides(
+		familyId: Id,
+		rampId: Id,
+		stepIndex: string,
+		overrides: SwatchChannelOverrides
+	): void {
+		this.commitMutation('Set swatch overrides', () => {
+			const ramp = this.selectedVariant?.values.families[familyId]?.ramps[rampId];
+			if (!ramp) return;
+			if (Object.keys(overrides).length === 0) delete ramp.swatchOverrides[stepIndex];
+			else ramp.swatchOverrides[stepIndex] = { ...overrides };
+		});
 	}
 
 	resetSwatchChannel(familyId: Id, rampId: Id, stepIndex: string, channel: OklchChannel): void {

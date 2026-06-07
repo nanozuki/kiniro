@@ -58,6 +58,15 @@ state before persistence or rendering.
 Inline edit previews are temporary. They do not write local storage or add undo
 entries until submission.
 
+## Dialogs
+
+Dialogs own draft state for edits made inside the modal. Closing or canceling a
+dialog discards the draft. AppManager state changes only after the dialog's
+explicit submit/apply action.
+
+Dialogs may show a local preview derived from draft values, but that preview
+must not mutate AppManager state, undo history, or persistence until submit.
+
 ## Shared Naming and Validation Rules
 
 Users edit friendly display names. CSS-safe names are derived automatically and

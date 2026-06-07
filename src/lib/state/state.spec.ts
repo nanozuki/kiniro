@@ -522,6 +522,28 @@ describe('AppManager ramp and swatch operations', () => {
 		).toEqual({});
 	});
 
+	it('sets swatch overrides as one replacement operation', () => {
+		const theme = createDefaultTheme();
+		const familyId = theme.structure.families[0].id;
+		const manager = new AppManager({
+			data: { themes: [theme] }
+		});
+		const ramp = manager.addRamp(familyId, source, 'Ramp');
+		const rampId = ramp!.id;
+
+		manager.setSwatchOverrides(familyId, rampId, '300', { chroma: 0.2, hue: 120 });
+		expect(
+			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
+		).toEqual({
+			'300': { chroma: 0.2, hue: 120 }
+		});
+
+		manager.setSwatchOverrides(familyId, rampId, '300', {});
+		expect(
+			manager.selectedVariant?.values.families[familyId].ramps[rampId].swatchOverrides
+		).toEqual({});
+	});
+
 	it('previews swatch channel overrides without persistence or history until submit', () => {
 		const theme = createDefaultTheme();
 		const familyId = theme.structure.families[0].id;

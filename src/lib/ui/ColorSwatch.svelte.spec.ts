@@ -38,11 +38,9 @@ describe('ColorSwatch', () => {
 		await expect.element(page.getByLabelText('Has overrides')).toBeInTheDocument();
 	});
 
-	it('delegates channel overrides and resets from the modal', async () => {
+	it('commits draft channel overrides only after applying the modal', async () => {
 		const app = new AppManager();
-		const overrideSwatchChannel = vi.spyOn(app, 'overrideSwatchChannel');
-		const resetSwatchChannel = vi.spyOn(app, 'resetSwatchChannel');
-		const resetSwatchColor = vi.spyOn(app, 'resetSwatchColor');
+		const setSwatchOverrides = vi.spyOn(app, 'setSwatchOverrides');
 		render(ColorSwatch, {
 			...appManagerContextOption(app),
 			props: {
@@ -55,12 +53,61 @@ describe('ColorSwatch', () => {
 
 		await page.getByRole('button', { name: /Accent-100/ }).click();
 		await page.getByLabelText(/Hue/).fill('180');
-		await page.getByRole('button', { name: 'Reset Chroma' }).click();
-		await page.getByRole('button', { name: 'Reset all channels' }).click();
+		expect(setSwatchOverrides).not.toHaveBeenCalled();
+		await page.getByRole('button', { name: 'Apply changes' }).click();
 
-		expect(overrideSwatchChannel).toHaveBeenCalledWith('family-1', 'ramp-1', '100', 'hue', 180);
-		expect(resetSwatchChannel).toHaveBeenCalledWith('family-1', 'ramp-1', '100', 'chroma');
-		expect(resetSwatchColor).toHaveBeenCalledWith('family-1', 'ramp-1', '100');
+		expect(setSwatchOverrides).toHaveBeenCalledWith('family-1', 'ramp-1', '100', {
+			chroma: 0.2,
+			hue: 180
+		});
+	});
+
+	it('keeps reset and apply disabled for unchanged generated values with extra precision', async () => {
+		render(ColorSwatch, {
+			...context(),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: {
+					stepIndex: '200',
+					name: 'Base-200',
+					generated: { lightness: 0.84375, chroma: 0.0178901, hue: 291.139 },
+					overrides: {},
+					oklch: { lightness: 0.84375, chroma: 0.0178901, hue: 291.139 }
+				},
+				gamut: 'srgb'
+			}
+		});
+
+		await page.getByRole('button', { name: /Base-200/ }).click();
+
+		await expect.element(page.getByRole('button', { name: 'Reset Lightness' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Reset Chroma' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Reset Hue' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Reset all channels' })).toBeDisabled();
+		await expect.element(page.getByRole('button', { name: 'Apply changes' })).toBeDisabled();
+	});
+
+	it('resets and cancels modal drafts without committing app state', async () => {
+		const app = new AppManager();
+		const setSwatchOverrides = vi.spyOn(app, 'setSwatchOverrides');
+		render(ColorSwatch, {
+			...appManagerContextOption(app),
+			props: {
+				familyId: 'family-1',
+				rampId: 'ramp-1',
+				swatch: swatch({ chroma: 0.2 }),
+				gamut: 'srgb'
+			}
+		});
+
+		await page.getByRole('button', { name: /Accent-100/ }).click();
+		await page.getByRole('button', { name: 'Reset Chroma' }).click();
+		await page.getByLabelText(/Hue/).fill('180');
+		await page.getByRole('button', { name: 'Reset all channels' }).click();
+		await page.getByRole('button', { name: 'Cancel' }).click();
+
+		expect(setSwatchOverrides).not.toHaveBeenCalled();
 	});
 
 	it('marks colors outside the selected gamut', async () => {
